@@ -30,9 +30,12 @@ defmodule DistributedSimulator do
     end
   end
 
-  def sum {x1, y1}, coords2 do
-    {x2, y2} = get_shift coords2
+  def sum {x1, y1}, {x2, y2} do
     {x1 + x2, y1 + y2}
+  end
+  
+  def shift coord, direction do
+    sum(coord, get_shift(direction))
   end
 
   def is_valid {x, y} do
@@ -43,7 +46,7 @@ defmodule DistributedSimulator do
     cells = for k_x <- 1..@x_size, k_y <- 1..@y_size, into: %{}, do: {{k_x, k_y}, %Cell{id: (k_x-1)*@y_size + k_y}}
     neighbors = cells
       |> Enum.map(fn {coords, _} -> {coords,
-                         (for direction <- @directions, is_valid(sum(coords, direction)), into: %{}, do: {direction, sum(coords, direction)})} end)
+                         (for direction <- @directions, is_valid(shift(coords, direction)), into: %{}, do: {direction, shift(coords, direction)})} end)
       |> Map.new
 
     {cells, neighbors}
