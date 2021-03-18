@@ -43,13 +43,20 @@ defmodule DistributedSimulator do
   end
 
   def make_grid do
-    cells = for k_x <- 1..@x_size, k_y <- 1..@y_size, into: %{}, do: {{k_x, k_y}, %Cell{id: (k_x-1)*@y_size + k_y}}
+    cells = for k_x <- 1..@x_size, k_y <- 1..@y_size, into: %{}, do: {{k_x, k_y}, :empty}
     neighbors = cells
       |> Enum.map(fn {coords, _} -> {coords,
                          (for direction <- @directions, is_valid(shift(coords, direction)), into: %{}, do: {direction, shift(coords, direction)})} end)
       |> Map.new
 
     {cells, neighbors}
+  end
+
+  def populate grid, [] do
+    grid
+  end
+  def populate [coord | coords] do
+
   end
 
   def hello do
