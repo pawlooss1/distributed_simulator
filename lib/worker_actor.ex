@@ -72,16 +72,20 @@ defmodule WorkerActor do
     send self(), {:remote_plans, iteration, plans}
   end
 
-  def processPlans grid, [] do
-    {grid, []}
+  def processPlans grid, plans do
+    processPlansInner grid, [], plans
   end
-  def processPlans grid, [plan | plans] do
+
+  def processPlansInner grid, acceptedPlans, [] do
+    {grid, acceptedPlans}
+  end
+
+  def processPlansInner grid, acceptedPlans, [plan | plans] do
     if validatePlan grid, plan do
       {{target, action}, _} = plan
-      {updatedGrid, acceptedPlans} = processPlans(%{grid | target => action}, plans)
-      {updatedGrid, [plan | acceptedPlans]}
+      processPlansInner(%{grid | target => action}, [plan | acceptedPlans], plans)
     else
-      processPlans grid, plans
+      processPlansInner grid, acceptedPlans, plans
     end
   end
 
