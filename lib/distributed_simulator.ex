@@ -4,39 +4,26 @@ defmodule DistributedSimulator do
   """
 
   @doc """
-  Hello world.
+  Distributed Simulator
 
-  ## Examples
+  ## To start:
 
-      iex> DistributedSimulator.hello()
-      :world
+      $ iex -S mix
+      iex> DistributedSimulator.start()
+      :ok
+      terminating worker
 
+  ## Look to "grid_0.txt", "grid_1.txt", ..., "grid_5.txt" files in lib/grid_iterations
   """
-  @x_size 3
-  @y_size 4
+  import Position
+  import Utils
+
   @directions [:top, :top_right, :right, :bottom_right, :bottom, :bottom_left, :left, :top_left]
 
-  def get_shift direction do
-    case direction do
-      :top -> {-1, 0}
-      :top_right -> {-1, 1}
-      :right -> {0, 1}
-      :bottom_right -> {1, 1}
-      :bottom -> {1, 0}
-      :bottom_left -> {1, -1}
-      :left -> {0, -1}
-      :top_left -> {-1, -1}
-      _ -> direction
-    end
-  end
+  @x_size 12
+  @y_size 12
 
-  def sum {x1, y1}, {x2, y2} do
-    {x1 + x2, y1 + y2}
-  end
-  
-  def shift coord, direction do
-    sum(coord, get_shift(direction))
-  end
+  @mocks_by_dimension 2
 
   def is_valid {x, y} do
     x >= 1 and x <= @x_size and y >= 1 and y <= @y_size
@@ -55,11 +42,26 @@ defmodule DistributedSimulator do
   def populate grid, [] do
     grid
   end
-  def populate [coord | coords] do
-
+  def populate grid, [coord | coords] do
+    populate %{grid | coord => :mock}, coords
   end
 
-  def hello do
-    make_grid()
+  def populateEvenly grid do
+    xUnit = @x_size / (@mocks_by_dimension + 1)
+    yUnit = @y_size / (@mocks_by_dimension + 1)
+
+    mocksPositions = for xIndex <- 1..@mocks_by_dimension, yIndex <- 1..@mocks_by_dimension, do: {trunc(xIndex * xUnit), trunc(yIndex * yUnit)}
+    populate grid, mocksPositions
+  end
+
+  def start do
+    {cells, neighbors} = make_grid()
+    grid = populateEvenly cells
+
+    pid = spawn WorkerActor, :listen, [grid, neighbors]
+    writeToFile grid, "grid_0"
+
+    send pid, {:start_iteration, 1}
+    :ok
   end
 end
