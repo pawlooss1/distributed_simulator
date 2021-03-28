@@ -51,19 +51,24 @@ defmodule DistributedSimulator do
     mocks_positions = for xIndex <- 1..@mocks_by_dimension, yIndex <- 1..@mocks_by_dimension, do: {trunc(xIndex * x_unit), trunc(yIndex * y_unit)}
     populate(grid, mocks_positions)
   end
-
-  def initialize_signal cells do
-    cells
-    |> Map.keys
-    |> Enum.map(fn coords -> {coords, Enum.map(@directions, fn direction -> {direction, 0} end)} end)
-    |> Enum.map(fn {coords, signal_map} -> {coords, Map.new(signal_map)} end)
+  @doc"""
+      initialize signal map for each coord:
+      returns Map {coords => map of signals by direction}
+  """
+  def initialize_signal coords_list do
+    coords_list
+    |> Enum.map(fn coords ->
+      {coords, Enum.map(@directions, fn direction ->
+        {direction, 0} end)} end)
+    |> Enum.map(fn {coords, signal_map} ->
+      {coords, Map.new(signal_map)} end)
     |> Map.new
   end
 
   def start do
-    {cells, neighbors} = make_grid()
-    grid = populate_evenly cells
-    signal = initialize_signal cells
+    {cells_by_coords, neighbors} = make_grid()
+    grid = populate_evenly cells_by_coords
+    signal = initialize_signal Map.keys(cells_by_coords)
 
     pid = spawn(WorkerActor, :listen, [grid, neighbors, signal])
     write_to_file(grid, signal, "grid_0")
