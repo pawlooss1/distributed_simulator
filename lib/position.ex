@@ -1,6 +1,8 @@
 defmodule Position do
   @moduledoc false
 
+  @directions [:top, :top_right, :right, :bottom_right, :bottom, :bottom_left, :left, :top_left]
+
   def get_shift direction do
     case direction do
       :top -> {-1, 0}
@@ -21,5 +23,14 @@ defmodule Position do
 
   def shift coord, direction do
     sum(coord, get_shift(direction))
+  end
+
+  def with_adjacent direction do
+    index = Enum.find_index(@directions, &(&1 == direction))
+    len = length(@directions)
+
+    [Enum.fetch!(@directions, rem(len + index - 1, len)),
+     direction,
+     Enum.fetch!(@directions, rem(index + 1, len))]
   end
 end

@@ -10,8 +10,6 @@ defmodule DistributedSimulator do
 
       $ iex -S mix
       iex> DistributedSimulator.start()
-      :ok
-      terminating worker
 
   ## Look to "grid_0.txt", "grid_1.txt", ..., "grid_5.txt" files in lib/grid_iterations
   """
@@ -20,8 +18,8 @@ defmodule DistributedSimulator do
 
   @directions [:top, :top_right, :right, :bottom_right, :bottom, :bottom_left, :left, :top_left]
 
-  @x_size 12
-  @y_size 12
+  @x_size 8
+  @y_size 8
 
   @mocks_by_dimension 2
 
@@ -43,25 +41,34 @@ defmodule DistributedSimulator do
     grid
   end
   def populate grid, [coord | coords] do
-    populate %{grid | coord => :mock}, coords
+    populate(%{grid | coord => :mock}, coords)
   end
 
-  def populateEvenly grid do
-    xUnit = @x_size / (@mocks_by_dimension + 1)
-    yUnit = @y_size / (@mocks_by_dimension + 1)
+  def populate_evenly grid do
+    x_unit = @x_size / (@mocks_by_dimension + 1)
+    y_unit = @y_size / (@mocks_by_dimension + 1)
 
-    mocksPositions = for xIndex <- 1..@mocks_by_dimension, yIndex <- 1..@mocks_by_dimension, do: {trunc(xIndex * xUnit), trunc(yIndex * yUnit)}
-    populate grid, mocksPositions
+    mocks_positions = for xIndex <- 1..@mocks_by_dimension, yIndex <- 1..@mocks_by_dimension, do: {trunc(xIndex * x_unit), trunc(yIndex * y_unit)}
+    populate(grid, mocks_positions)
+  end
+
+  def initialize_signal cells do
+    cells
+    |> Map.keys
+    |> Enum.map(fn coords -> {coords, Enum.map(@directions, fn direction -> {direction, 0} end)} end)
+    |> Enum.map(fn {coords, signal_map} -> {coords, Map.new(signal_map)} end)
+    |> Map.new
   end
 
   def start do
     {cells, neighbors} = make_grid()
-    grid = populateEvenly cells
+    grid = populate_evenly cells
+    signal = initialize_signal cells
 
-    pid = spawn WorkerActor, :listen, [grid, neighbors]
-    writeToFile grid, "grid_0"
+    pid = spawn(WorkerActor, :listen, [grid, neighbors, signal])
+    write_to_file(grid, signal, "grid_0")
 
-    send pid, {:start_iteration, 1}
+    send(pid, {:start_iteration, 1})
     :ok
   end
 end

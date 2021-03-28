@@ -1,8 +1,19 @@
 defmodule Cell do
   @moduledoc false
-#  todo add iteration and config as paramters (not basic functionality)
-  def generateSignal _any do 0 end
+#  todo add iteration and config as parameters (not basic functionality)
+  @mock_initial_signal 1
 
-  def signalFactor :obstacle do 0 end
-  def signalFactor _any do 1 end
+  def generate_signal :mock do
+    @mock_initial_signal
+  end
+  def generate_signal _any do
+    0
+  end
+
+  def signal_factor :obstacle do
+    0
+  end
+  def signal_factor _any do
+    1
+  end
 end
