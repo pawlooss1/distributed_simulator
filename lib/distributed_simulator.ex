@@ -23,10 +23,16 @@ defmodule DistributedSimulator do
 
   @mocks_by_dimension 2
 
+  @doc"""
+  check if given coordinates are within grid bounds
+"""
   def is_valid {x, y} do
     x >= 1 and x <= @x_size and y >= 1 and y <= @y_size
   end
 
+  @doc"""
+  create grid @x_size x @y_size as Map {coords => cell}, with initially empty cells
+"""
   def make_grid do
     cells = for k_x <- 1..@x_size, k_y <- 1..@y_size, into: %{}, do: {{k_x, k_y}, :empty}
     neighbors = cells
@@ -37,6 +43,10 @@ defmodule DistributedSimulator do
     {cells, neighbors}
   end
 
+  @doc"""
+  add :mock objects on given coordinates
+"""
+  def populate grid, coords_list
   def populate grid, [] do
     grid
   end
@@ -44,6 +54,9 @@ defmodule DistributedSimulator do
     populate(%{grid | coord => :mock}, coords)
   end
 
+  @doc"""
+    add :mock objects distributed evenly on grid
+  """
   def populate_evenly grid do
     x_unit = @x_size / (@mocks_by_dimension + 1)
     y_unit = @y_size / (@mocks_by_dimension + 1)
