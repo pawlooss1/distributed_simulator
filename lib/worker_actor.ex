@@ -14,44 +14,44 @@ defmodule WorkerActor do
   Currently there is also no use of :remote_signal and :remote_cell_contents states.
   Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   """
-  def listen grid, neighbors, signal do
+  def listen cells_by_coords, neighbors_by_coords, signal_by_coords do
     receive do
       {:start_iteration, iteration} when iteration > @max_iterations ->
         IO.puts "terminating worker"
 
       {:start_iteration, iteration} ->
         plans =
-          Map.keys(grid)
-          |> Enum.map(fn position -> create_plan(position, grid, neighbors) end)
+          Map.keys(cells_by_coords)
+          |> Enum.map(fn position -> create_plan(position, cells_by_coords, neighbors_by_coords) end)
 
         distribute_plans(iteration, plans)
-        listen(grid, neighbors, signal)
+        listen(cells_by_coords, neighbors_by_coords, signal_by_coords)
 
       {:remote_plans, iteration, plans} ->
-        {updated_grid, accepted_plans} = process_plans(grid, Enum.shuffle(plans))
+        {updated_grid, accepted_plans} = process_plans(cells_by_coords, Enum.shuffle(plans))
         consequences = Enum.map(accepted_plans, fn {_, consequence} -> consequence end)
 
         distribute_consequences(iteration, consequences)
-        listen(updated_grid, neighbors, signal)
+        listen(updated_grid, neighbors_by_coords, signal_by_coords)
 
       {:remote_consequences, iteration, consequences} ->
-        updated_grid = apply_consequences(grid, consequences)
+        updated_grid = apply_consequences(cells_by_coords, consequences)
 
-        distribute_signal(iteration, calculate_signal_updates(grid, neighbors, signal))
-        listen(updated_grid, neighbors, signal)
+        distribute_signal(iteration, calculate_signal_updates(cells_by_coords, neighbors_by_coords, signal_by_coords))
+        listen(updated_grid, neighbors_by_coords, signal_by_coords)
 
       {:remote_signal, iteration, signal_updates} ->
-        updated_signal = apply_signal_updates(signal, signal_updates, grid)
-        write_to_file(grid, updated_signal, "grid_#{iteration}")
+        updated_signal = apply_signal_updates(signal_by_coords, signal_updates, cells_by_coords)
+        write_to_file(cells_by_coords, updated_signal, "grid_#{iteration}")
 
         send(self(), {:start_iteration, iteration + 1})
-        listen(grid, neighbors, updated_signal)
+        listen(cells_by_coords, neighbors_by_coords, updated_signal)
     end
   end
 
-  def create_plan cell_position, grid, neighbors do
-    case grid[cell_position] do
-      :mock -> random_move(cell_position, grid, neighbors)
+  def create_plan cell_position, cells_by_coords, neighbors_by_coords do
+    case cells_by_coords[cell_position] do
+      :mock -> random_move(cell_position, cells_by_coords, neighbors_by_coords)
       _     -> {}
     end
   end
@@ -60,11 +60,11 @@ defmodule WorkerActor do
   For now abandon 'Alternative' in plans (not appearing in Mock example)
   Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   """
-  def random_move cell_position, grid, neighbors do
+  def random_move cell_position, cells_by_coords, neighbors_by_coords do
     available_directions =
-      neighbors[cell_position]
+      neighbors_by_coords[cell_position]
       |> Enum.filter(fn {_, position} ->
-        grid[position] == :empty end)
+        cells_by_coords[position] == :empty end)
       |> Enum.map(fn {direction, _} -> direction end)
 
     case available_directions do
@@ -76,40 +76,42 @@ defmodule WorkerActor do
   end
 
   @doc"""
-  apply action from all accepted plans -> returns {grid, accepted_plans}
+  apply action from all accepted plans -> returns {cells_by_coords, accepted_plans}
 """
-  def process_plans grid, plans do
-    process_plans_inner(grid, [], plans)
+  def process_plans cells_by_coords, plans do
+    process_plans_inner(cells_by_coords, [], plans)
   end
 
-  def process_plans_inner grid, accepted_plans, [] do
-    {grid, accepted_plans}
+  def process_plans_inner cells_by_coords, accepted_plans, [] do
+    {cells_by_coords, accepted_plans}
   end
 
-  def process_plans_inner grid, accepted_plans, [plan | plans] do
-    if validate_plan grid, plan do
+  def process_plans_inner cells_by_coords, accepted_plans, [plan | plans] do
+    if validate_plan cells_by_coords, plan do
       {{target, action}, _} = plan
-      process_plans_inner(%{grid | target => action}, [plan | accepted_plans], plans)
+      process_plans_inner(%{cells_by_coords | target => action}, [plan | accepted_plans], plans)
     else
-      process_plans_inner(grid, accepted_plans, plans)
+      process_plans_inner(cells_by_coords, accepted_plans, plans)
     end
   end
   @doc"""
   check if plan can be executed (here: if target field is empty)
 """
-  def validate_plan grid, plan do
+  def validate_plan cells_by_coords, plan do
     case plan do
       {}               -> false
-      {{target, _}, _} -> grid[target] == :empty
+      {{target, _}, _} -> cells_by_coords[target] == :empty
     end
   end
-
-  def apply_consequences grid, [] do
-    grid
+  @doc"""
+    return cells_by_coords with applied given consequences
+  """
+  def apply_consequences cells_by_coords, [] do
+    cells_by_coords
   end
-  def apply_consequences grid, [consequence | consequences] do
+  def apply_consequences cells_by_coord, [consequence | consequences] do
     {target, action} = consequence
-    apply_consequences(%{grid | target => action}, consequences)
+    apply_consequences(%{cells_by_coord | target => action}, consequences)
   end
 
   @doc"""
@@ -135,8 +137,9 @@ defmodule WorkerActor do
   @doc"""
     calculate signal for given directions
     returns generated + propagated signal for given direction
+    neighbor_coords - coordinates of a neighbor from direction @direction (e.g. {2,3})
   """
-  def calculate_signal_for_direction direction, grid, neighbor_coords, signal do
+  def calculate_signal_for_direction direction, cells_by_coords, neighbor_coords, signal_by_coords do
     cond do
       direction in [:top, :right, :bottom, :left] ->
         case neighbor_coords do
@@ -145,17 +148,17 @@ defmodule WorkerActor do
             propagated_signal =
               with_adjacent(direction)
               |> Enum.map(fn neighbor_direction ->
-                Map.get(signal[neighbor_coords], neighbor_direction) end)
+                Map.get(signal_by_coords[neighbor_coords], neighbor_direction) end)
               |> Enum.sum
 
-            generated_signal = generate_signal(grid[neighbor_coords])
+            generated_signal = generate_signal(cells_by_coords[neighbor_coords])
 
             propagated_signal + generated_signal
         end
       direction in [:top_right, :bottom_right, :bottom_left, :top_left] ->
         case neighbor_coords do
           nil -> 0
-          _   -> Map.get(signal[neighbor_coords], direction) + generate_signal(grid[neighbor_coords])
+          _   -> Map.get(signal_by_coords[neighbor_coords], direction) + generate_signal(cells_by_coords[neighbor_coords])
         end
       true -> 0
     end
@@ -166,10 +169,10 @@ defmodule WorkerActor do
   @old_signal: signal from previous iteration
   @signal_update: generated and propagated signal in this iteration for each cell
   """
-  def apply_signal_updates old_signal_by_coord, signal_update_by_coord, grid do
+  def apply_signal_updates old_signal_by_coord, signal_update_by_coord, cells_by_coords do
     old_signal_by_coord
     |> Enum.map(fn {coords, cell_signal} ->
-      {coords, apply_signal_update(cell_signal, signal_update_by_coord[coords], signal_factor(grid[coords]))} end)
+      {coords, apply_signal_update(cell_signal, signal_update_by_coord[coords], signal_factor(cells_by_coords[coords]))} end)
     |> Map.new
   end
 
@@ -184,16 +187,22 @@ defmodule WorkerActor do
         (signal + cell_signal_update[direction] * @signal_suppression_factor) * @signal_attenuation_factor * cell_signal_factor} end)
     |> Map.new
   end
-
+  @doc"""
+  send each plan to worker managing cells affected by this plan
+"""
   def distribute_plans iteration, plans do
     send(self(), {:remote_plans, iteration, plans})
   end
-
+  @doc"""
+    send each consequence to worker managing cells affected by this plan consequence
+  """
   def distribute_consequences iteration, consequences do
     send(self(), {:remote_consequences, iteration, consequences})
   end
-
-  def distribute_signal iteration, signal do
-    send(self(), {:remote_signal, iteration, signal})
+  @doc"""
+    send each signal to worker managing cells affected by this signal
+  """
+  def distribute_signal iteration, signal_by_coords do
+    send(self(), {:remote_signal, iteration, signal_by_coords})
   end
 end

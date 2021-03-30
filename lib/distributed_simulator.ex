@@ -1,18 +1,15 @@
 defmodule DistributedSimulator do
   @moduledoc """
-  Documentation for `DistributedSimulator`.
-  """
-
-  @doc """
   Distributed Simulator
 
   ## To start:
 
-      $ iex -S mix
-      iex> DistributedSimulator.start()
+     $ iex -S mix
+     iex> DistributedSimulator.start()
 
   ## Look to "grid_0.txt", "grid_1.txt", ..., "grid_5.txt" files in lib/grid_iterations
   """
+
   import Position
   import Utils
 
