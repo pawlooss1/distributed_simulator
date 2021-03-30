@@ -10,8 +10,8 @@ defmodule WorkerActor do
   @signal_attenuation_factor 0.4
 
   @doc """
-  For now abandon 'Alternative' from discarded plans in remote plans (no use of it in Mock example). Currently there is
-  also no use of :remote_signal and :remote_cell_contents states.
+  For now abandon 'Alternative' from discarded plans in remote plans (no use of it in Mock example).
+  Currently there is also no use of :remote_signal and :remote_cell_contents states.
   Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   """
   def listen grid, neighbors, signal do
@@ -50,7 +50,7 @@ defmodule WorkerActor do
   end
 
   def create_plan cell_position, grid, neighbors do
-    case Map.get(grid, cell_position) do
+    case grid[cell_position] do
       :mock -> random_move(cell_position, grid, neighbors)
       _     -> {}
     end
@@ -62,8 +62,9 @@ defmodule WorkerActor do
   """
   def random_move cell_position, grid, neighbors do
     available_directions =
-      Map.get(neighbors, cell_position)
-      |> Enum.filter(fn {_, position} -> Map.get(grid, position) == :empty end)
+      neighbors[cell_position]
+      |> Enum.filter(fn {_, position} ->
+        grid[position] == :empty end)
       |> Enum.map(fn {direction, _} -> direction end)
 
     case available_directions do
@@ -74,6 +75,9 @@ defmodule WorkerActor do
     end
   end
 
+  @doc"""
+  apply action from all accepted plans -> returns {grid, accepted_plans}
+"""
   def process_plans grid, plans do
     process_plans_inner(grid, [], plans)
   end
@@ -90,11 +94,13 @@ defmodule WorkerActor do
       process_plans_inner(grid, accepted_plans, plans)
     end
   end
-
+  @doc"""
+  check if plan can be executed (here: if target field is empty)
+"""
   def validate_plan grid, plan do
     case plan do
       {}               -> false
-      {{target, _}, _} -> Map.get(grid, target) == :empty
+      {{target, _}, _} -> grid[target] == :empty
     end
   end
 
@@ -106,18 +112,30 @@ defmodule WorkerActor do
     apply_consequences(%{grid | target => action}, consequences)
   end
 
-  def calculate_signal_updates grid, neighbors, signal do
-    signal
-    |> Enum.map(fn {coords, _cell_signal} -> {coords, calculate_signal_update(coords, grid, Map.get(neighbors, coords), signal)} end)
+  @doc"""
+  calculate new signals for all cells
+"""
+  def calculate_signal_updates cells_by_coord, neighbors_by_coord, signal_by_coord do
+    all_coords = Map.keys(signal_by_coord)
+    all_coords
+    |> Enum.map(fn coords ->
+      {coords, calculate_signal_update(coords, cells_by_coord, neighbors_by_coord[coords], signal_by_coord)} end)
     |> Map.new
   end
-
-  def calculate_signal_update coords, grid, cell_neighbors, signal do
-    Map.get(signal, coords)
-    |> Enum.map(fn {direction, _direction_signal} -> {direction, calculate_signal_for_direction(direction, grid, Map.get(cell_neighbors, direction, nil), signal)} end)
+  @doc"""
+    calculate new signal for given coordinates
+    returns map {direction => new_signal}
+  """
+  def calculate_signal_update coords, cells_by_coord, cell_neighbors, signals_by_coord do
+    signals_by_coord[coords]
+    |> Enum.map(fn {direction, _direction_signal} ->
+      {direction, calculate_signal_for_direction(direction, cells_by_coord, Map.get(cell_neighbors, direction, nil), signals_by_coord)} end)
     |> Map.new
   end
-
+  @doc"""
+    calculate signal for given directions
+    returns generated + propagated signal for given direction
+  """
   def calculate_signal_for_direction direction, grid, neighbor_coords, signal do
     cond do
       direction in [:top, :right, :bottom, :left] ->
@@ -126,33 +144,44 @@ defmodule WorkerActor do
           _   ->
             propagated_signal =
               with_adjacent(direction)
-              |> Enum.map(fn neighbor_direction -> Map.get(Map.get(signal, neighbor_coords), neighbor_direction) end)
+              |> Enum.map(fn neighbor_direction ->
+                Map.get(signal[neighbor_coords], neighbor_direction) end)
               |> Enum.sum
 
-            generated_signal = generate_signal Map.get(grid, neighbor_coords)
+            generated_signal = generate_signal(grid[neighbor_coords])
 
             propagated_signal + generated_signal
         end
       direction in [:top_right, :bottom_right, :bottom_left, :top_left] ->
         case neighbor_coords do
           nil -> 0
-          _   -> Map.get(Map.get(signal, neighbor_coords), direction) + generate_signal Map.get(grid, neighbor_coords)
+          _   -> Map.get(signal[neighbor_coords], direction) + generate_signal(grid[neighbor_coords])
         end
       true -> 0
     end
   end
 
-  def apply_signal_updates old_signal, signal_update, grid do
-    old_signal
-    |> Enum.map(fn {coords, cell_signal} -> {coords, apply_signal_update(cell_signal, Map.get(signal_update, coords), signal_factor Map.get(grid, coords))} end)
+  @doc"""
+    apply signal update for all cells
+  @old_signal: signal from previous iteration
+  @signal_update: generated and propagated signal in this iteration for each cell
+  """
+  def apply_signal_updates old_signal_by_coord, signal_update_by_coord, grid do
+    old_signal_by_coord
+    |> Enum.map(fn {coords, cell_signal} ->
+      {coords, apply_signal_update(cell_signal, signal_update_by_coord[coords], signal_factor(grid[coords]))} end)
     |> Map.new
   end
 
-  def apply_signal_update cell_signal, cell_signal_update, cell_signal_factor do
-    cell_signal
+  @doc"""
+    returns new value of signal per direction for given cell:
+    new signal with suppression factor added to old signal, then attenuated and multiplied by cell_signal_factor
+  """
+  def apply_signal_update old_cell_signal, cell_signal_update, cell_signal_factor do
+    old_cell_signal
     |> Enum.map(fn {direction, signal} ->
       {direction,
-        (signal + Map.get(cell_signal_update, direction) * @signal_suppression_factor) * @signal_attenuation_factor * cell_signal_factor} end)
+        (signal + cell_signal_update[direction] * @signal_suppression_factor) * @signal_attenuation_factor * cell_signal_factor} end)
     |> Map.new
   end
 
