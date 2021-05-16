@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="nx" type="mix">
+    <CLASSES>
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
