@@ -19,8 +19,8 @@ defmodule DistributedSimulator do
   Runs simulation.
   """
   def start do
-    {cells_by_coords, neighbors} = make_grid()
-    grid = populate_evenly cells_by_coords
+    grid = make_grid()
+    grid = populate_evenly grid
     signal = initialize_signal Map.keys(cells_by_coords)
 
     pid = spawn(WorkerActor, :listen, [grid, neighbors, signal])
@@ -30,17 +30,15 @@ defmodule DistributedSimulator do
     :ok
   end
 
-  # create grid as Map {coords => cell}, with initially empty cells
   defp make_grid do
     {x_size, y_size} = get_size()
 
-    cells = for k_x <- 1..x_size, k_y <- 1..y_size, into: %{}, do: {{k_x, k_y}, :empty}
-    neighbors = cells
-                |> Enum.map(fn {coords, _} -> {coords,
-                                                (for direction <- @directions, is_valid(shift(coords, direction)), into: %{}, do: {direction, shift(coords, direction)})} end)
-                |> Map.new
-
-    {cells, neighbors}
+    cells =
+      for _x <- 1..x_size, do: (
+        for _y <- 1..y_size, do: (
+          for _dir <- 1..9, do: 0))
+    grid = Nx.tensor(cells)
+    grid
   end
 
   # checks if given coordinates are within grid bounds
