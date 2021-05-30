@@ -27,5 +27,6 @@
     <orderEntry type="library" name="ex_unit_notifier" level="project" />
     <orderEntry type="library" name="ex_doc" level="project" />
     <orderEntry type="library" name="nx" level="project" />
+    <orderEntry type="library" name="typed_struct" level="project" />
   </component>
 </module>

@@ -5,8 +5,16 @@
       <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
       <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
       <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
+      <root url="file://$PROJECT_DIR$/_build/dev/lib/nx/ebin" />
     </CLASSES>
     <JAVADOC />
-    <SOURCES />
+    <SOURCES>
+      <root url="file://$PROJECT_DIR$/../nx/nx/lib" />
+      <root url="file://$PROJECT_DIR$/../nx/nx/lib" />
+      <root url="file://$PROJECT_DIR$/../nx/nx/lib" />
+    </SOURCES>
   </library>
 </component>
