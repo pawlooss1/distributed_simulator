@@ -77,7 +77,7 @@ defmodule DistributedSimulator do
   defp as_list(cell, map) do
     case map[cell] do
       :empty -> for _ <- 1..9, do: 0
-      :mock -> [0, 0, 0, 0, 1, 0, 0, 0, 0]
+      :mock -> [1, 0, 0, 0, 0, 0, 0, 0, 0]
     end
   end
 

@@ -6,18 +6,22 @@ defmodule WorkerActor do
 #  import Position
   import Utils
 
-  @top 0
-  @top_right 1
-  @right 2
-  @bottom_right 3
-  @bottom 4
-  @bottom_left 5
-  @left 6
-  @top_left 7
+  @dir_stay 0
+  @dir_top 1
+  @dir_top_right 2
+  @dir_right 3
+  @dir_bottom_right 4
+  @dir_bottom 5
+  @dir_bottom_left 6
+  @dir_left 7
+  @dir_top_left 8
 
   @max_iterations 5
   @signal_suppression_factor 0.4
   @signal_attenuation_factor 0.4
+
+  @empty 0
+  @mock 1
 
   @doc """
   For now abandon 'Alternative' from discarded plans in remote plans (no use of it in Mock example).
@@ -37,9 +41,9 @@ defmodule WorkerActor do
 
       {:remote_plans, iteration, plans} ->
         IO.inspect plans
-
-
-#        {updated_grid, accepted_plans} = process_plans(cells_by_coords, Enum.shuffle(plans))
+        {updated_grid, accepted_plans} = process_plans(grid, plans)
+        IO.inspect updated_grid
+        IO.inspect accepted_plans
 #        consequences = Enum.map(accepted_plans, fn {_, consequence} -> consequence end)
 #
 #        distribute_consequences(iteration, consequences)
@@ -67,9 +71,9 @@ defmodule WorkerActor do
       while {i = 0, plans = Nx.broadcast(Nx.tensor(0), {x_size, y_size}), grid}, Nx.less(i, x_size) do
         {_i, _j, plans, _grid} =
           while {i, j = 0, plans, grid}, Nx.less(j, y_size) do
-            if Nx.equal(grid[i][j][4], 1) do
+            if Nx.equal(grid[i][j][0], @mock) do
               {_i, _j, _direction, availability, availability_size, _grid} =
-                while {i, j, direction = 0, availability =  Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid}, Nx.less(direction, 8) do
+                while {i, j, direction = 1, availability =  Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid}, Nx.less(direction, 9) do
                   {x, y} = shift({i, j}, direction)
 
                   if is_valid({x, y}, grid) do
@@ -94,17 +98,67 @@ defmodule WorkerActor do
     plans
   end
 
+  def create_plans2(grid) do
+    {x_size, y_size, _z_size} = Nx.shape(grid)
+    plans =  Nx.map(Nx.iota({x_size, y_size}), fn ordinal ->
+      create_plan(grid[Nx.quotient(ordinal, y_size)][Nx.remainder(ordinal,y_size)]) end)
+  end
+
+  defn create_plan values do
+    values[0]
+  end
+
+  def process_plans(grid, plans) do
+    {x_size, y_size, _z_size} = Nx.shape(grid)
+    order = 0..(x_size*y_size-1)
+    |> Enum.shuffle
+    |> Nx.tensor
+    process_plans_in_order(grid, plans, order)
+  end
+
+  defn process_plans_in_order(grid, plans, order)do
+    {x_size, y_size, _z_size} = Nx.shape(grid)
+    {order_len} = Nx.shape(order)
+    {_i, _order, plans, grid, _y_size, accepted_plans} =
+      while {i = 0, order, plans, grid, y_size, accepted_plans= Nx.broadcast(0, {x_size, y_size})}, Nx.less(i, order_len) do
+          ordinal = order[i]
+          {x, y} = {Nx.quotient(ordinal, y_size), Nx.remainder(ordinal, y_size)}
+          {x_new, y_new} = shift({x, y}, plans[x][y])
+          if Nx.not_equal(grid[x][y][0], @empty) and Nx.equal(grid[x_new][y_new][0], @empty) do
+            grid = Nx.put_slice(grid, Nx.broadcast(grid[x][y][0], {1, 1, 1}), [x_new, y_new, 0])
+            accepted_plans = Nx.put_slice(accepted_plans, Nx.broadcast(1, {1, 1}), [x, y])
+            grid = Nx.put_slice(grid, Nx.broadcast(0, {1, 1, 1}), [x, y, 0])
+            {i+1, order, plans, grid, y_size, accepted_plans}
+            else
+            {i+1, order, plans, grid, y_size, accepted_plans}
+          end
+      end
+    {grid, accepted_plans}
+  end
+
+# todo my process plan
+#  def process_plan(grid, plans, ordinal) do
+#    {x, y} = {Nx.quotient(ordinal, y_size), Nx.remainder(ordinal, y_size)}
+#    if validate_plan(grid, plans, x, y) do
+#      {x_new, y_new} = shift({x, y}, plans[x][y])
+#      entity = grid[x][y][0]
+#      grid = Nx.put_slice(grid, Nx.broadcast(entity, {1, 1}), [x_new, y_new])
+#      grid = Nx.put_slice(grid, Nx.broadcast(0, {1, 1}), [x, y])
+#    end
+#  end
+
   defn shift({x, y}, direction) do
     cond do
-      Nx.equal(direction, @top) -> {x-1, y}
-      Nx.equal(direction, @top_right) -> {x-1, y+1}
-      Nx.equal(direction, @right) -> {x, y+1}
-      Nx.equal(direction, @bottom_right) -> {x+1, y+1}
-      Nx.equal(direction, @bottom) -> {x+1, y}
-      Nx.equal(direction, @bottom_left) -> {x+1, y-1}
-      Nx.equal(direction, @left) -> {x, y-1}
-      Nx.equal(direction, @top_left) -> {x-1, y-1}
-      true -> {0, 0}
+      Nx.equal(direction, @dir_stay) -> {x, y}
+      Nx.equal(direction, @dir_top) -> {x-1, y}
+      Nx.equal(direction, @dir_top_right) -> {x-1, y+1}
+      Nx.equal(direction, @dir_right) -> {x, y+1}
+      Nx.equal(direction, @dir_bottom_right) -> {x+1, y+1}
+      Nx.equal(direction, @dir_bottom) -> {x+1, y}
+      Nx.equal(direction, @dir_bottom_left) -> {x+1, y-1}
+      Nx.equal(direction, @dir_left) -> {x, y-1}
+      Nx.equal(direction, @dir_top_left) -> {x-1, y-1}
+      true -> {0, 0} # todo why? shouldnt throw?
     end
   end
 
@@ -163,12 +217,14 @@ defmodule WorkerActor do
 #  @doc"""
 #  check if plan can be executed (here: if target field is empty)
 #"""
-#  def validate_plan cells_by_coords, plan do
-#    case plan do
-#      {}               -> false
-#      {{target, _}, _} -> cells_by_coords[target] == :empty
-#    end
-#  end
+  def validate_plan grid, plans, x, y do
+    case plans[x][y] do
+      @dir_stay -> true
+      dir ->
+        {x2, y2} = shift({x,y}, dir)
+        grid[x2][y2][0] == @empty
+    end
+  end
 #  @doc"""
 #    return cells_by_coords with applied given consequences
 #  """
