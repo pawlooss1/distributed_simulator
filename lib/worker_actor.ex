@@ -48,12 +48,14 @@ defmodule WorkerActor do
         # todo - now action+cons applied at once
         #todo could apply alternatives as well if those existed, without changing input :D
 #
-#        distribute_consequences(iteration, plans, accepted_plans)
-#        listen(updated_grid)
+        distribute_consequences(iteration, plans, accepted_plans)
+        listen(updated_grid)
 #
       {:remote_consequences, iteration, plans, accepted_plans} ->
         updated_grid = apply_consequences(grid, plans, accepted_plans)
-#
+        IO.inspect updated_grid
+
+      #
 #        distribute_signal(iteration, calculate_signal_updates(cells_by_coords, neighbors_by_coords, signal_by_coords))
 #        listen(updated_grid, neighbors_by_coords, signal_by_coords)
 #
@@ -94,15 +96,15 @@ defmodule WorkerActor do
     plans
   end
 
-  defn create_plan_mock(x, y, grid) do
+  defn create_plan_mock(i, j, grid) do
     {_i, _j, _direction, availability, availability_size, _grid} =
-      while {x, y, direction = 1, availability =  Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid}, Nx.less(direction, 9) do
-        {x, y} = shift({x, y}, direction)
+      while {i, j, direction = 1, availability =  Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid}, Nx.less(direction, 9) do
+        {x, y} = shift({i, j}, direction)
 
         if is_valid({x, y}, grid) do
-          {x, y, direction + 1, Nx.put_slice(availability, Nx.broadcast(direction, {1}), [curr]), curr + 1, grid}
+          {i, j, direction + 1, Nx.put_slice(availability, Nx.broadcast(direction, {1}), [curr]), curr + 1, grid}
         else
-          {x, y, direction + 1, availability, curr, grid}
+          {i, j, direction + 1, availability, curr, grid}
         end
       end
 
@@ -159,7 +161,6 @@ defmodule WorkerActor do
       consequence = plans[x][y][2]
       if Nx.equal(grid[x_target][y_target][0], @empty) do
         grid = Nx.put_slice(grid, Nx.broadcast(action, {1, 1, 1}), [x_target, y_target, 0])
-#        grid = Nx.put_slice(grid, Nx.broadcast(consequence, {1, 1, 1}), [x, y, 0]) now consequences applied separately
         accepted_plans = Nx.put_slice(accepted_plans, Nx.broadcast(1, {1, 1}), [x, y])
         {grid, accepted_plans}
         else
@@ -264,19 +265,8 @@ defmodule WorkerActor do
           end
         {i + 1, grid, plans, accepted_plans}
       end
-
+    grid
   end
-#  @doc"""
-#    return cells_by_coords with applied given consequences
-#  """
-#  def apply_consequences cells_by_coords, [] do
-#    cells_by_coords
-#  end
-#  def apply_consequences cells_by_coord, [consequence | consequences] do
-#    {target, action} = consequence
-#    apply_consequences(%{cells_by_coord | target => action}, consequences)
-#  end
-#
 #  @doc"""
 #  calculate new signals for all cells
 #"""
