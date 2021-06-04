@@ -64,29 +64,23 @@ defmodule WorkerActor do
     end
   end
 
+    @doc """
+    Each plan is a tensor: [direction, action, consequence]
+    action: what should be the state of target cell (pointed by direction)
+    consequence: what should be in current cell (applied only if plan executed)
+    e.x.: mock wants to move up: [@dir_up, @mock, @empty]
+    """
   defn create_plans(grid) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, plans, _grid} =
-      while {i = 0, plans = Nx.broadcast(Nx.tensor(0), {x_size, y_size}), grid}, Nx.less(i, x_size) do
+      while {i = 0, plans = Nx.broadcast(Nx.tensor(0), {x_size, y_size, 3}), grid}, Nx.less(i, x_size) do
         {_i, _j, plans, _grid} =
           while {i, j = 0, plans, grid}, Nx.less(j, y_size) do
             if Nx.equal(grid[i][j][0], @mock) do
-              {_i, _j, _direction, availability, availability_size, _grid} =
-                while {i, j, direction = 1, availability =  Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid}, Nx.less(direction, 9) do
-                  {x, y} = shift({i, j}, direction)
-
-                  if is_valid({x, y}, grid) do
-                    {i, j, direction + 1, Nx.put_slice(availability, Nx.broadcast(direction, {1}), [curr]), curr + 1, grid}
-                  else
-                    {i, j, direction + 1, availability, curr, grid}
-                  end
-                end
-
-              index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
-              direction = availability[index]
-
-              {i, j + 1, Nx.put_slice(plans, Nx.broadcast(direction, {1, 1}), [i, j]), grid}
+              plan = create_plan_mock(i, j, grid)
+              plans = Nx.put_slice(plans, Nx.broadcast(plan, {1,1,3}), [i, j, 0])
+              {i, j + 1, plans, grid}
             else
               {i, j + 1, plans, grid}
             end
@@ -98,6 +92,30 @@ defmodule WorkerActor do
     plans
   end
 
+  defn create_plan_mock(x, y, grid) do
+    {_i, _j, _direction, availability, availability_size, _grid} =
+      while {x, y, direction = 1, availability =  Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid}, Nx.less(direction, 9) do
+        {x, y} = shift({x, y}, direction)
+
+        if is_valid({x, y}, grid) do
+          {x, y, direction + 1, Nx.put_slice(availability, Nx.broadcast(direction, {1}), [curr]), curr + 1, grid}
+        else
+          {x, y, direction + 1, availability, curr, grid}
+        end
+      end
+
+    index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
+    # todo to_scalar doesn't work in defn, and tensor([scalar-tensor, scalar, scalar]) doesnt work,
+    # so to create [dir, mock, empty] we convert dir (scalar tensor)
+    # to tensor of shape [1]
+    direction = availability[index]
+    direction = Nx.reshape(direction, {1})
+    action_consequence = Nx.tensor([@mock, @empty])
+    plan = Nx.concatenate([direction, action_consequence])
+    plan
+  end
+
+  # todo celaner architecture proposition, if nx implements new functions
   def create_plans2(grid) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
     plans =  Nx.map(Nx.iota({x_size, y_size}), fn ordinal ->
@@ -119,33 +137,34 @@ defmodule WorkerActor do
   defn process_plans_in_order(grid, plans, order)do
     {x_size, y_size, _z_size} = Nx.shape(grid)
     {order_len} = Nx.shape(order)
-    {_i, _order, plans, grid, _y_size, accepted_plans} =
+    {_i, _order, _plans, grid, _y_size, accepted_plans} =
       while {i = 0, order, plans, grid, y_size, accepted_plans= Nx.broadcast(0, {x_size, y_size})}, Nx.less(i, order_len) do
           ordinal = order[i]
           {x, y} = {Nx.quotient(ordinal, y_size), Nx.remainder(ordinal, y_size)}
-          {x_new, y_new} = shift({x, y}, plans[x][y])
-          if Nx.not_equal(grid[x][y][0], @empty) and Nx.equal(grid[x_new][y_new][0], @empty) do
-            grid = Nx.put_slice(grid, Nx.broadcast(grid[x][y][0], {1, 1, 1}), [x_new, y_new, 0])
-            accepted_plans = Nx.put_slice(accepted_plans, Nx.broadcast(1, {1, 1}), [x, y])
-            grid = Nx.put_slice(grid, Nx.broadcast(0, {1, 1, 1}), [x, y, 0])
-            {i+1, order, plans, grid, y_size, accepted_plans}
-            else
-            {i+1, order, plans, grid, y_size, accepted_plans}
-          end
+          {grid, accepted_plans} = process_plan(x, y, plans, grid, accepted_plans)
+          {i+1, order, plans, grid, y_size, accepted_plans}
       end
     {grid, accepted_plans}
   end
 
-# todo my process plan
-#  def process_plan(grid, plans, ordinal) do
-#    {x, y} = {Nx.quotient(ordinal, y_size), Nx.remainder(ordinal, y_size)}
-#    if validate_plan(grid, plans, x, y) do
-#      {x_new, y_new} = shift({x, y}, plans[x][y])
-#      entity = grid[x][y][0]
-#      grid = Nx.put_slice(grid, Nx.broadcast(entity, {1, 1}), [x_new, y_new])
-#      grid = Nx.put_slice(grid, Nx.broadcast(0, {1, 1}), [x, y])
-#    end
-#  end
+  defn process_plan(x, y, plans, grid, accepted_plans) do
+    object = grid[x][y][0]
+    if Nx.equal(object, @empty) do
+      {grid, accepted_plans}
+      else
+      {x_target, y_target} = shift({x, y}, plans[x][y][0])
+      action = plans[x][y][1]
+      consequence = plans[x][y][2]
+      if Nx.equal(grid[x_target][y_target][0], @empty) do
+        grid = Nx.put_slice(grid, Nx.broadcast(action, {1, 1, 1}), [x_target, y_target, 0])
+        grid = Nx.put_slice(grid, Nx.broadcast(consequence, {1, 1, 1}), [x, y, 0])
+        accepted_plans = Nx.put_slice(accepted_plans, Nx.broadcast(1, {1, 1}), [x, y])
+        {grid, accepted_plans}
+        else
+        {grid, accepted_plans}
+        end
+    end
+  end
 
   defn shift({x, y}, direction) do
     cond do
