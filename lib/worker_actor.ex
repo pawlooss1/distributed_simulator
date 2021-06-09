@@ -56,9 +56,10 @@ defmodule WorkerActor do
         updated_grid = apply_consequences(grid, plans, accepted_plans)
         IO.inspect("after consequences")
         IO.inspect(updated_grid)
-        updated_grid = calculate_signal_updates(updated_grid)
-        IO.inspect("after signal updates")
-        IO.inspect(updated_grid)
+        update_grid = calculate_signal_updates(updated_grid)
+        IO.inspect("signal updates grid")
+#        update_grid = Nx.reshape(update_grid, {2, 2, 3, 3})
+        IO.inspect(update_grid)
 
         #        distribute_signal(iteration, calculate_signal_updates(cells_by_coords, neighbors_by_coords, signal_by_coords))
         #        listen(updated_grid, neighbors_by_coords, signal_by_coords)
@@ -259,41 +260,60 @@ defmodule WorkerActor do
 
   defn calculate_signal_updates(grid) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
+    {_i, grid, update_grid} =
+      while {i = 0, grid, update_grid = Nx.broadcast(0, Nx.shape(grid))}, Nx.less(i, x_size) do
+        {_i, _j, grid, update_grid} =
+          while {i, j = 0, grid, update_grid}, Nx.less(j, y_size) do
 
-    {_i, grid} =
-      while {i = 0, grid}, Nx.less(i, x_size) do
-        {_i, _j, grid} =
-          while {i, j = 0, grid}, Nx.less(j, y_size) do
+            update_grid = signal_update_for_cell(i, j, grid, update_grid)
 
-            grid = signal_update_for_cell(i, j, grid)
-
-            {i, j + 1, grid}
+            {i, j + 1, grid, update_grid}
           end
-        {i + 1, grid}
+        {i + 1, grid, update_grid}
       end
 
-    grid
+    update_grid
   end
 
-  defn signal_update_for_cell(x, y, grid) do
-    {_x, _y, _dir, grid} =
-      while {x, y, dir = 1, grid}, Nx.less(dir, 9) do
+  @doc """
+    standard signal update for given cell.
+  """
+  defn signal_update_for_cell(x, y, grid, update_grid) do
+    {_x, _y, _dir, _grid, update_grid} =
+      while {x, y, dir = 1, grid, update_grid}, Nx.less(dir, 9) do
         cardinal = Nx.remainder(dir, 2)  # direction in [top, left, right, bottom]
         {x2, y2} = shift({x, y}, dir)  # coords of a cell that we consider signal from
-        propagated_signal =
-          if cardinal do
-            left_adj_dir = dir - 1  # todo zawin
-            right_adj_dir = dir + 1  # todo zawin
-            grid[x2][y2][left_adj_dir] + grid[x2][y2][dir] + grid[x2][y2][right_adj_dir]
-          else
-            grid[x2][y2][dir]
-          end
-        generated_signal = generate_signal(grid[x2][y2][0])
-        update = propagated_signal + generated_signal
-        grid = Nx.put_slice(grid, Nx.broadcast(update, {1, 1, 1}), [x, y, dir])
-        {x, y, dir + 1, grid}
+        if is_valid({x2, y2}, grid) do
+          propagated_signal =
+            if cardinal do
+              grid[x2][y2][adj_left(dir)] + grid[x2][y2][dir] + grid[x2][y2][adj_right(dir)]
+            else
+              grid[x2][y2][dir]
+            end
+          generated_signal = generate_signal(grid[x2][y2][0])
+          update =  generated_signal + propagated_signal
+          update_grid = Nx.put_slice(update_grid, Nx.broadcast(update, {1, 1, 1}), [x, y, dir])
+          {x, y, dir + 1, grid, update_grid}
+        else
+          {x, y, dir + 1, grid, update_grid}
+        end
+
       end
-    grid
+    update_grid
+  end
+
+  @doc """
+      get next direction, clockwise ( @top -> @top_right, @top_left -> @top)
+  """
+  defn adj_left(dir) do
+    Nx.remainder((8 + dir - 2), 8) + 1
+  end
+
+  @doc """
+      get next direction, counterclockwise ( @top -> @top_left, @right -> @bottom_right)
+  """
+  defn adj_right(dir) do
+    Nx.remainder(dir, 8) + 1
   end
 
 
