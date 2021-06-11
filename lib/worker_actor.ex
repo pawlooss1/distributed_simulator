@@ -281,22 +281,15 @@ defmodule WorkerActor do
   defn signal_update_for_cell(x, y, grid, update_grid) do
     {_x, _y, _dir, _grid, update_grid} =
       while {x, y, dir = 1, grid, update_grid}, Nx.less(dir, 9) do
-        # direction in [top, left, right, bottom]
-        cardinal = Nx.remainder(dir, 2)
         # coords of a cell that we consider signal from
         {x2, y2} = shift({x, y}, dir)
 
         if is_valid({x2, y2}, grid) do
-          propagated_signal =
-            if cardinal do
-              grid[x2][y2][adj_left(dir)] + grid[x2][y2][dir] + grid[x2][y2][adj_right(dir)]
-            else
-              grid[x2][y2][dir]
-            end
+          update_value = signal_update_from_direction(x2, y2, grid, dir)
 
-          generated_signal = generate_signal(grid[x2][y2][0])
-          update = generated_signal + propagated_signal
-          update_grid = Nx.put_slice(update_grid, Nx.broadcast(update, {1, 1, 1}), [x, y, dir])
+          update_grid =
+            Nx.put_slice(update_grid, Nx.broadcast(update_value, {1, 1, 1}), [x, y, dir])
+
           {x, y, dir + 1, grid, update_grid}
         else
           {x, y, dir + 1, grid, update_grid}
@@ -304,6 +297,27 @@ defmodule WorkerActor do
       end
 
     update_grid
+  end
+
+  @doc """
+      calculate generated+propagated signal:
+       coming from given cell - {x_from, y_from}, from direction dir
+       coordinates of a calling cell don't matter (but can be reconstructed moving 1 step in opposite direction)
+  """
+  defn signal_update_from_direction(x_from, y_from, grid, dir) do
+    # direction in [top, left, right, bottom]
+    cardinal = Nx.remainder(dir, 2)
+    generated_signal = generate_signal(grid[x_from][y_from][0])
+
+    propagated_signal =
+      if cardinal do
+        grid[x_from][y_from][adj_left(dir)] + grid[x_from][y_from][dir] +
+          grid[x_from][y_from][adj_right(dir)]
+      else
+        grid[x_from][y_from][dir]
+      end
+
+    generated_signal + propagated_signal
   end
 
   @doc """
