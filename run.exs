@@ -1,3 +1,3 @@
 alias Simulator.Launcher
 :ok = Launcher.start(:nx)
-#:ok = Launcher.start(:elixir)
+#:ok = Launcher.start(:standard)

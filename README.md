@@ -1,6 +1,14 @@
-# DistributedSimulator
+# Distributed Simulator
 
-**TODO: Add description**
+Firstly, install dependencies:
+```bash
+mix deps.get
+```
+
+Then run:
+```bash
+mix run --no-halt run.exs
+```
 
 ## Installation
 

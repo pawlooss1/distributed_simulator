@@ -1,4 +1,4 @@
-defmodule Position do
+defmodule Simulator.Standard.Position do
   @moduledoc false
 
   @directions [:top, :top_right, :right, :bottom_right, :bottom, :bottom_left, :left, :top_left]
@@ -24,7 +24,7 @@ defmodule Position do
   @doc"""
   returns coordinates shifted by direction, e.g :
   {1,2}, :top -> {1,3}
-"""
+  """
   def shift coord, direction do
     sum(coord, to_coords(direction))
   end
@@ -32,7 +32,7 @@ defmodule Position do
   @doc"""
   returns given direction with its adjacent directions, e.g:
   :top -> [:top_left, :top, :top_right]
-"""
+  """
   def with_adjacent direction do
     index = Enum.find_index(@directions, &(&1 == direction))
     len = length(@directions)

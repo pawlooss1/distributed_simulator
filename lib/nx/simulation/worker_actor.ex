@@ -1,10 +1,8 @@
-defmodule WorkerActor do
+defmodule Simulator.Nx.WorkerActor do
   @moduledoc false
 
-  import Cell
   import Nx.Defn
-  #  import Position
-  import Utils
+  import Simulator.Nx.Cell
 
   @dir_stay 0
   @dir_top 1
@@ -61,6 +59,7 @@ defmodule WorkerActor do
         updated_grid = apply_consequences(grid, plans, accepted_plans)
         IO.inspect("after consequences")
         IO.inspect(updated_grid)
+
         signal_update = calculate_signal_updates(updated_grid)
         IO.inspect("signal updates grid")
         IO.inspect(signal_update)
@@ -85,7 +84,7 @@ defmodule WorkerActor do
   consequence: what should be in current cell (applied only if plan executed)
   e.x.: mock wants to move up: [@dir_up, @mock, @empty]
   """
-  defn create_plans(grid) do
+  defnp create_plans(grid) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, plans, _grid} =
@@ -108,7 +107,7 @@ defmodule WorkerActor do
     plans
   end
 
-  defn create_plan_mock(i, j, grid) do
+  defnp create_plan_mock(i, j, grid) do
     {_i, _j, _direction, availability, availability_size, _grid} =
       while {i, j, direction = 1, availability = Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid},
             Nx.less(direction, 9) do
@@ -136,7 +135,7 @@ defmodule WorkerActor do
     Nx.concatenate([direction, action_consequence])
   end
 
-  # todo cleaner architecture proposition, if nx implements new functions
+#  # todo cleaner architecture proposition, if nx implements new functions
 #  def create_plans2(grid) do
 #    {x_size, y_size, _z_size} = Nx.shape(grid)
 #
@@ -145,13 +144,13 @@ defmodule WorkerActor do
 #        create_plan(grid[Nx.quotient(ordinal, y_size)][Nx.remainder(ordinal, y_size)])
 #      end)
 #  end
+#
+#  defn create_plan(values) do
+#    values[0]
+#  end
 
-  defn create_plan(values) do
-    values[0]
-  end
-
-  # todo shuffle in defn
-  def process_plans(grid, plans) do
+  # todo; make our own shuffle to use it in defn
+  defp process_plans(grid, plans) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     order =
@@ -162,7 +161,7 @@ defmodule WorkerActor do
     process_plans_in_order(grid, plans, order)
   end
 
-  defn process_plans_in_order(grid, plans, order) do
+  defnp process_plans_in_order(grid, plans, order) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
     {order_len} = Nx.shape(order)
 
@@ -180,7 +179,7 @@ defmodule WorkerActor do
     {grid, accepted_plans}
   end
 
-  defn process_plan(x, y, plans, grid, accepted_plans) do
+  defnp process_plan(x, y, plans, grid, accepted_plans) do
     object = grid[x][y][0]
 
     if Nx.equal(object, @empty) do
@@ -201,7 +200,7 @@ defmodule WorkerActor do
     end
   end
 
-  defn shift({x, y}, direction) do
+  defnp shift({x, y}, direction) do
     cond do
       Nx.equal(direction, @dir_stay) -> {x, y}
       Nx.equal(direction, @dir_top) -> {x - 1, y}
@@ -220,18 +219,18 @@ defmodule WorkerActor do
   @doc """
   Checks if plan can be executed (here: if target field is empty).
   """
-  def validate_plan(grid, plans, x, y) do
-    case plans[x][y] do
-      @dir_stay ->
-        true
+  defnp validate_plan(grid, plans, x, y) do
+    direction = plans[x][y]
 
-      dir ->
-        {x2, y2} = shift({x, y}, dir)
-        grid[x2][y2][0] == @empty
+    cond do
+      Nx.equal(direction, @dir_stay) -> true
+      :otherwise ->
+        {x2, y2} = shift({x, y}, direction)
+        Nx.equal(grid[x2][y2][0], @empty)
     end
   end
 
-  defn apply_consequences(grid, plans, accepted_plans) do
+  defnp apply_consequences(grid, plans, accepted_plans) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, grid, _plans, _accepted_plans} =
@@ -254,7 +253,7 @@ defmodule WorkerActor do
     grid
   end
 
-  defn calculate_signal_updates(grid) do
+  defnp calculate_signal_updates(grid) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, grid, update_grid} =
@@ -275,7 +274,7 @@ defmodule WorkerActor do
   @doc """
   Standard signal update for given cell.
   """
-  defn signal_update_for_cell(x, y, grid, update_grid) do
+  defnp signal_update_for_cell(x, y, grid, update_grid) do
     {_x, _y, _dir, _grid, update_grid} =
       while {x, y, dir = 1, grid, update_grid}, Nx.less(dir, 9) do
         # coords of a cell that we consider signal from
@@ -302,7 +301,7 @@ defmodule WorkerActor do
   It is coming from given cell - {x_from, y_from}, from direction dir.
   Coordinates of a calling cell don't matter (but can be reconstructed moving 1 step in opposite direction).
   """
-  defn signal_update_from_direction(x_from, y_from, grid, dir) do
+  defnp signal_update_from_direction(x_from, y_from, grid, dir) do
     is_cardinal =
       Nx.remainder(dir, 2)
       |> Nx.equal(1)
@@ -321,6 +320,21 @@ defmodule WorkerActor do
   end
 
   @doc """
+  Get next direction, counterclockwise ( @top -> @top_left, @right -> @bottom_right)
+  """
+  defnp adj_left(dir) do
+    Nx.remainder(8 + dir - 2, 8) + 1
+  end
+
+  @doc """
+  Get next direction, clockwise (@top -> @top_right, @top_left -> @top)
+  """
+  defnp adj_right(dir) do
+    Nx.remainder(dir, 8) + 1
+  end
+
+  # todo; currently it truncates signal values if they are not integers. We can consider rounding them instead
+  @doc """
   Applies signal update.
 
   Cuts out only signal (without object) from `grid` and `signal_update`, performs applying update and puts result back
@@ -336,7 +350,7 @@ defmodule WorkerActor do
   - A - `@signal_attenuation_factor`
   - f - `signal_factor` function - returned value depends on the contents of the cell
   """
-  defn apply_signal_update(grid, signal_update) do
+  defnp apply_signal_update(grid, signal_update) do
     signal_factors = map_signal_factor(grid)
 
     signal = Nx.slice_axis(grid, 1, 8, 2)
@@ -357,7 +371,7 @@ defmodule WorkerActor do
   Returns 3D tensor with shape {x, y, 1}, where {x, y, _z} is a shape of the passed `grid`. Tensor gives a factor for
   every cell to multiply it by signal in that cell. Value depends on the contents of the cell - obstacles block signal.
   """
-  defn map_signal_factor(grid) do
+  defnp map_signal_factor(grid) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, _grid, signal_factors} =
@@ -376,48 +390,10 @@ defmodule WorkerActor do
     signal_factors
   end
 
-#  @doc """
-#  Apply signal update for all cells
-#  @old_signal: signal from previous iteration
-#  @signal_update: generated and propagated signal in this iteration for each cell
-#  """
-#  def apply_signal_updates old_signal_by_coord, signal_update_by_coord, cells_by_coords do
-#    old_signal_by_coord
-#    |> Enum.map(fn {coords, cell_signal} ->
-#      {coords, apply_signal_update(cell_signal, signal_update_by_coord[coords], signal_factor(cells_by_coords[coords]))} end)
-#    |> Map.new
-#  end
-#
-#  @doc """
-#    returns new value of signal per direction for given cell:
-#    new signal with suppression factor added to old signal, then attenuated and multiplied by cell_signal_factor
-#  """
-#  def apply_signal_update old_cell_signal, cell_signal_update, cell_signal_factor do
-#    old_cell_signal
-#    |> Enum.map(fn {direction, signal} ->
-#      {direction,
-#        (signal + cell_signal_update[direction] * @signal_suppression_factor) * @signal_attenuation_factor * cell_signal_factor} end)
-#    |> Map.new
-#  end
-
-  @doc """
-  Get next direction, counterclockwise ( @top -> @top_left, @right -> @bottom_right)
-  """
-  defn adj_left(dir) do
-    Nx.remainder(8 + dir - 2, 8) + 1
-  end
-
-  @doc """
-  Get next direction, clockwise (@top -> @top_right, @top_left -> @top)
-  """
-  defn adj_right(dir) do
-    Nx.remainder(dir, 8) + 1
-  end
-
   @doc """
   Checks whether the mock can move to position {x, y}.
   """
-  defn can_move({x, y}, grid) do
+  defnp can_move({x, y}, grid) do
     [is_valid({x, y}, grid), Nx.equal(grid[x][y][0], 0)]
     |> Nx.stack()
     |> Nx.all?()
@@ -426,7 +402,7 @@ defmodule WorkerActor do
   @doc """
   Checks if position {x, y} is inside the grid.
   """
-  defn is_valid({x, y}, grid) do
+  defnp is_valid({x, y}, grid) do
     {x_size, y_size, _} = Nx.shape(grid)
 
     [
@@ -439,75 +415,24 @@ defmodule WorkerActor do
     |> Nx.all?()
   end
 
-  #  @doc"""
-  #  calculate new signals for all cells
-  # """
-  #  def calculate_signal_updates cells_by_coord, neighbors_by_coord, signal_by_coord do
-  #    all_coords = Map.keys(signal_by_coord)
-  #    all_coords
-  #    |> Enum.map(fn coords ->
-  #      {coords, calculate_signal_update(coords, cells_by_coord, neighbors_by_coord[coords], signal_by_coord)} end)
-  #    |> Map.new
-  #  end
-  #  @doc"""
-  #    calculate new signal for given coordinates
-  #    returns map {direction => new_signal}
-  #  """
-  #  def calculate_signal_update coords, cells_by_coord, cell_neighbors, signals_by_coord do
-  #    signals_by_coord[coords]
-  #    |> Enum.map(fn {direction, _direction_signal} ->
-  #      {direction, calculate_signal_for_direction(direction, cells_by_coord, Map.get(cell_neighbors, direction, nil), signals_by_coord)} end)
-  #    |> Map.new
-  #  end
-  #  @doc"""
-  #    calculate signal for given directions
-  #    returns generated + propagated signal for given direction
-  #    neighbor_coords - coordinates of a neighbor from direction @direction (e.g. {2,3})
-  #  """
-  #  def calculate_signal_for_direction direction, cells_by_coords, neighbor_coords, signal_by_coords do
-  #    cond do
-  #      direction in [:top, :right, :bottom, :left] ->
-  #        case neighbor_coords do
-  #          nil -> 0
-  #          _   ->
-  #            propagated_signal =
-  #              with_adjacent(direction)
-  #              |> Enum.map(fn neighbor_direction ->
-  #                Map.get(signal_by_coords[neighbor_coords], neighbor_direction) end)
-  #              |> Enum.sum
-  #
-  #            generated_signal = generate_signal(cells_by_coords[neighbor_coords])
-  #
-  #            propagated_signal + generated_signal
-  #        end
-  #      direction in [:top_right, :bottom_right, :bottom_left, :top_left] ->
-  #        case neighbor_coords do
-  #          nil -> 0
-  #          _   -> Map.get(signal_by_coords[neighbor_coords], direction) + generate_signal(cells_by_coords[neighbor_coords])
-  #        end
-  #      true -> 0
-  #    end
-  #  end
-  #
-
   @doc """
   Send each plan to worker managing cells affected by this plan.
   """
-  def distribute_plans(iteration, plans) do
+  defp distribute_plans(iteration, plans) do
     send(self(), {:remote_plans, iteration, plans})
   end
 
   @doc """
   Send each consequence to worker managing cells affected by this plan consequence.
   """
-  def distribute_consequences(iteration, plans, accepted_plans) do
+  defp distribute_consequences(iteration, plans, accepted_plans) do
     send(self(), {:remote_consequences, iteration, plans, accepted_plans})
   end
 
   @doc """
   Send each signal to worker managing cells affected by this signal.
   """
-  def distribute_signal(iteration, signal_update) do
+  defp distribute_signal(iteration, signal_update) do
     send(self(), {:remote_signal, iteration, signal_update})
   end
 end

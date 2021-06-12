@@ -3,12 +3,15 @@ defmodule Simulator.Launcher do
   Choosing implementation.
   """
 
+  alias Simulator.Nx
+  alias Simulator.Standard
+
   def start(:nx) do
-    :ok
+    Nx.start()
   end
 
-  def start(:elixir) do
-    :ok
+  def start(:standard) do
+    Standard.start()
   end
 
 end

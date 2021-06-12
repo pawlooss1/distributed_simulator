@@ -1,4 +1,4 @@
-defmodule Utils do
+defmodule Simulator.Standard.Printer do
   @moduledoc false
 
   @signal_multiplier 30
@@ -6,7 +6,7 @@ defmodule Utils do
   def write_to_file grid, signal, file_name do
     grid_as_string = to_string grid, signal
     IO.puts grid_as_string <> "\n"
-    File.write!("lib/grid_iterations/#{file_name}.txt", grid_as_string)
+    File.write!("lib/standard/grid_iterations/#{file_name}.txt", grid_as_string)
   end
 
   def to_string grid, signal do
@@ -39,5 +39,4 @@ defmodule Utils do
 
     [row_1, row_2, row_3, [""]]
   end
-
 end

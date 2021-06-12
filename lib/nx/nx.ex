@@ -1,33 +1,22 @@
-defmodule DistributedSimulator do
+defmodule Simulator.Nx do
   @moduledoc """
-  Distributed Simulator
-
-  ## To start:
-
-     $ iex -S mix
-     iex> DistributedSimulator.start()
-
-  ## Look to "grid_0.txt", "grid_1.txt", ..., "grid_5.txt" files in lib/grid_iterations
+  Distributed Simulator implemented using Nx library.
   """
 
-  import Position
-  import Utils
-
-  @directions [:top, :top_right, :right, :bottom_right, :bottom, :bottom_left, :left, :top_left]
+  alias Simulator.Nx.WorkerActor
 
   @doc"""
   Runs simulation.
   """
-  def start do
+  def start() do
     grid = make_grid()
 
     grid = populate_evenly grid
-    pretty_print grid
-#    signal = initialize_signal Map.keys(cells_by_coords)
-#
+#    pretty_print grid
+
     pid = spawn(WorkerActor, :listen, [grid])
 #    write_to_file(grid, signal, "grid_0")
-#
+
     send(pid, {:start_iteration, 1})
     :ok
   end
