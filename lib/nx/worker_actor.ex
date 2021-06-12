@@ -35,14 +35,20 @@ defmodule WorkerActor do
 
       {:start_iteration, iteration} ->
         plans = create_plans(grid)
-
+        IO.inspect("plans")
+        IO.inspect(plans)
         distribute_plans(iteration, plans)
         listen(grid)
 
       {:remote_plans, iteration, plans} ->
+        IO.inspect("plans")
         IO.inspect(plans)
+
         {updated_grid, accepted_plans} = process_plans(grid, plans)
+        IO.inspect("updated grid")
         IO.inspect(updated_grid)
+
+        IO.inspect("accepted plans")
         IO.inspect(accepted_plans)
 
         # todo - now action+cons applied at once
@@ -51,24 +57,25 @@ defmodule WorkerActor do
         distribute_consequences(iteration, plans, accepted_plans)
         listen(updated_grid)
 
-      #
       {:remote_consequences, iteration, plans, accepted_plans} ->
         updated_grid = apply_consequences(grid, plans, accepted_plans)
         IO.inspect("after consequences")
         IO.inspect(updated_grid)
-        update_grid = calculate_signal_updates(updated_grid)
+        signal_update = calculate_signal_updates(updated_grid)
         IO.inspect("signal updates grid")
-        IO.inspect(update_grid)
+        IO.inspect(signal_update)
 
-        #        distribute_signal(iteration, calculate_signal_updates(cells_by_coords, neighbors_by_coords, signal_by_coords))
-        #        listen(updated_grid, neighbors_by_coords, signal_by_coords)
-        #
-        #      {:remote_signal, iteration, signal_updates} ->
-        #        updated_signal = apply_signal_updates(signal_by_coords, signal_updates, cells_by_coords)
-        #        write_to_file(cells_by_coords, updated_signal, "grid_#{iteration}")
-        #
-        #        send(self(), {:start_iteration, iteration + 1})
-        #        listen(cells_by_coords, neighbors_by_coords, updated_signal)
+        distribute_signal(iteration, signal_update)
+        listen(updated_grid)
+
+      {:remote_signal, iteration, signal_update} ->
+        updated_grid = apply_signal_update(grid, signal_update)
+        IO.inspect("after signal applying")
+        IO.inspect(updated_grid)
+#        write_to_file(cells_by_coords, updated_signal, "grid_#{iteration}")
+
+        send(self(), {:start_iteration, iteration + 1})
+        listen(updated_grid)
     end
   end
 
@@ -107,7 +114,7 @@ defmodule WorkerActor do
             Nx.less(direction, 9) do
         {x, y} = shift({i, j}, direction)
 
-        if is_valid({x, y}, grid) do
+        if can_move({x, y}, grid) do
           availability = Nx.put_slice(availability, Nx.broadcast(direction, {1}), [curr])
           {i, j, direction + 1, availability, curr + 1, grid}
         else
@@ -120,27 +127,30 @@ defmodule WorkerActor do
     # todo to_scalar doesn't work in defn, and tensor([scalar-tensor, scalar, scalar]) doesnt work,
     # so to create [dir, mock, empty] we convert dir (scalar tensor)
     # to tensor of shape [1]
-    direction = availability[index]
-    direction = Nx.reshape(direction, {1})
+    direction =
+      availability[index]
+      |> Nx.reshape({1})
+
     action_consequence = Nx.tensor([@mock, @empty])
-    plan = Nx.concatenate([direction, action_consequence])
-    plan
+
+    Nx.concatenate([direction, action_consequence])
   end
 
   # todo cleaner architecture proposition, if nx implements new functions
-  def create_plans2(grid) do
-    {x_size, y_size, _z_size} = Nx.shape(grid)
-
-    plans =
-      Nx.map(Nx.iota({x_size, y_size}), fn ordinal ->
-        create_plan(grid[Nx.quotient(ordinal, y_size)][Nx.remainder(ordinal, y_size)])
-      end)
-  end
+#  def create_plans2(grid) do
+#    {x_size, y_size, _z_size} = Nx.shape(grid)
+#
+#    plans =
+#      Nx.map(Nx.iota({x_size, y_size}), fn ordinal ->
+#        create_plan(grid[Nx.quotient(ordinal, y_size)][Nx.remainder(ordinal, y_size)])
+#      end)
+#  end
 
   defn create_plan(values) do
     values[0]
   end
 
+  # todo shuffle in defn
   def process_plans(grid, plans) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
@@ -177,12 +187,13 @@ defmodule WorkerActor do
       {grid, accepted_plans}
     else
       {x_target, y_target} = shift({x, y}, plans[x][y][0])
-      action = plans[x][y][1]
-      consequence = plans[x][y][2]
 
       if Nx.equal(grid[x_target][y_target][0], @empty) do
+        action = plans[x][y][1]
+
         grid = Nx.put_slice(grid, Nx.broadcast(action, {1, 1, 1}), [x_target, y_target, 0])
         accepted_plans = Nx.put_slice(accepted_plans, Nx.broadcast(1, {1, 1}), [x, y])
+
         {grid, accepted_plans}
       else
         {grid, accepted_plans}
@@ -201,27 +212,13 @@ defmodule WorkerActor do
       Nx.equal(direction, @dir_bottom_left) -> {x + 1, y - 1}
       Nx.equal(direction, @dir_left) -> {x, y - 1}
       Nx.equal(direction, @dir_top_left) -> {x - 1, y - 1}
-      # todo why? shouldnt throw?
+      # todo why? shouldn't throw? // I think we cannot throw from defn. Any suggestions what to do with that?
       true -> {0, 0}
     end
   end
 
-  defn is_valid({x, y}, grid) do
-    {x_size, y_size, _} = Nx.shape(grid)
-
-    [
-      Nx.greater_equal(x, 0),
-      Nx.less(x, x_size),
-      Nx.greater_equal(y, 0),
-      Nx.less(y, y_size),
-      Nx.equal(grid[x][y][4], 0)
-    ]
-    |> Nx.stack()
-    |> Nx.all?()
-  end
-
   @doc """
-    check if plan can be executed (here: if target field is empty)
+  Checks if plan can be executed (here: if target field is empty).
   """
   def validate_plan(grid, plans, x, y) do
     case plans[x][y] do
@@ -241,7 +238,7 @@ defmodule WorkerActor do
       while {i = 0, grid, plans, accepted_plans}, Nx.less(i, x_size) do
         {_i, _j, grid, plans, accepted_plans} =
           while {i, j = 0, grid, plans, accepted_plans}, Nx.less(j, y_size) do
-            # todo could apply alternatice here
+            # todo could apply alternative here
             if Nx.equal(accepted_plans[i][j], 1) do
               consequence = plans[i][j][2]
               grid = Nx.put_slice(grid, Nx.broadcast(consequence, {1, 1, 1}), [i, j, 0])
@@ -276,7 +273,7 @@ defmodule WorkerActor do
   end
 
   @doc """
-    standard signal update for given cell.
+  Standard signal update for given cell.
   """
   defn signal_update_for_cell(x, y, grid, update_grid) do
     {_x, _y, _dir, _grid, update_grid} =
@@ -300,17 +297,20 @@ defmodule WorkerActor do
   end
 
   @doc """
-      calculate generated+propagated signal:
-       coming from given cell - {x_from, y_from}, from direction dir
-       coordinates of a calling cell don't matter (but can be reconstructed moving 1 step in opposite direction)
+  Calculate generated + propagated signal.
+
+  It is coming from given cell - {x_from, y_from}, from direction dir.
+  Coordinates of a calling cell don't matter (but can be reconstructed moving 1 step in opposite direction).
   """
   defn signal_update_from_direction(x_from, y_from, grid, dir) do
-    # direction in [top, left, right, bottom]
-    cardinal = Nx.remainder(dir, 2)
+    is_cardinal =
+      Nx.remainder(dir, 2)
+      |> Nx.equal(1)
+
     generated_signal = generate_signal(grid[x_from][y_from][0])
 
     propagated_signal =
-      if cardinal do
+      if is_cardinal do
         grid[x_from][y_from][adj_left(dir)] + grid[x_from][y_from][dir] +
           grid[x_from][y_from][adj_right(dir)]
       else
@@ -321,17 +321,122 @@ defmodule WorkerActor do
   end
 
   @doc """
-      get next direction, clockwise ( @top -> @top_right, @top_left -> @top)
+  Applies signal update.
+
+  Cuts out only signal (without object) from `grid` and `signal_update`, performs applying update and puts result back
+  to the `grid`.
+
+  Applying update is making such operation on every signal value {i, j, dir}:
+  s[i][j][dir] = (s[i][j][dir] + S * u[i][j][dir]) * A * f(g[i][j][0])
+  where
+  - s - a signal grid (3D tensor cut out from `grid`)
+  - u - passed `signal update` (3D tensor)
+  - g - passed `grid`
+  - S - `@signal_suppression_factor`
+  - A - `@signal_attenuation_factor`
+  - f - `signal_factor` function - returned value depends on the contents of the cell
+  """
+  defn apply_signal_update(grid, signal_update) do
+    signal_factors = map_signal_factor(grid)
+
+    signal = Nx.slice_axis(grid, 1, 8, 2)
+
+    updated_signal =
+      signal_update
+      |> Nx.slice_axis(1, 8, 2)
+      |> Nx.multiply(@signal_suppression_factor)
+      |> Nx.add(signal)
+      |> Nx.multiply(@signal_attenuation_factor)
+      |> Nx.multiply(signal_factors)
+      |> Nx.as_type({:s, 64})
+
+    Nx.put_slice(grid, updated_signal, [0, 0, 1])
+  end
+
+  @doc """
+  Returns 3D tensor with shape {x, y, 1}, where {x, y, _z} is a shape of the passed `grid`. Tensor gives a factor for
+  every cell to multiply it by signal in that cell. Value depends on the contents of the cell - obstacles block signal.
+  """
+  defn map_signal_factor(grid) do
+    {x_size, y_size, _z_size} = Nx.shape(grid)
+
+    {_i, _grid, signal_factors} =
+      while {i = 0, grid, signal_factors = Nx.broadcast(0, {x_size, y_size, 1})}, Nx.less(i, x_size) do
+        {_i, _j, grid, signal_factors} =
+          while {i, j = 0, grid, signal_factors}, Nx.less(j, y_size) do
+            cell_signal_factor = Nx.broadcast(signal_factor(grid[i][j][0]), {1, 1, 1})
+            signal_factors = Nx.put_slice(signal_factors, cell_signal_factor, [i, j, 0])
+
+            {i, j + 1, grid, signal_factors}
+          end
+
+        {i + 1, grid, signal_factors}
+      end
+
+    signal_factors
+  end
+
+#  @doc """
+#  Apply signal update for all cells
+#  @old_signal: signal from previous iteration
+#  @signal_update: generated and propagated signal in this iteration for each cell
+#  """
+#  def apply_signal_updates old_signal_by_coord, signal_update_by_coord, cells_by_coords do
+#    old_signal_by_coord
+#    |> Enum.map(fn {coords, cell_signal} ->
+#      {coords, apply_signal_update(cell_signal, signal_update_by_coord[coords], signal_factor(cells_by_coords[coords]))} end)
+#    |> Map.new
+#  end
+#
+#  @doc """
+#    returns new value of signal per direction for given cell:
+#    new signal with suppression factor added to old signal, then attenuated and multiplied by cell_signal_factor
+#  """
+#  def apply_signal_update old_cell_signal, cell_signal_update, cell_signal_factor do
+#    old_cell_signal
+#    |> Enum.map(fn {direction, signal} ->
+#      {direction,
+#        (signal + cell_signal_update[direction] * @signal_suppression_factor) * @signal_attenuation_factor * cell_signal_factor} end)
+#    |> Map.new
+#  end
+
+  @doc """
+  Get next direction, counterclockwise ( @top -> @top_left, @right -> @bottom_right)
   """
   defn adj_left(dir) do
     Nx.remainder(8 + dir - 2, 8) + 1
   end
 
   @doc """
-      get next direction, counterclockwise ( @top -> @top_left, @right -> @bottom_right)
+  Get next direction, clockwise (@top -> @top_right, @top_left -> @top)
   """
   defn adj_right(dir) do
     Nx.remainder(dir, 8) + 1
+  end
+
+  @doc """
+  Checks whether the mock can move to position {x, y}.
+  """
+  defn can_move({x, y}, grid) do
+    [is_valid({x, y}, grid), Nx.equal(grid[x][y][0], 0)]
+    |> Nx.stack()
+    |> Nx.all?()
+  end
+
+  @doc """
+  Checks if position {x, y} is inside the grid.
+  """
+  defn is_valid({x, y}, grid) do
+    {x_size, y_size, _} = Nx.shape(grid)
+
+    [
+      Nx.greater_equal(x, 0),
+      Nx.less(x, x_size),
+      Nx.greater_equal(y, 0),
+      Nx.less(y, y_size)
+    ]
+    |> Nx.stack()
+    |> Nx.all?()
   end
 
   #  @doc"""
@@ -384,47 +489,25 @@ defmodule WorkerActor do
   #    end
   #  end
   #
-  #  @doc"""
-  #    apply signal update for all cells
-  #  @old_signal: signal from previous iteration
-  #  @signal_update: generated and propagated signal in this iteration for each cell
-  #  """
-  #  def apply_signal_updates old_signal_by_coord, signal_update_by_coord, cells_by_coords do
-  #    old_signal_by_coord
-  #    |> Enum.map(fn {coords, cell_signal} ->
-  #      {coords, apply_signal_update(cell_signal, signal_update_by_coord[coords], signal_factor(cells_by_coords[coords]))} end)
-  #    |> Map.new
-  #  end
-  #
-  #  @doc"""
-  #    returns new value of signal per direction for given cell:
-  #    new signal with suppression factor added to old signal, then attenuated and multiplied by cell_signal_factor
-  #  """
-  #  def apply_signal_update old_cell_signal, cell_signal_update, cell_signal_factor do
-  #    old_cell_signal
-  #    |> Enum.map(fn {direction, signal} ->
-  #      {direction,
-  #        (signal + cell_signal_update[direction] * @signal_suppression_factor) * @signal_attenuation_factor * cell_signal_factor} end)
-  #    |> Map.new
-  #  end
+
   @doc """
-    send each plan to worker managing cells affected by this plan
+  Send each plan to worker managing cells affected by this plan.
   """
   def distribute_plans(iteration, plans) do
     send(self(), {:remote_plans, iteration, plans})
   end
 
   @doc """
-    send each consequence to worker managing cells affected by this plan consequence
+  Send each consequence to worker managing cells affected by this plan consequence.
   """
   def distribute_consequences(iteration, plans, accepted_plans) do
     send(self(), {:remote_consequences, iteration, plans, accepted_plans})
   end
 
-  #  @doc"""
-  #    send each signal to worker managing cells affected by this signal
-  #  """
-  #  def distribute_signal iteration, signal_by_coords do
-  #    send(self(), {:remote_signal, iteration, signal_by_coords})
-  #  end
+  @doc """
+  Send each signal to worker managing cells affected by this signal.
+  """
+  def distribute_signal(iteration, signal_update) do
+    send(self(), {:remote_signal, iteration, signal_update})
+  end
 end

@@ -22,6 +22,7 @@ defmodule DistributedSimulator do
     grid = make_grid()
 
     grid = populate_evenly grid
+    pretty_print grid
 #    signal = initialize_signal Map.keys(cells_by_coords)
 #
     pid = spawn(WorkerActor, :listen, [grid])
