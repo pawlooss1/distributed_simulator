@@ -71,7 +71,7 @@ defmodule Simulator.Nx.WorkerActor do
         updated_grid = apply_signal_update(grid, signal_update)
         IO.inspect("after signal applying")
         IO.inspect(updated_grid)
-#        write_to_file(cells_by_coords, updated_signal, "grid_#{iteration}")
+        #        write_to_file(cells_by_coords, updated_signal, "grid_#{iteration}")
 
         send(self(), {:start_iteration, iteration + 1})
         listen(updated_grid)
@@ -135,19 +135,19 @@ defmodule Simulator.Nx.WorkerActor do
     Nx.concatenate([direction, action_consequence])
   end
 
-#  # todo cleaner architecture proposition, if nx implements new functions
-#  def create_plans2(grid) do
-#    {x_size, y_size, _z_size} = Nx.shape(grid)
-#
-#    plans =
-#      Nx.map(Nx.iota({x_size, y_size}), fn ordinal ->
-#        create_plan(grid[Nx.quotient(ordinal, y_size)][Nx.remainder(ordinal, y_size)])
-#      end)
-#  end
-#
-#  defn create_plan(values) do
-#    values[0]
-#  end
+  #  # todo cleaner architecture proposition, if nx implements new functions
+  #  def create_plans2(grid) do
+  #    {x_size, y_size, _z_size} = Nx.shape(grid)
+  #
+  #    plans =
+  #      Nx.map(Nx.iota({x_size, y_size}), fn ordinal ->
+  #        create_plan(grid[Nx.quotient(ordinal, y_size)][Nx.remainder(ordinal, y_size)])
+  #      end)
+  #  end
+  #
+  #  defn create_plan(values) do
+  #    values[0]
+  #  end
 
   # todo; make our own shuffle to use it in defn
   defp process_plans(grid, plans) do
@@ -223,7 +223,9 @@ defmodule Simulator.Nx.WorkerActor do
     direction = plans[x][y]
 
     cond do
-      Nx.equal(direction, @dir_stay) -> true
+      Nx.equal(direction, @dir_stay) ->
+        true
+
       :otherwise ->
         {x2, y2} = shift({x, y}, direction)
         Nx.equal(grid[x2][y2][0], @empty)
@@ -375,7 +377,8 @@ defmodule Simulator.Nx.WorkerActor do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, _grid, signal_factors} =
-      while {i = 0, grid, signal_factors = Nx.broadcast(0, {x_size, y_size, 1})}, Nx.less(i, x_size) do
+      while {i = 0, grid, signal_factors = Nx.broadcast(0, {x_size, y_size, 1})},
+            Nx.less(i, x_size) do
         {_i, _j, grid, signal_factors} =
           while {i, j = 0, grid, signal_factors}, Nx.less(j, y_size) do
             cell_signal_factor = Nx.broadcast(signal_factor(grid[i][j][0]), {1, 1, 1})

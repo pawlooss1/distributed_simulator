@@ -13,5 +13,4 @@ defmodule Simulator.Launcher do
   def start(:standard) do
     Standard.start()
   end
-
 end

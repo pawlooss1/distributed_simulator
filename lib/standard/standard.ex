@@ -12,13 +12,13 @@ defmodule Simulator.Standard do
 
   @directions [:top, :top_right, :right, :bottom_right, :bottom, :bottom_left, :left, :top_left]
 
-  @doc"""
+  @doc """
   Runs simulation.
   """
   def start() do
     {cells_by_coords, neighbors} = make_grid()
-    grid = populate_evenly cells_by_coords
-    signal = initialize_signal Map.keys(cells_by_coords)
+    grid = populate_evenly(cells_by_coords)
+    signal = initialize_signal(Map.keys(cells_by_coords))
 
     pid = spawn(WorkerActor, :listen, [grid, neighbors, signal])
     write_to_file(grid, signal, "grid_0")
@@ -32,10 +32,19 @@ defmodule Simulator.Standard do
     {x_size, y_size} = get_size()
 
     cells = for k_x <- 1..x_size, k_y <- 1..y_size, into: %{}, do: {{k_x, k_y}, :empty}
-    neighbors = cells
-                |> Enum.map(fn {coords, _} -> {coords,
-                                                (for direction <- @directions, is_valid(shift(coords, direction)), into: %{}, do: {direction, shift(coords, direction)})} end)
-                |> Map.new
+
+    neighbors =
+      cells
+      |> Enum.map(fn {coords, _} ->
+        {coords,
+         for(
+           direction <- @directions,
+           is_valid(shift(coords, direction)),
+           into: %{},
+           do: {direction, shift(coords, direction)}
+         )}
+      end)
+      |> Map.new()
 
     {cells, neighbors}
   end
@@ -54,13 +63,18 @@ defmodule Simulator.Standard do
     x_unit = x_size / (mocks_by_dimension + 1)
     y_unit = y_size / (mocks_by_dimension + 1)
 
-    mocks_positions = for xIndex <- 1..mocks_by_dimension, yIndex <- 1..mocks_by_dimension, do: {trunc(xIndex * x_unit), trunc(yIndex * y_unit)}
+    mocks_positions =
+      for xIndex <- 1..mocks_by_dimension,
+          yIndex <- 1..mocks_by_dimension,
+          do: {trunc(xIndex * x_unit), trunc(yIndex * y_unit)}
+
     populate(grid, mocks_positions)
   end
 
   # adds `:mock` objects on given coordinates
   defp populate(grid, []),
     do: grid
+
   defp populate(grid, [coord | coords]),
     do: populate(%{grid | coord => :mock}, coords)
 
@@ -69,13 +83,19 @@ defmodule Simulator.Standard do
   defp initialize_signal(coords_list) do
     coords_list
     |> Enum.map(fn coords ->
-      {coords, Enum.map(@directions, fn direction ->
-        {direction, 0} end)} end)
+      {coords,
+       Enum.map(@directions, fn direction ->
+         {direction, 0}
+       end)}
+    end)
     |> Enum.map(fn {coords, signal_map} ->
-      {coords, Map.new(signal_map)} end)
-    |> Map.new
+      {coords, Map.new(signal_map)}
+    end)
+    |> Map.new()
   end
 
   defp get_size,
-    do: {Application.fetch_env!(:distributed_simulator, :x_size), Application.fetch_env!(:distributed_simulator, :y_size)}
+    do:
+      {Application.fetch_env!(:distributed_simulator, :x_size),
+       Application.fetch_env!(:distributed_simulator, :y_size)}
 end
