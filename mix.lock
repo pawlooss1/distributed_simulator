@@ -1,4 +1,6 @@
 %{
+  "elixir_make": {:hex, :elixir_make, "0.6.2", "7dffacd77dec4c37b39af867cedaabb0b59f6a871f89722c25b28fcd4bd70530", [:mix], [], "hexpm", "03e49eadda22526a7e5279d53321d1cced6552f344ba4e03e619063de75348d9"},
+  "exla": {:git, "https://github.com/elixir-nx/nx.git", "8d2678f4dbfd7f840504d8cb1d1b82163cae7823", [sparse: "exla"]},
   "nx": {:git, "https://github.com/elixir-nx/nx.git", "b63b8952b0b18573c8e8907eef51adffba0e9d6e", [branch: "main", sparse: "nx"]},
   "typed_struct": {:hex, :typed_struct, "0.2.1", "e1993414c371f09ff25231393b6430bd89d780e2a499ae3b2d2b00852f593d97", [:mix], [], "hexpm", "8f5218c35ec38262f627b2c522542f1eae41f625f92649c0af701a6fab2e11b3"},
 }

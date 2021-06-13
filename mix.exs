@@ -22,8 +22,9 @@ defmodule DistributedSimulator.MixProject do
   defp deps do
     [
       {:typed_struct, "~> 0.2.1"},
-      #      {:nx, path: "/home/sheldak/thesis/nx/nx"},
-      {:nx, path: "D:\\Agnieszka\\Documents\\Studia\\PracaInz\\nx\\nx"}
+#      {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla"},
+      {:nx, path: "/home/sheldak/thesis/nx/nx", override: true}
+      #      {:nx, path: "D:\\Agnieszka\\Documents\\Studia\\PracaInz\\nx\\nx"}
       #      {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", branch: "main", sparse: "nx"}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}

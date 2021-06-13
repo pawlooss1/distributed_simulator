@@ -1,6 +1,20 @@
-# DistributedSimulator
+# Distributed Simulator
 
-**TODO: Add description**
+Firstly, install dependencies:
+```bash
+mix deps.get
+```
+
+Then run:
+```bash
+mix run --no-halt run.exs
+```
+
+Optionally, you can provide environment variable `APP_MODE` to run specified implementation, e.g.:
+```bash
+APP_MODE=comparison mix run --no-halt run.exs
+```
+There are three modes: `nx`, `standard` and `comparison`. `nx` is default.
 
 ## Installation
 
