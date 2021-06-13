@@ -3,19 +3,21 @@ defmodule Simulator.Nx do
   Distributed Simulator implemented using Nx library.
   """
 
+  import Nx.Defn
+  import Simulator.Nx.Printer
+
   alias Simulator.Nx.WorkerActor
 
   @doc """
   Runs simulation.
   """
   def start() do
-    grid = make_grid()
-
-    grid = populate_evenly(grid)
-    #    pretty_print grid
+    grid =
+      make_grid()
+      |> populate_evenly()
 
     pid = spawn(WorkerActor, :listen, [grid])
-    #    write_to_file(grid, signal, "grid_0")
+    write_to_file(grid, "grid_0")
 
     send(pid, {:start_iteration, 1})
     :ok
@@ -72,47 +74,6 @@ defmodule Simulator.Nx do
       :empty -> for _ <- 1..9, do: 0
       :mock -> [1, 0, 0, 0, 0, 0, 0, 0, 0]
     end
-  end
-
-  defp pretty_print(tensor) do
-    {x_size, y_size, _} = Nx.shape(tensor)
-
-    as_string =
-      get_template(x_size, y_size)
-      |> Enum.map(fn x ->
-        Enum.map(x, fn xx ->
-          Enum.map(xx, fn y ->
-            Enum.map(y, fn yy -> Nx.to_scalar(tensor[elem(yy, 0)][elem(yy, 1)][elem(yy, 2)]) end)
-          end)
-        end)
-      end)
-      |> Enum.map(fn x ->
-        Enum.map(x, fn xx ->
-          Enum.map(xx, fn y ->
-            Enum.join(y, "")
-          end)
-        end)
-      end)
-      |> Enum.map(fn x ->
-        Enum.map(x, fn xx ->
-          Enum.join(xx, " ")
-        end)
-      end)
-      |> Enum.map(fn x ->
-        Enum.join(x, "\n")
-      end)
-      |> Enum.join("\n\n")
-
-    IO.puts(as_string)
-  end
-
-  defp get_template(x_size, y_size) do
-    for x <- 0..(x_size - 1),
-        do:
-          for(
-            xx <- 0..2,
-            do: for(y <- 0..(y_size - 1), do: for(yy <- 0..2, do: {x, y, xx * 3 + yy}))
-          )
   end
 
   defp get_size,

@@ -3,6 +3,7 @@ defmodule Simulator.Nx.WorkerActor do
 
   import Nx.Defn
   import Simulator.Nx.Cell
+  import Simulator.Nx.Printer
 
   @dir_stay 0
   @dir_top 1
@@ -33,21 +34,11 @@ defmodule Simulator.Nx.WorkerActor do
 
       {:start_iteration, iteration} ->
         plans = create_plans(grid)
-        IO.inspect("plans")
-        IO.inspect(plans)
         distribute_plans(iteration, plans)
         listen(grid)
 
       {:remote_plans, iteration, plans} ->
-        IO.inspect("plans")
-        IO.inspect(plans)
-
         {updated_grid, accepted_plans} = process_plans(grid, plans)
-        IO.inspect("updated grid")
-        IO.inspect(updated_grid)
-
-        IO.inspect("accepted plans")
-        IO.inspect(accepted_plans)
 
         # todo - now action+cons applied at once
         # todo could apply alternatives as well if those existed, without changing input :D
@@ -57,21 +48,15 @@ defmodule Simulator.Nx.WorkerActor do
 
       {:remote_consequences, iteration, plans, accepted_plans} ->
         updated_grid = apply_consequences(grid, plans, accepted_plans)
-        IO.inspect("after consequences")
-        IO.inspect(updated_grid)
-
         signal_update = calculate_signal_updates(updated_grid)
-        IO.inspect("signal updates grid")
-        IO.inspect(signal_update)
 
         distribute_signal(iteration, signal_update)
         listen(updated_grid)
 
       {:remote_signal, iteration, signal_update} ->
         updated_grid = apply_signal_update(grid, signal_update)
-        IO.inspect("after signal applying")
-        IO.inspect(updated_grid)
-        #        write_to_file(cells_by_coords, updated_signal, "grid_#{iteration}")
+
+        write_to_file(updated_grid, "grid_#{iteration}")
 
         send(self(), {:start_iteration, iteration + 1})
         listen(updated_grid)

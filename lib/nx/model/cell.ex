@@ -3,7 +3,7 @@ defmodule Simulator.Nx.Cell do
 
   import Nx.Defn
   # todo add iteration and config as parameters (not basic functionality)
-  @mock_initial_signal 100
+  @mock_initial_signal 30
 
   # todo repeated, in future import
   @mock 1
