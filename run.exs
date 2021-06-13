@@ -1,3 +1,3 @@
 alias Simulator.Launcher
-:ok = Launcher.start(:nx)
-#:ok = Launcher.start(:standard)
+mode = Application.fetch_env!(:distributed_simulator, :mode)
+:ok = Launcher.start(mode)

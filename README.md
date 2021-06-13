@@ -10,6 +10,12 @@ Then run:
 mix run --no-halt run.exs
 ```
 
+Optionally, you can provide environment variable `APP_MODE` to run specified implementation, e.g.:
+```bash
+APP_MODE=standard mix run --no-halt run.exs
+```
+There are two modes: `nx` and `standard`. `nx` is default.
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
