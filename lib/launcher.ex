@@ -5,6 +5,7 @@ defmodule Simulator.Launcher do
 
   alias Simulator.Nx
   alias Simulator.Standard
+  alias Simulator.Comparer
 
   def start(:nx) do
     Nx.start()
@@ -12,5 +13,9 @@ defmodule Simulator.Launcher do
 
   def start(:standard) do
     Standard.start()
+  end
+
+  def start(:comparison) do
+    Comparer.start()
   end
 end

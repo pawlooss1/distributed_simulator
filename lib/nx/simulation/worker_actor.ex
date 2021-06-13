@@ -30,7 +30,7 @@ defmodule Simulator.Nx.WorkerActor do
   def listen(grid) do
     receive do
       {:start_iteration, iteration} when iteration > @max_iterations ->
-        IO.puts("terminating worker")
+        :ok
 
       {:start_iteration, iteration} ->
         plans = create_plans(grid)

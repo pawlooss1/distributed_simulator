@@ -12,7 +12,6 @@ defmodule Simulator.Nx.Printer do
   """
   def write_to_file(grid, file_name) do
     grid_as_string = tensor_to_string(grid)
-    IO.puts(grid_as_string)
     File.write!("lib/nx/grid_iterations/#{file_name}.txt", grid_as_string)
   end
 
@@ -20,7 +19,7 @@ defmodule Simulator.Nx.Printer do
   Prints given `tensor`.
   """
   def print(grid) do
-    IO.puts(tensor_to_string(grid))
+    IO.puts(tensor_to_string(grid) <> "\n\n")
   end
 
   @doc """
@@ -57,7 +56,7 @@ defmodule Simulator.Nx.Printer do
       end)
       |> Enum.join("\n\n")
 
-    as_string <> "\n\n"
+    as_string
   end
 
   @doc """

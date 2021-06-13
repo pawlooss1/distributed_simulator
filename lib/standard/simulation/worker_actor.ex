@@ -17,7 +17,7 @@ defmodule Simulator.Standard.WorkerActor do
   def listen(cells_by_coords, neighbors_by_coords, signal_by_coords) do
     receive do
       {:start_iteration, iteration} when iteration > @max_iterations ->
-        IO.puts("terminating worker")
+        :ok
 
       {:start_iteration, iteration} ->
         plans =

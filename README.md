@@ -12,9 +12,9 @@ mix run --no-halt run.exs
 
 Optionally, you can provide environment variable `APP_MODE` to run specified implementation, e.g.:
 ```bash
-APP_MODE=standard mix run --no-halt run.exs
+APP_MODE=comparison mix run --no-halt run.exs
 ```
-There are two modes: `nx` and `standard`. `nx` is default.
+There are three modes: `nx`, `standard` and `comparison`. `nx` is default.
 
 ## Installation
 

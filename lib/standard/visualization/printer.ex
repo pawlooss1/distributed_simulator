@@ -5,7 +5,6 @@ defmodule Simulator.Standard.Printer do
 
   def write_to_file(grid, signal, file_name) do
     grid_as_string = to_string(grid, signal)
-    IO.puts(grid_as_string <> "\n")
     File.write!("lib/standard/grid_iterations/#{file_name}.txt", grid_as_string)
   end
 
