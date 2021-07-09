@@ -15,7 +15,7 @@ defmodule Simulator.Nx.WorkerActor do
   @dir_left 7
   @dir_top_left 8
 
-  @max_iterations 5
+  @max_iterations 25
   @signal_suppression_factor 0.4
   @signal_attenuation_factor 0.4
 
@@ -34,6 +34,7 @@ defmodule Simulator.Nx.WorkerActor do
 
       {:start_iteration, iteration} ->
         plans = create_plans(grid)
+#        IO.inspect(grid)
         distribute_plans(iteration, plans)
         listen(grid)
 
@@ -92,6 +93,12 @@ defmodule Simulator.Nx.WorkerActor do
     plans
   end
 
+#  defnp create_plan_mock(i, j, grid) do
+#    direction = Nx.argmax(grid[i][j][1..8]) + 1 |> Nx.reshape({1})
+#    action_consequence = Nx.tensor([@mock, @empty])
+#
+#    Nx.concatenate([direction, action_consequence])
+#  end
   defnp create_plan_mock(i, j, grid) do
     {_i, _j, _direction, availability, availability_size, _grid} =
       while {i, j, direction = 1, availability = Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid},

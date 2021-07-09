@@ -11,6 +11,7 @@ defmodule Simulator.Nx.Printer do
   Prints the string as well.
   """
   def write_to_file(grid, file_name) do
+    IO.puts "writing"
     grid_as_string = tensor_to_string(grid)
     File.write!("lib/nx/grid_iterations/#{file_name}.txt", grid_as_string)
   end
@@ -26,37 +27,11 @@ defmodule Simulator.Nx.Printer do
   Converts grid as tensor to (relatively) readable string.
   """
   defp tensor_to_string(tensor) do
-    {x_size, y_size, _} = Nx.shape(tensor)
-
-    tensor = reconfigure(tensor)
-
-    as_string =
-      get_template(x_size, y_size)
-      |> Enum.map(fn x ->
-        Enum.map(x, fn xx ->
-          Enum.map(xx, fn y ->
-            Enum.map(y, fn yy -> Nx.to_scalar(tensor[elem(yy, 0)][elem(yy, 1)][elem(yy, 2)]) end)
-          end)
-        end)
-      end)
-      |> Enum.map(fn x ->
-        Enum.map(x, fn xx ->
-          Enum.map(xx, fn y ->
-            Enum.join(y, "")
-          end)
-        end)
-      end)
-      |> Enum.map(fn x ->
-        Enum.map(x, fn xx ->
-          Enum.join(xx, "   ")
-        end)
-      end)
-      |> Enum.map(fn x ->
-        Enum.join(x, "\n")
-      end)
-      |> Enum.join("\n\n")
-
-    as_string
+    ans = Nx.to_flat_list(tensor)
+          |> Enum.map(fn num -> to_string(num) end)
+#          |> Enum.chunk_every() # todo is it needed?
+          |> Enum.join(" ")
+    ans
   end
 
   @doc """
