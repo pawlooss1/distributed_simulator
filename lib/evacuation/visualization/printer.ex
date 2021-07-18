@@ -13,7 +13,7 @@ defmodule Simulator.Evacuation.Printer do
   def write_to_file(grid, file_name) do
     IO.puts "writing"
     grid_as_string = tensor_to_string(grid)
-    File.write!("lib/nx/grid_iterations/#{file_name}.txt", grid_as_string)
+    File.write!("lib/evacuation/grid_iterations/#{file_name}.txt", grid_as_string)
   end
 
   @doc """
@@ -23,9 +23,7 @@ defmodule Simulator.Evacuation.Printer do
     IO.puts(tensor_to_string(grid) <> "\n\n")
   end
 
-  @doc """
-  Converts grid as tensor to (relatively) readable string.
-  """
+  # Converts grid as tensor to (relatively) readable string.
   defp tensor_to_string(tensor) do
     ans = Nx.to_flat_list(tensor)
           |> Enum.map(fn num -> to_string(num) end)
@@ -34,15 +32,13 @@ defmodule Simulator.Evacuation.Printer do
     ans
   end
 
-  @doc """
-  From
-  [ object top top-right right bottom-right bottom bottom-left left top-left ]
+  # From
+  # [ object top top-right right bottom-right bottom bottom-left left top-left ]
 
-  to
-  [ top-left    top    top-right
-    left        object right
-    bottom-left bottom bottom-right ]
-  """
+  # to
+  # [ top-left    top    top-right
+  #   left        object right
+  #   bottom-left bottom bottom-right ]
   defnp reconfigure(tensor) do
     {x_size, y_size, _} = Nx.shape(tensor)
 

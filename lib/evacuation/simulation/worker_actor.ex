@@ -20,7 +20,10 @@ defmodule Simulator.Evacuation.WorkerActor do
   @signal_attenuation_factor 0.4
 
   @empty 0
-  @mock 1
+  @person 1
+  @obstacle 2
+  @exit 3
+  @fire 4
 
   @doc """
   For now abandon 'Alternative' from discarded plans in remote plans (no use of it in Mock example).
@@ -78,7 +81,7 @@ defmodule Simulator.Evacuation.WorkerActor do
             Nx.less(i, x_size) do
         {_i, _j, plans, _grid} =
           while {i, j = 0, plans, grid}, Nx.less(j, y_size) do
-            if Nx.equal(grid[i][j][0], @mock) do
+            if Nx.equal(grid[i][j][0], @person) do
               plan = create_plan_mock(i, j, grid)
               plans = Nx.put_slice(plans, Nx.broadcast(plan, {1, 1, 3}), [i, j, 0])
               {i, j + 1, plans, grid}
@@ -122,7 +125,7 @@ defmodule Simulator.Evacuation.WorkerActor do
       availability[index]
       |> Nx.reshape({1})
 
-    action_consequence = Nx.tensor([@mock, @empty])
+    action_consequence = Nx.tensor([@person, @empty])
 
     Nx.concatenate([direction, action_consequence])
   end
