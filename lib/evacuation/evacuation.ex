@@ -17,10 +17,10 @@ defmodule Simulator.Evacuation do
   Runs simulation.
   """
   def start() do
-    grid = read_grid("map_1")
+    grid = read_grid("map_2")
 
     pid = spawn(WorkerActor, :listen, [grid])
-    write_to_file(grid, "grid_0")
+    # write_to_file(grid, "grid_0")
 
     send(pid, {:start_iteration, 1})
     :ok
