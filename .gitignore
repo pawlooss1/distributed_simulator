@@ -28,4 +28,4 @@ distributed_simulator-*.tar
 
 /.idea
 
-*/grid_iterations/*
+grid_iterations/
