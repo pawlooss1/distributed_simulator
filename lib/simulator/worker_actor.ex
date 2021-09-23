@@ -1,56 +1,74 @@
 defmodule Simulator.WorkerActor do
   @moduledoc false
-  
+
+  use GenServer
   use Simulator.BaseConstants
 
   import Nx.Defn
-  import Simulator.{Cell, Heleprs, Printer}
+  import Simulator.{Cell, Helpers, Printer}
+
+  def start(grid: grid) do
+    GenServer.start(__MODULE__, grid)
+  end
+
+  @impl true
+  def init(grid) do
+    send(self(), :start_iteration)
+
+    {:ok, %{grid: grid, iteration: 1}}
+  end
 
   @doc """
   For now abandon 'Alternative' from discarded plans in remote plans (no use of it in Mock example).
   Currently there is also no use of :remote_signal and :remote_cell_contents states.
   Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   """
-  def listen(grid, functions) do
-    receive do
-      {:start_iteration, iteration} when iteration > @max_iterations ->
-        :ok
+  @impl true
+  def handle_info(:start_iteration, %{iteration: iteration} = state) when iteration > @max_iterations do
+    {:stop, :normal, state}
+  end
 
-      {:start_iteration, iteration} ->
-        create_plan = &@module_prefix.PlanCreator.create_plan/5
-        plans = create_plans(iteration, grid, create_plan)
+  def handle_info(:start_iteration, %{grid: grid, iteration: iteration} = state) do
+    create_plan = &@module_prefix.PlanCreator.create_plan/5
+    plans = create_plans(iteration, grid, create_plan)
 
-        distribute_plans(iteration, plans)
-        send(self(), {:start_iteration, iteration + 1})
-        listen(grid, functions)
+    distribute_plans(plans)
 
-      {:remote_plans, iteration, plans} ->
-        {updated_grid, accepted_plans} = process_plans(grid, plans)
+    {:noreply, state}
+  end
 
-        # todo - now action+cons applied at once
-        # todo could apply alternatives as well if those existed, without changing input :D
-        #
-        distribute_consequences(iteration, plans, accepted_plans)
-        listen(updated_grid, functions)
+  def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
+    {updated_grid, accepted_plans} = process_plans(grid, plans)
 
-      {:remote_consequences, iteration, plans, accepted_plans} ->
-        updated_grid = apply_consequences(grid, plans, accepted_plans)
+    # todo - now action+cons applied at once
+    # todo could apply alternatives as well if those existed, without changing input :D
+    #
+    distribute_consequences(plans, accepted_plans)
+    {:noreply, %{state | grid: updated_grid}}
+  end
 
-        generate_signal = &@module_prefix.Cell.generate_signal/1
-        signal_update = calculate_signal_updates(updated_grid, generate_signal)
+  def handle_info({:remote_consequences, plans, accepted_plans}, %{grid: grid} = state) do
+    updated_grid = apply_consequences(grid, plans, accepted_plans)
 
-        distribute_signal(iteration, signal_update)
-        listen(updated_grid, functions)
+    generate_signal = &@module_prefix.Cell.generate_signal/1
+    signal_update = calculate_signal_updates(updated_grid, generate_signal)
 
-      {:remote_signal, iteration, signal_update} ->
-        signal_factor = &@module_prefix.Cell.signal_factor/1
-        updated_grid = apply_signal_update(grid, signal_update, signal_factor)
+    distribute_signal(signal_update)
 
-        write_to_file(updated_grid, "grid_#{iteration}")
+    {:noreply, %{state | grid: updated_grid}}
+  end
 
-        send(self(), {:start_iteration, iteration + 1})
-        listen(updated_grid, functions)
-    end
+  def handle_info({:remote_signal, signal_update}, state) do
+    %{grid: grid, iteration: iteration} = state
+    
+    signal_factor = &@module_prefix.Cell.signal_factor/1
+    updated_grid = apply_signal_update(grid, signal_update, signal_factor)
+
+    write_to_file(updated_grid, "grid_#{iteration}")
+
+    send(self(), :start_iteration)
+
+    {:noreply, %{state | grid: updated_grid, iteration: iteration + 1}}
   end
 
   # Each plan is a tensor: [direction, action, consequence]
@@ -289,18 +307,18 @@ defmodule Simulator.WorkerActor do
     signal_factors
   end
 
-  # Send each plan to worker managing cells affected by this plan.
-  defp distribute_plans(iteration, plans) do
-    send(self(), {:remote_plans, iteration, plans})
+  # Sends each plan to worker managing cells affected by this plan.
+  defp distribute_plans(plans) do
+    send(self(), {:remote_plans, plans})
   end
 
-  # Send each consequence to worker managing cells affected by this plan consequence.
-  defp distribute_consequences(iteration, plans, accepted_plans) do
-    send(self(), {:remote_consequences, iteration, plans, accepted_plans})
+  # Sends each consequence to worker managing cells affected by this plan consequence.
+  defp distribute_consequences(plans, accepted_plans) do
+    send(self(), {:remote_consequences, plans, accepted_plans})
   end
 
-  # Send each signal to worker managing cells affected by this signal.
-  defp distribute_signal(iteration, signal_update) do
-    send(self(), {:remote_signal, iteration, signal_update})
+  # Sends each signal to worker managing cells affected by this signal.
+  defp distribute_signal(signal_update) do
+    send(self(), {:remote_signal, signal_update})
   end
 end

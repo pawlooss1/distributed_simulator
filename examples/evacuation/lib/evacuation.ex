@@ -1,19 +1,11 @@
 defmodule Evacuation do
   @moduledoc """
-  Distributed Simulator implemented using Nx library.
+  Simulation of the evacuation using DistributedSimulator framework.
   """
 
-  import Simulator.Printer
+  use Evacuation.Constants
 
-  alias Evacuation.Cell
-  alias Evacuation.PlanCreator
-  alias Simulator.WorkerActor
-
-  @empty 0
-  @person 1
-  @obstacle 2
-  @exit 3
-  @fire 4
+  alias Simulator.{Printer, WorkerActor}
 
   @doc """
   Runs simulation.
@@ -21,17 +13,8 @@ defmodule Evacuation do
   def start() do
     grid = read_grid("map_2")
 
-    functions = %{
-      create_plan: &PlanCreator.create_plan/5,
-      generate_signal: &Cell.generate_signal/1,
-      signal_factor: &Cell.signal_factor/1,
-    }
-
-    # TODO make GenServer instead
-    pid = spawn(WorkerActor, :listen, [grid, functions])
-    # write_to_file(grid, "grid_0")
-
-    send(pid, {:start_iteration, 1})
+    WorkerActor.start(grid: grid)
+    # Printer.write_to_file(grid, "grid_0")
     :ok
   end
 
