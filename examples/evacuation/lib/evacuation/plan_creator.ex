@@ -1,18 +1,10 @@
 defmodule Evacuation.PlanCreator do
-  import Nx.Defn
-  import Simulator.Helpers
-
   @behaviour Simulator.PlanCreator
 
-  @infinity 1_000_000_000
+  use Evacuation.Constants
 
-  @fire_spreading_frequency 5
-
-  @empty 0
-  @person 1
-  @obstacle 2
-  @exit 3
-  @fire 4
+  import Nx.Defn
+  import Simulator.Helpers
 
   @impl true
   defn create_plan(i, j, plans, grid, iteration) do

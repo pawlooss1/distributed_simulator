@@ -1,18 +1,9 @@
 defmodule Evacuation.Cell do
-  @moduledoc false
-
   @behaviour Simulator.Cell
 
+  use Evacuation.Constants
+
   import Nx.Defn
-
-  # todo repeated, in future import
-  @person 1
-  @obstacle 2
-  @exit 3
-  @fire 4
-
-  @exit_signal 30
-  @fire_signal -30
 
   @impl true
   defn generate_signal(object) do

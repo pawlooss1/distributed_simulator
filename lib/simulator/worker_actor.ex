@@ -1,33 +1,10 @@
 defmodule Simulator.WorkerActor do
   @moduledoc false
+  
+  use Simulator.BaseConstants
 
   import Nx.Defn
-  import Simulator.Cell
-  import Simulator.Helpers
-  import Simulator.Printer
-
-  # TODO maybe we can add necessary attributes via macros? (e.g. using `use`)
-  @infinity 1_000_000_000
-
-  @dir_stay 0
-  @dir_top 1
-  @dir_top_right 2
-  @dir_right 3
-  @dir_bottom_right 4
-  @dir_bottom 5
-  @dir_bottom_left 6
-  @dir_left 7
-  @dir_top_left 8
-
-  @max_iterations 25
-  @signal_suppression_factor 0.4
-  @signal_attenuation_factor 0.4
-
-  @empty 0
-  @person 1
-  @obstacle 2
-  @exit 3
-  @fire 4
+  import Simulator.{Cell, Heleprs, Printer}
 
   @doc """
   For now abandon 'Alternative' from discarded plans in remote plans (no use of it in Mock example).
@@ -40,9 +17,8 @@ defmodule Simulator.WorkerActor do
         :ok
 
       {:start_iteration, iteration} ->
-        plans = create_plans(iteration, grid, functions[:create_plan])
-
-        IO.inspect(plans)
+        create_plan = &@module_prefix.PlanCreator.create_plan/5
+        plans = create_plans(iteration, grid, create_plan)
 
         distribute_plans(iteration, plans)
         send(self(), {:start_iteration, iteration + 1})
@@ -59,13 +35,16 @@ defmodule Simulator.WorkerActor do
 
       {:remote_consequences, iteration, plans, accepted_plans} ->
         updated_grid = apply_consequences(grid, plans, accepted_plans)
-        signal_update = calculate_signal_updates(updated_grid, functions[:generate_signal])
+
+        generate_signal = &@module_prefix.Cell.generate_signal/1
+        signal_update = calculate_signal_updates(updated_grid, generate_signal)
 
         distribute_signal(iteration, signal_update)
         listen(updated_grid, functions)
 
       {:remote_signal, iteration, signal_update} ->
-        updated_grid = apply_signal_update(grid, signal_update, functions[:signal_factor])
+        signal_factor = &@module_prefix.Cell.signal_factor/1
+        updated_grid = apply_signal_update(grid, signal_update, signal_factor)
 
         write_to_file(updated_grid, "grid_#{iteration}")
 

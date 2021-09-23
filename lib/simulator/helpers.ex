@@ -1,15 +1,7 @@
 defmodule Simulator.Helpers do
-  import Nx.Defn
+  use Simulator.BaseConstants
 
-  @dir_stay 0
-  @dir_top 1
-  @dir_top_right 2
-  @dir_right 3
-  @dir_bottom_right 4
-  @dir_bottom 5
-  @dir_bottom_left 6
-  @dir_left 7
-  @dir_top_left 8
+  import Nx.Defn
 
   defn shift({x, y}, direction) do
     cond do
