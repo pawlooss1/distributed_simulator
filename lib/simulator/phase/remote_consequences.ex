@@ -4,6 +4,7 @@ defmodule Simulator.Phase.RemoteConsequences do
   import Nx.Defn
   import Simulator.Helpers
 
+  @spec apply_consequences(Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
   defn apply_consequences(grid, plans, accepted_plans) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
@@ -27,6 +28,7 @@ defmodule Simulator.Phase.RemoteConsequences do
     grid
   end
 
+  @spec calculate_signal_updates(Nx.t(), fun()) :: Nx.t()
   defn calculate_signal_updates(grid, generate_signal) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 

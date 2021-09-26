@@ -5,6 +5,7 @@ defmodule Simulator.Phase.RemotePlans do
   import Simulator.Helpers
 
   # todo; make our own shuffle to use it in defn
+  @spec process_plans(Nx.t(), Nx.t()) :: Nx.t()
   def process_plans(grid, plans) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 

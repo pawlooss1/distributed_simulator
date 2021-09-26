@@ -3,6 +3,12 @@ defmodule Simulator.Helpers do
 
   import Nx.Defn
 
+  alias Simulator.Types
+
+  @doc """
+  Returns coordinates of the field being in `direction` from the given {`x`, `y`}.
+  """
+  @spec shift({Types.index(), Types.index()}, Nx.t()) :: {Types.index(), Types.index()}
   defn shift({x, y}, direction) do
     cond do
       Nx.equal(direction, @dir_stay) -> {x, y}
@@ -22,6 +28,7 @@ defmodule Simulator.Helpers do
   @doc """
   Checks whether the mock can move to position {x, y}.
   """
+  @spec can_move({Types.index(), Types.index()}, Nx.t()) :: Nx.t()
   defn can_move({x, y}, grid) do
     [is_valid({x, y}, grid), Nx.equal(grid[x][y][0], 0)]
     |> Nx.stack()
@@ -31,6 +38,7 @@ defmodule Simulator.Helpers do
   @doc """
   Checks if position {x, y} is inside the grid.
   """
+  @spec is_valid({Types.index(), Types.index()}, Nx.t()) :: Nx.t()
   defn is_valid({x, y}, grid) do
     {x_size, y_size, _} = Nx.shape(grid)
 

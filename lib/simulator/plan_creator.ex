@@ -1,8 +1,8 @@
 defmodule Simulator.PlanCreator do
-  @type index :: non_neg_integer
+  alias Simulator.Types
 
-  @callback create_plan(index(), index(), Nx.t(), Nx.t(), index()) ::
-              {index(), index(), Nx.t(), Nx.t(), index()}
+  @callback create_plan(Types.index(), Types.index(), Nx.t(), Nx.t(), Types.index()) ::
+              {Types.index(), Types.index(), Nx.t(), Nx.t(), Types.index()}
 
   defmacro __using__(_opts) do
     quote location: :keep do

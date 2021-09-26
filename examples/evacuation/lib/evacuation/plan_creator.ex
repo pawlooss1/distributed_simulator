@@ -71,12 +71,8 @@ defmodule Evacuation.PlanCreator do
       # todo to_scalar doesn't work in defn, and tensor([scalar-tensor, scalar, scalar]) doesnt work,
       # so to create [dir, mock, empty] we convert dir (scalar tensor)
       # to tensor of shape [1]
-      direction =
-        availability[index]
-        |> Nx.reshape({1})
-
+      direction = Nx.reshape(availability[index], {1})
       action_consequence = Nx.tensor([@fire, @fire])
-
       Nx.concatenate([direction, action_consequence])
     else
       Nx.tensor([0, 0, 0])

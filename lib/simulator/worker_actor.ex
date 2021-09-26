@@ -4,11 +4,10 @@ defmodule Simulator.WorkerActor do
   use GenServer
   use Simulator.BaseConstants
 
-  import Nx.Defn
-  import Simulator.{Cell, Helpers, Printer}
-
   alias Simulator.Phase.{RemoteConsequences, RemotePlans, RemoteSignal, StartIteration}
+  alias Simulator.Printer
 
+  @spec start(keyword(Nx.t())) :: GenServer.on_start()
   def start(grid: grid) do
     GenServer.start(__MODULE__, grid)
   end
@@ -65,7 +64,7 @@ defmodule Simulator.WorkerActor do
     signal_factor = &@module_prefix.Cell.signal_factor/1
     updated_grid = RemoteSignal.apply_signal_update(grid, signal_update, signal_factor)
 
-    write_to_file(updated_grid, "grid_#{iteration}")
+    Printer.write_to_file(updated_grid, "grid_#{iteration}")
 
     start_next_iteration()
     {:noreply, %{state | grid: updated_grid, iteration: iteration + 1}}

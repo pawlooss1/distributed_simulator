@@ -3,12 +3,15 @@ defmodule Simulator.Phase.StartIteration do
 
   import Nx.Defn
 
+  alias Simulator.Types
+
   @doc """
   Each plan is a tensor: [direction, action, consequence]
   action: what should be the state of target cell (pointed by direction)
   consequence: what should be in current cell (applied only if plan executed)
   e.g.: mock wants to move up: [@dir_up, @mock, @empty]
   """
+  @spec create_plans(Types.index(), Nx.t(), fun()) :: Nx.t()
   defn create_plans(iteration, grid, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 

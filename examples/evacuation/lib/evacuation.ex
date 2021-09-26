@@ -8,8 +8,9 @@ defmodule Evacuation do
   alias Simulator.{Printer, WorkerActor}
 
   @doc """
-  Runs simulation.
+  Runs the simulation.
   """
+  @spec start() :: :ok
   def start() do
     grid = read_grid("map_2")
 
