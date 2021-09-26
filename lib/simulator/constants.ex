@@ -1,4 +1,21 @@
 defmodule Simulator.Constants do
+  @moduledoc """
+  Module which should be `used` in the Constant module in every
+  simulation. Constant module provides other modules with useful
+  constants (as Nx requires numbers, it is a workaround to make code
+  more readables).
+
+  `Using` the module requires implementing `define_constants/0`
+  macro. Its exemplary body can be seen in `Evacuation.Constants`
+  module in the `examples` directory. Attributes inside the macro
+  are specific to the simulation.
+
+  After defining Constant module (`using` this one), it can be `used`
+  by other modules in the simulation to provide them with needed
+  constants (the ones defined below and other defined by the
+  framework user).
+  """
+
   @macrocallback define_constants() :: Macro.t()
   @optional_callbacks define_constants: 0
 

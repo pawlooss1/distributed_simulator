@@ -1,9 +1,17 @@
 defmodule Simulator.Phase.RemoteConsequences do
+  @moduledoc """
+  Module contataining the functions called during the
+  `:remote_consequences` phase.
+  """
+
   use Simulator.BaseConstants
 
   import Nx.Defn
   import Simulator.Helpers
 
+  @doc """
+  Applies all consequences from the accepted plans.
+  """
   @spec apply_consequences(Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
   defn apply_consequences(grid, plans, accepted_plans) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
@@ -12,7 +20,7 @@ defmodule Simulator.Phase.RemoteConsequences do
       while {i = 0, grid, plans, accepted_plans}, Nx.less(i, x_size) do
         {_i, _j, grid, plans, accepted_plans} =
           while {i, j = 0, grid, plans, accepted_plans}, Nx.less(j, y_size) do
-            # todo could apply alternative here
+            # TODO
             if Nx.equal(accepted_plans[i][j], 1) do
               consequence = plans[i][j][2]
               grid = Nx.put_slice(grid, Nx.broadcast(consequence, {1, 1, 1}), [i, j, 0])
@@ -28,6 +36,9 @@ defmodule Simulator.Phase.RemoteConsequences do
     grid
   end
 
+  @doc """
+  Calculates signal update for all cells.
+  """
   @spec calculate_signal_updates(Nx.t(), fun()) :: Nx.t()
   defn calculate_signal_updates(grid, generate_signal) do
     {x_size, y_size, _z_size} = Nx.shape(grid)

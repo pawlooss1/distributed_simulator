@@ -1,4 +1,9 @@
 defmodule Simulator.Phase.StartIteration do
+  @moduledoc """
+  Module contataining the function called during the
+  `:start_iteration` phase.
+  """
+
   use Simulator.BaseConstants
 
   import Nx.Defn
@@ -6,10 +11,18 @@ defmodule Simulator.Phase.StartIteration do
   alias Simulator.Types
 
   @doc """
-  Each plan is a tensor: [direction, action, consequence]
-  action: what should be the state of target cell (pointed by direction)
-  consequence: what should be in current cell (applied only if plan executed)
-  e.g.: mock wants to move up: [@dir_up, @mock, @empty]
+  Each plan is a tensor: [direction, action, consequence].
+
+  `direction` - a plan contains an action towards a specific
+    neighboring cell. `Direction` indicates it.
+
+  `action` - what should be the state of the target cell (pointed by
+    `direction`).
+
+  `consequence` - what should be in the current cell if the plan will
+    be executed.
+
+  Example: a person wants to move up: [@dir_up, @person, @empty].
   """
   @spec create_plans(Types.index(), Nx.t(), fun()) :: Nx.t()
   defn create_plans(iteration, grid, create_plan) do

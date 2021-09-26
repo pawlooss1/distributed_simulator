@@ -1,10 +1,21 @@
 defmodule Simulator.Phase.RemotePlans do
+  @moduledoc """
+  Module contataining the function called during the
+  `:remote_plans` phase.
+  """
+
   use Simulator.BaseConstants
 
   import Nx.Defn
   import Simulator.Helpers
 
-  # todo; make our own shuffle to use it in defn
+  @doc """
+  The function decides which plans are accepted and update the grid
+  by putting `action` in the proper cells. `Consequences` will be
+  applied in the `:remote_consequences` phase.
+
+  TODO make our own shuffle to use it in defn.
+  """
   @spec process_plans(Nx.t(), Nx.t()) :: Nx.t()
   def process_plans(grid, plans) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
@@ -56,7 +67,7 @@ defmodule Simulator.Phase.RemotePlans do
     end
   end
 
-  # Checks if plan can be executed (here: if target field is empty).
+  # Checks if plan can be executed (here: if target cell is empty).
   defnp validate_plan(grid, plans, x, y) do
     direction = plans[x][y][0]
 

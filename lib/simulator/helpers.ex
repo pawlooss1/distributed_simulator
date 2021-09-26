@@ -1,4 +1,8 @@
 defmodule Simulator.Helpers do
+  @moduledoc """
+  Module containing useful functions (`defn`s).
+  """
+
   use Simulator.BaseConstants
 
   import Nx.Defn
@@ -6,7 +10,7 @@ defmodule Simulator.Helpers do
   alias Simulator.Types
 
   @doc """
-  Returns coordinates of the field being in `direction` from the given {`x`, `y`}.
+  Returns coordinates of the cell being in `direction` from the given {`x`, `y`}.
   """
   @spec shift({Types.index(), Types.index()}, Nx.t()) :: {Types.index(), Types.index()}
   defn shift({x, y}, direction) do
@@ -20,7 +24,7 @@ defmodule Simulator.Helpers do
       Nx.equal(direction, @dir_bottom_left) -> {x + 1, y - 1}
       Nx.equal(direction, @dir_left) -> {x, y - 1}
       Nx.equal(direction, @dir_top_left) -> {x - 1, y - 1}
-      # todo why? shouldn't throw? // I think we cannot throw from defn. Any suggestions what to do with that?
+      # TODO why? shouldn't throw? // I think we cannot throw from defn. Any suggestions what to do with that?
       true -> {0, 0}
     end
   end

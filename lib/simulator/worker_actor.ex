@@ -1,5 +1,20 @@
 defmodule Simulator.WorkerActor do
-  @moduledoc false
+  @moduledoc """
+  GenServer responsible for simulating one shard.
+
+  There are four phases of every iteration:
+  - `:start_iteration` - if iteration's number does not exceed the
+    maxium number of iterations set in the cofiguration, plans are
+    created and distributed to the neighboring shards;
+  - `:remote_plans` - plans are processed. Some of them are accepted,
+    some discarded. Result of the processing is distributed among
+    neighboring shards;
+  - `:remote_consequences` - consequences derived from the accepted
+    plans are applied to the grid. Additionally, signal update is
+    calculated and distributed to the neighboring shards;
+  - `:remote_signal` - signal is applied to the grid. Next iteration
+    is started.
+  """
 
   use GenServer
   use Simulator.BaseConstants
@@ -7,6 +22,11 @@ defmodule Simulator.WorkerActor do
   alias Simulator.Phase.{RemoteConsequences, RemotePlans, RemoteSignal, StartIteration}
   alias Simulator.Printer
 
+  @doc """
+  Starts the WorkerActor.
+
+  TODO use some supervisor.
+  """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
   def start(grid: grid) do
     GenServer.start(__MODULE__, grid)
@@ -19,11 +39,6 @@ defmodule Simulator.WorkerActor do
     {:ok, %{grid: grid, iteration: 1}}
   end
 
-  @doc """
-  For now abandon 'Alternative' from discarded plans in remote plans (no use of it in Mock example).
-  Currently there is also no use of :remote_signal and :remote_cell_contents states.
-  Returns tuple: {{action position, Action}, {consequence position, Consequence}}
-  """
   @impl true
   def handle_info(:start_iteration, %{iteration: iteration} = state)
       when iteration > @max_iterations do
@@ -38,12 +53,15 @@ defmodule Simulator.WorkerActor do
     {:noreply, state}
   end
 
+  # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
+  # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
+  # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
     {updated_grid, accepted_plans} = RemotePlans.process_plans(grid, plans)
 
-    # todo - now action+cons applied at once
+    # TODO - now action+cons applied at once
     # todo could apply alternatives as well if those existed, without changing input :D
-    #
+
     distribute_consequences(plans, accepted_plans)
     {:noreply, %{state | grid: updated_grid}}
   end
