@@ -1,15 +1,24 @@
 defmodule Simulator.Constants do
+  @macrocallback define_constants() :: Macro.t()
+  @optional_callbacks define_constants: 0
+
   defmacro __using__(_opts) do
     quote location: :keep do
       @behaviour unquote(__MODULE__)
 
       defmacro __using__(_opts) do
-        quote do
+        quote location: :keep do
           @module_prefix Application.compile_env!(:distributed_simulator, :module_prefix)
 
           @max_iterations Application.compile_env!(:distributed_simulator, :max_iterations)
-          @signal_suppression_factor Application.compile_env!(:distributed_simulator, :signal_suppression_factor)
-          @signal_attenuation_factor Application.compile_env!(:distributed_simulator, :signal_attenuation_factor)
+          @signal_suppression_factor Application.compile_env!(
+                                       :distributed_simulator,
+                                       :signal_suppression_factor
+                                     )
+          @signal_attenuation_factor Application.compile_env!(
+                                       :distributed_simulator,
+                                       :signal_attenuation_factor
+                                     )
 
           @dir_stay 0
           @dir_top 1
@@ -29,12 +38,10 @@ defmodule Simulator.Constants do
         end
       end
 
-      defmacro define_constants do end
+      defmacro define_constants do
+      end
 
       defoverridable define_constants: 0
     end
   end
-
-  @macrocallback define_constants() :: Macro.t()
-  @optional_callbacks define_constants: 0
 end

@@ -1,7 +1,6 @@
 defmodule Evacuation.Cell do
-  @behaviour Simulator.Cell
-
   use Evacuation.Constants
+  use Simulator.Cell
 
   import Nx.Defn
 

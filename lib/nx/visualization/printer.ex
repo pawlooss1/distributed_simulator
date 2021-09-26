@@ -11,7 +11,7 @@ defmodule Simulator.Nx.Printer do
   Prints the string as well.
   """
   def write_to_file(grid, file_name) do
-    IO.puts "writing"
+    IO.puts("writing")
     grid_as_string = tensor_to_string(grid)
     File.write!("lib/nx/grid_iterations/#{file_name}.txt", grid_as_string)
   end
@@ -27,10 +27,12 @@ defmodule Simulator.Nx.Printer do
   Converts grid as tensor to (relatively) readable string.
   """
   defp tensor_to_string(tensor) do
-    ans = Nx.to_flat_list(tensor)
-          |> Enum.map(fn num -> to_string(num) end)
-#          |> Enum.chunk_every() # todo is it needed?
-          |> Enum.join(" ")
+    ans =
+      Nx.to_flat_list(tensor)
+      |> Enum.map(fn num -> to_string(num) end)
+      #          |> Enum.chunk_every() # todo is it needed?
+      |> Enum.join(" ")
+
     ans
   end
 
@@ -51,6 +53,7 @@ defmodule Simulator.Nx.Printer do
         {_i, _j, tensor} =
           while {i, j = 0, tensor}, Nx.less(j, y_size) do
             cell = tensor[i][j]
+
             reconfigured =
               [cell[8], cell[1], cell[2], cell[7], cell[0], cell[3], cell[6], cell[5], cell[4]]
               |> Nx.stack()

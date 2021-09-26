@@ -1,7 +1,6 @@
 defmodule Evacuation.PlanCreator do
-  @behaviour Simulator.PlanCreator
-
   use Evacuation.Constants
+  use Simulator.PlanCreator
 
   import Nx.Defn
   import Simulator.Helpers

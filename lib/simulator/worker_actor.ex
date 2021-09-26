@@ -24,7 +24,8 @@ defmodule Simulator.WorkerActor do
   Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   """
   @impl true
-  def handle_info(:start_iteration, %{iteration: iteration} = state) when iteration > @max_iterations do
+  def handle_info(:start_iteration, %{iteration: iteration} = state)
+      when iteration > @max_iterations do
     {:stop, :normal, state}
   end
 
@@ -60,7 +61,7 @@ defmodule Simulator.WorkerActor do
 
   def handle_info({:remote_signal, signal_update}, state) do
     %{grid: grid, iteration: iteration} = state
-    
+
     signal_factor = &@module_prefix.Cell.signal_factor/1
     updated_grid = apply_signal_update(grid, signal_update, signal_factor)
 
@@ -110,7 +111,7 @@ defmodule Simulator.WorkerActor do
 
     {_i, _order, _plans, grid, _y_size, accepted_plans} =
       while {i = 0, order, plans, grid, y_size,
-              accepted_plans = Nx.broadcast(0, {x_size, y_size})},
+             accepted_plans = Nx.broadcast(0, {x_size, y_size})},
             Nx.less(i, order_len) do
         ordinal = order[i]
         {x, y} = {Nx.quotient(ordinal, y_size), Nx.remainder(ordinal, y_size)}
