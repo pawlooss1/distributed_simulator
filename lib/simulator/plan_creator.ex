@@ -13,14 +13,22 @@ defmodule Simulator.PlanCreator do
   the exemplary usage.
   """
 
-  @type x_index :: Type.index
-  @type y_index :: Type.index
-  @type grid :: Nx.t
-  @type plans :: Nx,t
-  @type iteration :: Type.index
+  alias Simulator.Types
 
-  @callback create_plan(x_index(), y_index, grid(), plans(), iteration()) ::
-              {x_index(), y_index, grid(), plans(), iteration()}
+  @callback create_plan(
+              x_index :: Types.index(),
+              y_index :: Types.index(),
+              grid :: Nx.t(),
+              plans :: Nx.t(),
+              iterations :: Types.index()
+            ) ::
+              {
+                x_index :: Types.index(),
+                y_index :: Types.index(),
+                grid :: Nx.t(),
+                plans :: Nx.t(),
+                iterations :: Types.index()
+              }
 
   defmacro __using__(_opts) do
     quote location: :keep do

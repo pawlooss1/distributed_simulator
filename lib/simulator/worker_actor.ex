@@ -59,9 +59,6 @@ defmodule Simulator.WorkerActor do
   def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
     {updated_grid, accepted_plans} = RemotePlans.process_plans(grid, plans)
 
-    # TODO - now action+cons applied at once
-    # todo could apply alternatives as well if those existed, without changing input :D
-
     distribute_consequences(plans, accepted_plans)
     {:noreply, %{state | grid: updated_grid}}
   end

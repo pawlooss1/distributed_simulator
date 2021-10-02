@@ -24,7 +24,6 @@ defmodule Simulator.Helpers do
       Nx.equal(direction, @dir_bottom_left) -> {x + 1, y - 1}
       Nx.equal(direction, @dir_left) -> {x, y - 1}
       Nx.equal(direction, @dir_top_left) -> {x - 1, y - 1}
-      # TODO why? shouldn't throw? // I think we cannot throw from defn. Any suggestions what to do with that?
       true -> {0, 0}
     end
   end

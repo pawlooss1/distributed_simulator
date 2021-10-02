@@ -14,12 +14,8 @@ defmodule Simulator.Cell do
   the exemplary usage.
   """
 
-  @type object :: Nx.t
-  @type signal :: non_neg_integer
-  @type signal_multiplier :: non_neg_integer
-
-  @callback generate_signal(object()) :: signal()
-  @callback signal_factor(object()) :: signal_multiplier()
+  @callback generate_signal(object :: Nx.t()) :: non_neg_integer()
+  @callback signal_factor(object :: Nx.t()) :: non_neg_integer()
 
   defmacro __using__(_opts) do
     quote location: :keep do
