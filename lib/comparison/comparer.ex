@@ -20,7 +20,7 @@ defmodule Simulator.Comparer do
 
   defp measure(function) do
     function
-    |> :timer.tc
+    |> :timer.tc()
     |> elem(0)
     |> Kernel./(1_000_000)
   end

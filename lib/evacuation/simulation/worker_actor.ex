@@ -92,10 +92,12 @@ defmodule Simulator.Evacuation.WorkerActor do
                 plan = create_plan_person(i, j, grid)
                 plans = Nx.put_slice(plans, Nx.broadcast(plan, {1, 1, 3}), [i, j, 0])
                 {i, j + 1, plans, grid, iteration}
+
               Nx.equal(grid[i][j][0], @fire) ->
                 plan = create_plan_fire(i, j, grid, iteration)
                 plans = Nx.put_slice(plans, Nx.broadcast(plan, {1, 1, 3}), [i, j, 0])
                 {i, j + 1, plans, grid, iteration}
+
               :otherwise ->
                 {i, j + 1, plans, grid, iteration}
             end
@@ -114,10 +116,12 @@ defmodule Simulator.Evacuation.WorkerActor do
         {x, y} = shift({i, j}, direction)
 
         if can_move({x, y}, grid) do
-          signals = Nx.put_slice(signals, Nx.broadcast(grid[i][j][direction], {1}), [direction-1])
+          signals =
+            Nx.put_slice(signals, Nx.broadcast(grid[i][j][direction], {1}), [direction - 1])
+
           {i, j, direction + 1, signals, grid}
         else
-          signals = Nx.put_slice(signals, Nx.broadcast(-@infinity, {1}), [direction-1])
+          signals = Nx.put_slice(signals, Nx.broadcast(-@infinity, {1}), [direction - 1])
           {i, j, direction + 1, signals, grid}
         end
       end
@@ -135,7 +139,8 @@ defmodule Simulator.Evacuation.WorkerActor do
   defnp create_plan_fire(i, j, grid, iteration) do
     if Nx.remainder(iteration, @fire_spreading_frequency) |> Nx.equal(Nx.tensor(0)) do
       {_i, _j, _direction, availability, availability_size, _grid} =
-        while {i, j, direction = 1, availability = Nx.broadcast(Nx.tensor(0), {8}), curr = 0, grid},
+        while {i, j, direction = 1, availability = Nx.broadcast(Nx.tensor(0), {8}), curr = 0,
+               grid},
               Nx.less(direction, 9) do
           {x, y} = shift({i, j}, direction)
 
