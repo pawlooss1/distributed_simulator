@@ -20,12 +20,7 @@ erl_crash.dump
 *.ez
 
 # Ignore package tarball (built via "mix hex.build").
-distributed_simulator-*.tar
+evacuation-*.tar
 
-
-# Temporary files for e.g. tests
-/tmp
-
-/.idea
-
-grid_iterations/
+# Temporary files, for example, from tests.
+/tmp/
