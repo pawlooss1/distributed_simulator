@@ -21,11 +21,9 @@ defmodule Evacuation.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nx, path: "/Users/samuelheldak/studies/nx/nx", override: true},
+      {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true},
       {:distributed_simulator,
-       path: "/Users/samuelheldak/studies/distributed_simulator", override: true}
-      # {:dep_from_hexpm, "~> 0.3.0"},
-      # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
+       path: "/Users/agnieszkadutka/repos/inz/distributed_simulator", override: true}
     ]
   end
 end

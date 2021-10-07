@@ -58,7 +58,7 @@ defmodule Simulator.Phase.RemotePlans do
         action = plans[x][y][1]
 
         grid = Nx.put_slice(grid, Nx.broadcast(action, {1, 1, 1}), [x_target, y_target, 0])
-        accepted_plans = Nx.put_slice(accepted_plans, Nx.broadcast(1, {1, 1}), [x, y])
+        accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(1, {1, 1}))
 
         {grid, accepted_plans}
       else

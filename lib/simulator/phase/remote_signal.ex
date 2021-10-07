@@ -45,7 +45,7 @@ defmodule Simulator.Phase.RemoteSignal do
       |> Nx.multiply(signal_factors)
       |> Nx.as_type({:s, 64})
 
-    Nx.put_slice(grid, updated_signal, [0, 0, 1])
+    Nx.put_slice(grid, [0, 0, 1], updated_signal)
   end
 
   # Returns 3D tensor with shape {x, y, 1}, where {x, y, _z} is a
@@ -61,7 +61,7 @@ defmodule Simulator.Phase.RemoteSignal do
         {_i, _j, grid, signal_factors} =
           while {i, j = 0, grid, signal_factors}, Nx.less(j, y_size) do
             cell_signal_factor = Nx.broadcast(signal_factor.(grid[i][j][0]), {1, 1, 1})
-            signal_factors = Nx.put_slice(signal_factors, cell_signal_factor, [i, j, 0])
+            signal_factors = Nx.put_slice(signal_factors, [i, j, 0], cell_signal_factor)
 
             {i, j + 1, grid, signal_factors}
           end

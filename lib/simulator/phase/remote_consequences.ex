@@ -23,7 +23,7 @@ defmodule Simulator.Phase.RemoteConsequences do
             # TODO
             if Nx.equal(accepted_plans[i][j], 1) do
               consequence = plans[i][j][2]
-              grid = Nx.put_slice(grid, Nx.broadcast(consequence, {1, 1, 1}), [i, j, 0])
+              grid = Nx.put_slice(grid, [i, j, 0], Nx.broadcast(consequence, {1, 1, 1}))
               {i, j + 1, grid, plans, accepted_plans}
             else
               {i, j + 1, grid, plans, accepted_plans}
@@ -69,7 +69,7 @@ defmodule Simulator.Phase.RemoteConsequences do
           update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
 
           update_grid =
-            Nx.put_slice(update_grid, Nx.broadcast(update_value, {1, 1, 1}), [x, y, dir])
+            Nx.put_slice(update_grid, [x, y, dir], Nx.broadcast(update_value, {1, 1, 1}))
 
           {x, y, dir + 1, grid, update_grid}
         else

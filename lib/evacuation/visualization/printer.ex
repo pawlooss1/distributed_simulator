@@ -55,7 +55,7 @@ defmodule Simulator.Evacuation.Printer do
               |> Nx.stack()
               |> Nx.broadcast({1, 1, 9})
 
-            tensor = Nx.put_slice(tensor, reconfigured, [i, j, 0])
+            tensor = Nx.put_slice(tensor, [i, j, 0], reconfigured)
 
             {i, j + 1, tensor}
           end

@@ -80,7 +80,7 @@ defmodule Simulator.Nx.WorkerActor do
           while {i, j = 0, plans, grid}, Nx.less(j, y_size) do
             if Nx.equal(grid[i][j][0], @mock) do
               plan = create_plan_mock(i, j, grid)
-              plans = Nx.put_slice(plans, Nx.broadcast(plan, {1, 1, 3}), [i, j, 0])
+              plans = Nx.put_slice(plans, [i, j, 0], Nx.broadcast(plan, {1, 1, 3}))
               {i, j + 1, plans, grid}
             else
               {i, j + 1, plans, grid}
@@ -106,7 +106,7 @@ defmodule Simulator.Nx.WorkerActor do
         {x, y} = shift({i, j}, direction)
 
         if can_move({x, y}, grid) do
-          availability = Nx.put_slice(availability, Nx.broadcast(direction, {1}), [curr])
+          availability = Nx.put_slice(availability, [curr], Nx.broadcast(direction, {1}))
           {i, j, direction + 1, availability, curr + 1, grid}
         else
           {i, j, direction + 1, availability, curr, grid}
@@ -182,8 +182,8 @@ defmodule Simulator.Nx.WorkerActor do
       if Nx.equal(grid[x_target][y_target][0], @empty) do
         action = plans[x][y][1]
 
-        grid = Nx.put_slice(grid, Nx.broadcast(action, {1, 1, 1}), [x_target, y_target, 0])
-        accepted_plans = Nx.put_slice(accepted_plans, Nx.broadcast(1, {1, 1}), [x, y])
+        grid = Nx.put_slice(grid, [x_target, y_target, 0], Nx.broadcast(action, {1, 1, 1}))
+        accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(1, {1, 1}))
 
         {grid, accepted_plans}
       else
@@ -234,7 +234,7 @@ defmodule Simulator.Nx.WorkerActor do
             # todo could apply alternative here
             if Nx.equal(accepted_plans[i][j], 1) do
               consequence = plans[i][j][2]
-              grid = Nx.put_slice(grid, Nx.broadcast(consequence, {1, 1, 1}), [i, j, 0])
+              grid = Nx.put_slice(grid, [i, j, 0], Nx.broadcast(consequence, {1, 1, 1}))
               {i, j + 1, grid, plans, accepted_plans}
             else
               {i, j + 1, grid, plans, accepted_plans}
@@ -278,7 +278,7 @@ defmodule Simulator.Nx.WorkerActor do
           update_value = signal_update_from_direction(x2, y2, grid, dir)
 
           update_grid =
-            Nx.put_slice(update_grid, Nx.broadcast(update_value, {1, 1, 1}), [x, y, dir])
+            Nx.put_slice(update_grid, [x, y, dir], Nx.broadcast(update_value, {1, 1, 1}))
 
           {x, y, dir + 1, grid, update_grid}
         else
@@ -358,7 +358,7 @@ defmodule Simulator.Nx.WorkerActor do
       |> Nx.multiply(signal_factors)
       |> Nx.as_type({:s, 64})
 
-    Nx.put_slice(grid, updated_signal, [0, 0, 1])
+    Nx.put_slice(grid, [0, 0, 1], updated_signal)
   end
 
   @doc """
@@ -374,7 +374,7 @@ defmodule Simulator.Nx.WorkerActor do
         {_i, _j, grid, signal_factors} =
           while {i, j = 0, grid, signal_factors}, Nx.less(j, y_size) do
             cell_signal_factor = Nx.broadcast(signal_factor(grid[i][j][0]), {1, 1, 1})
-            signal_factors = Nx.put_slice(signal_factors, cell_signal_factor, [i, j, 0])
+            signal_factors = Nx.put_slice(signal_factors, [i, j, 0], cell_signal_factor)
 
             {i, j + 1, grid, signal_factors}
           end
