@@ -57,7 +57,7 @@ defmodule Simulator.Phase.RemotePlans do
       if validate_plan(grid, plans, x, y) do
         action = plans[x][y][1]
 
-        grid = Nx.put_slice(grid, Nx.broadcast(action, {1, 1, 1}), [x_target, y_target, 0])
+        grid = Nx.put_slice(grid, [x_target, y_target, 0], Nx.broadcast(action, {1, 1, 1}))
         accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(1, {1, 1}))
 
         {grid, accepted_plans}

@@ -59,7 +59,7 @@ defmodule Evacuation.PlanCreator do
           {x, y} = shift({i, j}, direction)
 
           if can_burn({x, y}, grid) do
-            availability = Nx.put_slice(availability, [curr],Nx.broadcast(direction, {1}))
+            availability = Nx.put_slice(availability, [curr], Nx.broadcast(direction, {1}))
             {i, j, direction + 1, availability, curr + 1, grid}
           else
             {i, j, direction + 1, availability, curr, grid}
