@@ -34,7 +34,7 @@ defmodule Simulator.Phase.RemotePlans do
 
     {_i, _order, _plans, grid, _y_size, accepted_plans} =
       while {i = 0, order, plans, grid, y_size,
-             accepted_plans = Nx.broadcast(0, {x_size, y_size})},
+             accepted_plans = Nx.broadcast(@rejected, {x_size, y_size})},
             Nx.less(i, order_len) do
         ordinal = order[i]
         {x, y} = {Nx.quotient(ordinal, x_size), Nx.remainder(ordinal, y_size)}
@@ -56,7 +56,7 @@ defmodule Simulator.Phase.RemotePlans do
 
     if is_update_valid?.(action, object) do
       grid = apply_update.(grid, x_target, y_target, action, object)
-      accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(1, {1, 1}))
+      accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(@accepted, {1, 1}))
 
       {grid, accepted_plans}
     else

@@ -25,6 +25,7 @@ defmodule Simulator.Constants do
 
       defmacro __using__(_opts) do
         quote location: :keep do
+          # constants set in simulation's config file
           @module_prefix Application.compile_env!(:distributed_simulator, :module_prefix)
 
           @max_iterations Application.compile_env!(:distributed_simulator, :max_iterations)
@@ -37,6 +38,7 @@ defmodule Simulator.Constants do
                                        :signal_attenuation_factor
                                      )
 
+          # directions
           @dir_stay 0
           @dir_top 1
           @dir_top_right 2
@@ -47,10 +49,17 @@ defmodule Simulator.Constants do
           @dir_left 7
           @dir_top_left 8
 
+          # plans
+          @rejected 0
+          @accepted 1
+
+          # object
           @empty 0
 
+          # action
           @keep 0
 
+          # for signals
           @infinity 1_000_000_000
 
           unquote(__MODULE__).define_constants()
