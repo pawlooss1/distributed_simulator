@@ -55,12 +55,20 @@ defmodule Simulator.Helpers do
     |> Nx.all?()
   end
 
+  @doc """
+  Checks whether `a == a_ref and b == b_ref`.
+  """
+  @spec both_equal(Nx.t(), Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
   defn both_equal(a, a_ref, b, b_ref) do
     [Nx.equal(a, a_ref), Nx.equal(b, b_ref)]
     |> Nx.stack()
     |> Nx.all?()
   end
 
+  @doc """
+  Puts `object` to the `grid[x][y][0]`.
+  """
+  @spec put_object(Nx.t(), Types.index(), Types.index(), Nx.t()) :: Nx.t()
   defn put_object(grid, x, y, object) do
     Nx.put_slice(grid, [x, y, 0], Nx.broadcast(object, {1, 1, 1}))
   end
