@@ -49,6 +49,8 @@ defmodule Simulator.Constants do
 
           @empty 0
 
+          @keep 0
+
           @infinity 1_000_000_000
 
           unquote(__MODULE__).define_constants()

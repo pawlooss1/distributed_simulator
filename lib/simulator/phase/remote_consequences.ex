@@ -12,18 +12,19 @@ defmodule Simulator.Phase.RemoteConsequences do
   @doc """
   Applies all consequences from the accepted plans.
   """
-  @spec apply_consequences(Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
-  defn apply_consequences(grid, plans, accepted_plans) do
+  @spec apply_consequences(Nx.t(), Nx.t(), Nx.t(), fun()) :: Nx.t()
+  defn apply_consequences(grid, plans, accepted_plans, apply_update) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, grid, _plans, _accepted_plans} =
       while {i = 0, grid, plans, accepted_plans}, Nx.less(i, x_size) do
         {_i, _j, grid, plans, accepted_plans} =
           while {i, j = 0, grid, plans, accepted_plans}, Nx.less(j, y_size) do
-            # TODO
             if Nx.equal(accepted_plans[i][j], 1) do
+              object = grid[i][j][0]
               consequence = plans[i][j][2]
-              grid = Nx.put_slice(grid, [i, j, 0], Nx.broadcast(consequence, {1, 1, 1}))
+
+              grid = apply_update.(grid, i, j, consequence, object)
               {i, j + 1, grid, plans, accepted_plans}
             else
               {i, j + 1, grid, plans, accepted_plans}

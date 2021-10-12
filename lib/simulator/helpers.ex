@@ -33,7 +33,7 @@ defmodule Simulator.Helpers do
   """
   @spec can_move({Types.index(), Types.index()}, Nx.t()) :: Nx.t()
   defn can_move({x, y}, grid) do
-    [is_valid({x, y}, grid), Nx.equal(grid[x][y][0], 0)]
+    [is_valid({x, y}, grid), Nx.equal(grid[x][y][0], @empty)]
     |> Nx.stack()
     |> Nx.all?()
   end
@@ -53,5 +53,15 @@ defmodule Simulator.Helpers do
     ]
     |> Nx.stack()
     |> Nx.all?()
+  end
+
+  defn both_equal(a, a_ref, b, b_ref) do
+    [Nx.equal(a, a_ref), Nx.equal(b, b_ref)]
+    |> Nx.stack()
+    |> Nx.all?()
+  end
+
+  defn put_object(grid, x, y, object) do
+    Nx.put_slice(grid, [x, y, 0], Nx.broadcast(object, {1, 1, 1}))
   end
 end

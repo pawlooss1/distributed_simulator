@@ -9,7 +9,11 @@ defmodule Evacuation.Constants do
       @exit 3
       @fire 4
 
-      @fire_spreading_frequency 5
+      @add_person 1
+      @remove_person 2
+      @create_fire 3
+
+      @fire_spreading_frequency 2
 
       @exit_signal 30
       @fire_signal -30

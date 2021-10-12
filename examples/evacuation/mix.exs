@@ -21,9 +21,13 @@ defmodule Evacuation.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true},
+      # {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true},
+      # {:distributed_simulator,
+      #  path: "/Users/agnieszkadutka/repos/inz/distributed_simulator", override: true}
+
+      {:nx, path: "/Users/samuelheldak/studies/nx/nx", override: true},
       {:distributed_simulator,
-       path: "/Users/agnieszkadutka/repos/inz/distributed_simulator", override: true}
+       path: "/Users/samuelheldak/studies/distributed_simulator", override: true}
     ]
   end
 end

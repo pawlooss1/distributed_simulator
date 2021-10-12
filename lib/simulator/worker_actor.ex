@@ -46,8 +46,14 @@ defmodule Simulator.WorkerActor do
   end
 
   def handle_info(:start_iteration, %{grid: grid, iteration: iteration} = state) do
+    Process.sleep(300)
+
     create_plan = &@module_prefix.PlanCreator.create_plan/5
     plans = StartIteration.create_plans(iteration, grid, create_plan)
+
+    Printer.print_objects(grid, :start_iteration)
+    Printer.write_to_file(grid, "grid_#{iteration}")
+    Printer.print_plans(plans)
 
     distribute_plans(plans)
     {:noreply, state}
@@ -57,19 +63,33 @@ defmodule Simulator.WorkerActor do
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
-    {updated_grid, accepted_plans} = RemotePlans.process_plans(grid, plans)
+    is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
+    apply_update = &@module_prefix.PlanResolver.apply_update/5
+
+    {updated_grid, accepted_plans} =
+      RemotePlans.process_plans(grid, plans, is_update_valid?, apply_update)
 
     distribute_consequences(plans, accepted_plans)
+
+    IO.inspect(accepted_plans)
+    Printer.print_objects(updated_grid, :remote_plans)
+
     {:noreply, %{state | grid: updated_grid}}
   end
 
   def handle_info({:remote_consequences, plans, accepted_plans}, %{grid: grid} = state) do
-    updated_grid = RemoteConsequences.apply_consequences(grid, plans, accepted_plans)
+    apply_update = &@module_prefix.PlanResolver.apply_update/5
+
+    updated_grid =
+      RemoteConsequences.apply_consequences(grid, plans, accepted_plans, apply_update)
 
     generate_signal = &@module_prefix.Cell.generate_signal/1
     signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
 
     distribute_signal(signal_update)
+
+    Printer.print_objects(updated_grid, :remote_consequences)
+
     {:noreply, %{state | grid: updated_grid}}
   end
 
@@ -79,7 +99,7 @@ defmodule Simulator.WorkerActor do
     signal_factor = &@module_prefix.Cell.signal_factor/1
     updated_grid = RemoteSignal.apply_signal_update(grid, signal_update, signal_factor)
 
-    Printer.write_to_file(updated_grid, "grid_#{iteration}")
+    Printer.print_objects(updated_grid, :remote_signal)
 
     start_next_iteration()
     {:noreply, %{state | grid: updated_grid, iteration: iteration + 1}}

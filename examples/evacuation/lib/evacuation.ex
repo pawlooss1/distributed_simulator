@@ -12,10 +12,12 @@ defmodule Evacuation do
   """
   @spec start() :: :ok
   def start() do
-    grid = read_grid("map_2")
+    grid = read_grid("map_1")
+
+    clean_grid_iterations()
 
     WorkerActor.start(grid: grid)
-    # Printer.write_to_file(grid, "grid_0")
+    Printer.write_to_file(grid, "grid_0")
     :ok
   end
 
@@ -40,5 +42,11 @@ defmodule Evacuation do
       end
     end)
     |> Enum.map(fn contents -> [contents, 0, 0, 0, 0, 0, 0, 0, 0] end)
+  end
+
+  defp clean_grid_iterations() do
+    "lib/grid_iterations/*"
+    |> Path.wildcard()
+    |> Enum.each(fn path -> File.rm!(path) end)
   end
 end
