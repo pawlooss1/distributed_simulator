@@ -1,0 +1,5 @@
+label,number,color
+person,1,yellow
+obstacle,2,orange
+exit,3,green
+fire,4,red
