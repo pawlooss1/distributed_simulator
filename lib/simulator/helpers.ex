@@ -29,16 +29,6 @@ defmodule Simulator.Helpers do
   end
 
   @doc """
-  Checks whether the mock can move to position {x, y}.
-  """
-  @spec can_move({Types.index(), Types.index()}, Nx.t()) :: Nx.t()
-  defn can_move({x, y}, grid) do
-    [is_valid({x, y}, grid), Nx.equal(grid[x][y][0], @empty)]
-    |> Nx.stack()
-    |> Nx.all?()
-  end
-
-  @doc """
   Checks if position {x, y} is inside the grid.
   """
   @spec is_valid({Types.index(), Types.index()}, Nx.t()) :: Nx.t()
