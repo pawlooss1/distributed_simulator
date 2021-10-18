@@ -18,15 +18,17 @@ defmodule Simulator.PlanCreator do
   @callback create_plan(
               x_index :: Types.index(),
               y_index :: Types.index(),
-              grid :: Nx.t(),
               plans :: Nx.t(),
+              grid :: Nx.t(),
+              object_data :: Nx.t(),
               iterations :: Types.index()
             ) ::
               {
                 x_index :: Types.index(),
                 y_index :: Types.index(),
-                grid :: Nx.t(),
                 plans :: Nx.t(),
+                grid :: Nx.t(),
+                # object_data :: Nx.t(),
                 iterations :: Types.index()
               }
 

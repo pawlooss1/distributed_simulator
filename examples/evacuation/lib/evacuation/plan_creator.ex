@@ -6,7 +6,7 @@ defmodule Evacuation.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, plans, grid, iteration) do
+  defn create_plan(i, j, plans, grid, object_data, iteration) do
     plan =
       cond do
         Nx.equal(grid[i][j][0], @person) ->

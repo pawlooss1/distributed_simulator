@@ -6,7 +6,7 @@ defmodule Simulator.PlanResolver do
   Using module have to implement two functions:
   - `is_update_valid?/2` - which will be responsible for checking
     whether the `action` can be applied to the `object`;
-  - `apply_update/5` - which should return the `grid` with applied
+  - `apply_update/6` - which should return the `grid` with applied
     `action` on the `grid[x][y]`.
 
   See `Evacuation.PlanResolver` in the `examples` directory for
@@ -18,11 +18,12 @@ defmodule Simulator.PlanResolver do
   @callback is_update_valid?(action :: Nx.t(), object :: Nx.t()) :: Nx.t()
   @callback apply_update(
               grid :: Nx.t(),
+              object_data :: Nx.t(),
               x :: Types.index(),
               y :: Types.index(),
               action :: Nx.t(),
               object :: Nx.t()
-            ) :: Nx.t()
+            ) :: {Nx.t(), Nx.t()}
 
   defmacro __using__(_opts) do
     quote location: :keep do

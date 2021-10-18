@@ -28,15 +28,15 @@ defmodule Simulator.WorkerActor do
   TODO use some supervisor.
   """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
-  def start(grid: grid) do
-    GenServer.start(__MODULE__, grid)
+  def start(grid: grid, object_data: object_data) do
+    GenServer.start(__MODULE__, grid: grid, object_data: object_data)
   end
 
   @impl true
-  def init(grid) do
+  def init(grid: grid, object_data: object_data) do
     send(self(), :start_iteration)
 
-    {:ok, %{grid: grid, iteration: 1}}
+    {:ok, %{grid: grid, object_data: object_data, iteration: 1}}
   end
 
   @impl true
@@ -48,8 +48,8 @@ defmodule Simulator.WorkerActor do
   def handle_info(:start_iteration, %{grid: grid, iteration: iteration} = state) do
     Process.sleep(300)
 
-    create_plan = &@module_prefix.PlanCreator.create_plan/5
-    plans = StartIteration.create_plans(iteration, grid, create_plan)
+    create_plan = &@module_prefix.PlanCreator.create_plan/6
+    plans = StartIteration.create_plans(iteration, grid, state.object_data, create_plan)
 
     Printer.print_objects(grid, :start_iteration)
     Printer.write_to_file(grid, "grid_#{iteration}")
@@ -64,25 +64,32 @@ defmodule Simulator.WorkerActor do
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
     is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
-    apply_update = &@module_prefix.PlanResolver.apply_update/5
+    apply_update = &@module_prefix.PlanResolver.apply_update/6
 
-    {updated_grid, accepted_plans} =
-      RemotePlans.process_plans(grid, plans, is_update_valid?, apply_update)
+    {updated_grid, accepted_plans, object_data} =
+      RemotePlans.process_plans(grid, plans, state.object_data, is_update_valid?, apply_update)
 
     distribute_consequences(plans, accepted_plans)
 
     IO.inspect(accepted_plans)
     Printer.print_objects(updated_grid, :remote_plans)
 
-    {:noreply, %{state | grid: updated_grid}}
+    {:noreply, %{state | grid: updated_grid, object_data: object_data}}
   end
 
   def handle_info({:remote_consequences, plans, accepted_plans}, %{grid: grid} = state) do
-    apply_update = &@module_prefix.PlanResolver.apply_update/5
+    apply_update = &@module_prefix.PlanResolver.apply_update/6
 
-    updated_grid =
-      RemoteConsequences.apply_consequences(grid, plans, accepted_plans, apply_update)
+    {updated_grid, object_data} =
+      RemoteConsequences.apply_consequences(
+        grid,
+        state.object_data,
+        plans,
+        accepted_plans,
+        apply_update
+      )
 
+    # TODO should probably get object data
     generate_signal = &@module_prefix.Cell.generate_signal/1
     signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
 
@@ -90,12 +97,13 @@ defmodule Simulator.WorkerActor do
 
     Printer.print_objects(updated_grid, :remote_consequences)
 
-    {:noreply, %{state | grid: updated_grid}}
+    {:noreply, %{state | grid: updated_grid, object_data: object_data}}
   end
 
   def handle_info({:remote_signal, signal_update}, state) do
     %{grid: grid, iteration: iteration} = state
 
+    # TODO should signal factor depend on object state?
     signal_factor = &@module_prefix.Cell.signal_factor/1
     updated_grid = RemoteSignal.apply_signal_update(grid, signal_update, signal_factor)
 

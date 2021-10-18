@@ -24,8 +24,8 @@ defmodule Simulator.Phase.StartIteration do
 
   Example: a person wants to move up: [@dir_up, @person, @empty].
   """
-  @spec create_plans(Types.index(), Nx.t(), fun()) :: Nx.t()
-  defn create_plans(iteration, grid, create_plan) do
+  @spec create_plans(Types.index(), Nx.t(), Nx.t(), fun()) :: Nx.t()
+  defn create_plans(iteration, grid, object_data, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, plans, _grid, _iteration} =
@@ -33,7 +33,8 @@ defmodule Simulator.Phase.StartIteration do
             Nx.less(i, x_size) do
         {_i, _j, plans, _grid, _iteration} =
           while {i, j = 0, plans, grid, iteration}, Nx.less(j, y_size) do
-            create_plan.(i, j, plans, grid, iteration)
+            # TODO object_data not needed in loops?
+            create_plan.(i, j, plans, grid, object_data, iteration)
           end
 
         {i + 1, plans, grid, iteration}

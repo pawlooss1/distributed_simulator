@@ -13,10 +13,12 @@ defmodule Evacuation do
   @spec start() :: :ok
   def start() do
     grid = read_grid("map_1")
+    {x, y, _z} = Nx.shape(grid)
+    object_data = Nx.broadcast(0, {x, y, 1})
 
     clean_grid_iterations()
 
-    WorkerActor.start(grid: grid)
+    WorkerActor.start(grid: grid, object_data: object_data)
     Printer.write_to_file(grid, "grid_0")
     :ok
   end

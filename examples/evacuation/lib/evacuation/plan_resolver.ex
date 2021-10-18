@@ -23,7 +23,11 @@ defmodule Evacuation.PlanResolver do
   end
 
   @impl true
-  defn apply_update(grid, x, y, action, object) do
+  defn apply_update(grid, object_data, x, y, action, object) do
+    {do_apply_update(grid, x, y, action, object),  object_data}
+  end
+
+  defnp do_apply_update(grid, x, y, action, object) do
     cond do
       both_equal(action, @add_person, object, @empty) -> put_object(grid, x, y, @person)
       both_equal(action, @add_person, object, @exit) -> put_object(grid, x, y, @exit)

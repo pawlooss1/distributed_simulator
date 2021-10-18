@@ -29,6 +29,7 @@ defmodule Simulator.Constants do
           @module_prefix Application.compile_env!(:distributed_simulator, :module_prefix)
 
           @max_iterations Application.compile_env!(:distributed_simulator, :max_iterations)
+
           @signal_suppression_factor Application.compile_env!(
                                        :distributed_simulator,
                                        :signal_suppression_factor
@@ -37,7 +38,11 @@ defmodule Simulator.Constants do
                                        :distributed_simulator,
                                        :signal_attenuation_factor
                                      )
-
+          @object_vector_length Application.compile_env(
+                                  :distributed_simulator,
+                                  :object_vector_length,
+                                  1
+                                )
           # directions
           @dir_stay 0
           @dir_top 1
