@@ -6,9 +6,10 @@ defmodule Rabbits.PlanResolver do
   import Simulator.Helpers
 
   @impl true
+  # TODO why?
   defn is_update_valid?(action, object) do
-    # cond do
-      # both_equal(action, @add_person, object, @empty) -> Nx.tensor(1)
+    cond do
+      both_equal(action, @add_lettuce, object, @empty) -> Nx.tensor(1)
       # both_equal(action, @add_person, object, @exit) -> Nx.tensor(1)
       # both_equal(action, @add_person, object, @fire) -> Nx.tensor(1)
 
@@ -18,9 +19,8 @@ defmodule Rabbits.PlanResolver do
       # both_equal(action, @create_fire, object, @person) -> Nx.tensor(1)
       # both_equal(action, @create_fire, object, @exit) -> Nx.tensor(1)
 
-      # true -> Nx.tensor(0)
-    # end
-    Nx.tensor(1)
+      true -> Nx.tensor(0)
+    end
   end
 
   @impl true
@@ -29,8 +29,8 @@ defmodule Rabbits.PlanResolver do
   end
 
   defnp do_apply_update(grid, x, y, action, object) do
-    # cond do
-      # both_equal(action, @add_person, object, @empty) -> put_object(grid, x, y, @person)
+    cond do
+      both_equal(action, @add_lettuce, object, @empty) -> put_object(grid, x, y, @lettuce)
       # both_equal(action, @add_person, object, @exit) -> put_object(grid, x, y, @exit)
       # both_equal(action, @add_person, object, @fire) -> put_object(grid, x, y, @fire)
 
@@ -40,8 +40,7 @@ defmodule Rabbits.PlanResolver do
       # both_equal(action, @create_fire, object, @person) -> put_object(grid, x, y, @fire)
       # both_equal(action, @create_fire, object, @exit) -> put_object(grid, x, y, @fire)
 
-      # true -> grid
-    # end
-    grid
+      true -> grid
+    end
   end
 end

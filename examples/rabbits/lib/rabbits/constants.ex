@@ -12,7 +12,7 @@ defmodule Rabbits.Constants do
       @remove_rabbit 3
       @remove_lettuce 4
 
-      @lettuce_spreading_frequency 2
+      @lettuce_growth_factor 2
 
       @rabbit_signal -5
       @lettuce_signal 10
