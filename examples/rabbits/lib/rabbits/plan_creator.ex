@@ -24,9 +24,36 @@ defmodule Rabbits.PlanCreator do
   end
 
   defnp create_plan_rabbit(i, j, grid) do
-    Nx.tensor([@dir_stay, @keep, @keep])
+
+        # TODO all rabbits go up when signal is 0
+        # TODO procreate and die depending on energy
+    {_i, _j, _direction, signals, _grid} =
+      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(-@infinity), {9}), grid},
+            Nx.less_equal(direction, @dir_top_left) do
+        {x, y} = shift({i, j}, direction)
+
+        signals =
+          if Nx.equal(grid[x][y][0], @empty) or Nx.equal(grid[x][y][0], @lettuce) do
+            Nx.put_slice(signals, [direction], Nx.broadcast(grid[i][j][direction], {1}))
+          else
+            Nx.put_slice(signals, [direction], Nx.broadcast(-@infinity, {1}))
+          end
+
+        {i, j, direction + 1, signals, grid}
+      end
+
+    if signals |> Nx.reduce_max() |> Nx.greater(-@infinity) do
+      direction = Nx.argmax(signals)
+
+      action_consequence = Nx.tensor([@add_rabbit, @remove_rabbit])
+
+      Nx.concatenate([Nx.reshape(direction, {1}), action_consequence])
+    else
+      Nx.tensor([@dir_stay, @keep, @keep])
+    end
   end
 
+  # TODO refer to direction as 1 or @top?
   defnp create_plan_lettuce(i, j, grid, iteration) do
     if Nx.remainder(iteration, @lettuce_growth_factor) |> Nx.equal(Nx.tensor(0)) do
       {_i, _j, _direction, availability, availability_size, _grid} =
