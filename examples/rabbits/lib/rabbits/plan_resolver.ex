@@ -27,17 +27,16 @@ defmodule Rabbits.PlanResolver do
 
   @impl true
   defn apply_update(grid, object_data, x, y, action, object) do
-    {do_apply_update(grid, x, y, action, object),  object_data}
-  end
-
-  defnp do_apply_update(grid, x, y, action, object) do
     cond do
-      both_equal(action, @add_lettuce, object, @empty) -> put_object(grid, x, y, @lettuce)
-      both_equal(action, @add_rabbit, object, @empty) -> put_object(grid, x, y, @rabbit)
-      both_equal(action, @add_rabbit, object, @lettuce) -> put_object(grid, x, y, @rabbit)
-      both_equal(action, @remove_rabbit, object, @rabbit) -> put_object(grid, x, y, @empty)
+      both_equal(action, @add_lettuce, object, @empty) -> {put_object(grid, x, y, @lettuce), object_data}
+      both_equal(action, @add_rabbit, object, @empty) ->
+        {put_object(grid, x, y, @rabbit), Nx.put_slice(object_data, [x, y], Nx.broadcast(object_data[x][y]-1, {1, 1})) }
+      both_equal(action, @add_rabbit, object, @lettuce) ->
+        {put_object(grid, x, y, @rabbit), Nx.put_slice(object_data, [x, y], Nx.broadcast(object_data[x][y]+1, {1, 1})) }
+      both_equal(action, @remove_rabbit, object, @rabbit) -> {put_object(grid, x, y, @empty), object_data}
 
-      true -> grid
+      true -> {grid, object_data}
     end
   end
+
 end

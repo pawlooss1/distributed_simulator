@@ -10,7 +10,7 @@ defmodule Rabbits.PlanCreator do
     plan =
       cond do
         Nx.equal(grid[i][j][0], @rabbit) ->
-          create_plan_rabbit(i, j, grid)
+          create_plan_rabbit(i, j, grid, object_data)
 
         Nx.equal(grid[i][j][0], @lettuce) ->
           create_plan_lettuce(i, j, grid, iteration)
@@ -20,13 +20,16 @@ defmodule Rabbits.PlanCreator do
       end
 
     plans = add_plan(plans, i, j, plan)
-    {i, j + 1, plans, grid, iteration}
+    {i, j + 1, plans, grid, object_data, iteration}
   end
 
-  defnp create_plan_rabbit(i, j, grid) do
+  defnp create_plan_rabbit(i, j, grid, object_data) do
 
         # TODO all rabbits go up when signal is 0
         # TODO procreate and die depending on energy
+        if Nx.equal(object_data[i][j], 0) do
+            Nx.tensor([@dir_stay, @remove_rabbit, @keep])
+        else
     {_i, _j, _direction, signals, _grid} =
       while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(-@infinity), {9}), grid},
             Nx.less_equal(direction, @dir_top_left) do
@@ -51,6 +54,8 @@ defmodule Rabbits.PlanCreator do
     else
       Nx.tensor([@dir_stay, @keep, @keep])
     end
+  end
+
   end
 
   # TODO refer to direction as 1 or @top?
