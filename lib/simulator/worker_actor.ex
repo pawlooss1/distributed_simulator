@@ -48,7 +48,7 @@ defmodule Simulator.WorkerActor do
   def handle_info(:start_iteration, %{grid: grid, iteration: iteration} = state) do
     Process.sleep(300)
 
-    create_plan = &@module_prefix.PlanCreator.create_plan/7
+    create_plan = &@module_prefix.PlanCreator.create_plan/6
 
     plans = StartIteration.create_plans(iteration, grid, state.object_data, create_plan)
 
@@ -63,7 +63,7 @@ defmodule Simulator.WorkerActor do
   # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
-  def handle_info({:remote_plans, {plans, state_plans}}, %{grid: grid} = state) do
+  def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
     is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
     apply_update = &@module_prefix.PlanResolver.apply_update/7
 
@@ -71,7 +71,6 @@ defmodule Simulator.WorkerActor do
       RemotePlans.process_plans(
         grid,
         plans,
-        state_plans,
         state.object_data,
         is_update_valid?,
         apply_update

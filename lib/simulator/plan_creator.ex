@@ -19,7 +19,6 @@ defmodule Simulator.PlanCreator do
               x_index :: Types.index(),
               y_index :: Types.index(),
               plans :: Nx.t(),
-              state_plans :: Nx.t(),
               grid :: Nx.t(),
               object_data :: Nx.t(),
               iterations :: Types.index()
@@ -28,7 +27,6 @@ defmodule Simulator.PlanCreator do
                 x_index :: Types.index(),
                 y_index :: Types.index(),
                 plans :: Nx.t(),
-                state_plans :: Nx.t(),
                 grid :: Nx.t(),
                 # object_data :: Nx.t(),
                 iterations :: Types.index()

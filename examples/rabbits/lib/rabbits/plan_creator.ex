@@ -6,7 +6,7 @@ defmodule Rabbits.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, plans, state_plans, grid, object_data, iteration) do
+  defn create_plan(i, j, plans, grid, object_data, iteration) do
     # TODO rabbits and lettuce create state_plan as well!
     plan =
       cond do
@@ -21,7 +21,7 @@ defmodule Rabbits.PlanCreator do
       end
 
     plans = add_plan(plans, i, j, plan)
-    {i, j + 1, plans, state_plans, grid, object_data, iteration}
+    {i, j + 1, plans, grid, object_data, iteration}
   end
 
   defnp create_plan_rabbit(i, j, grid, object_data) do
