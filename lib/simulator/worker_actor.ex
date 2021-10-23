@@ -50,10 +50,7 @@ defmodule Simulator.WorkerActor do
 
     create_plan = &@module_prefix.PlanCreator.create_plan/7
 
-    # {plans, state_plans} =
     plans = StartIteration.create_plans(iteration, grid, state.object_data, create_plan)
-    # TODO delete, for debugging only
-    {grid_plans, _state_plans} = plans
 
     Printer.print_objects(grid, :start_iteration)
     Printer.write_to_file(grid, "grid_#{iteration}")
