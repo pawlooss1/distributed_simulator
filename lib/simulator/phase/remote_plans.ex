@@ -13,22 +13,11 @@ defmodule Simulator.Phase.RemotePlans do
   The function decides which plans are accepted and update the grid
   by putting `action` in the proper cells. `Consequences` will be
   applied in the `:remote_consequences` phase.
-
-  TODO make our own shuffle to use it in defn.
   """
   @spec process_plans(Nx.t(), Nx.t(), fun(), fun()) :: Nx.t()
-  def process_plans(grid, plans, is_update_valid?, apply_update) do
-    {x_size, y_size, _z_size} = Nx.shape(grid)
+  defn process_plans(grid, plans, is_update_valid?, apply_update) do
+    order = shuffle(plans)
 
-    order =
-      0..(x_size * y_size - 1)
-      |> Enum.shuffle()
-      |> Nx.tensor()
-
-    process_plans_in_order(grid, plans, order, is_update_valid?, apply_update)
-  end
-
-  defnp process_plans_in_order(grid, plans, order, is_update_valid?, apply_update) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
     {order_len} = Nx.shape(order)
 
@@ -46,6 +35,14 @@ defmodule Simulator.Phase.RemotePlans do
       end
 
     {grid, accepted_plans}
+  end
+
+  defnp shuffle(tensor) do
+    {x_size, y_size, _z_size} = Nx.shape(tensor)
+
+    {x_size * y_size}
+    |> Nx.random_uniform()
+    |> Nx.argsort()
   end
 
   defnp process_plan(x, y, plans, grid, accepted_plans, is_update_valid?, apply_update) do

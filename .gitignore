@@ -29,3 +29,6 @@ distributed_simulator-*.tar
 /.idea
 
 grid_iterations/
+
+movie.mp4
+.ipynb_checkpoints/
