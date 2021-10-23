@@ -23,7 +23,7 @@ defmodule Simulator.PlanResolver do
               y :: Types.index(),
               action :: Nx.t(),
               object :: Nx.t(),
-              new_state :: Nx.t()
+              old_state :: Nx.t()
             ) :: {Nx.t(), Nx.t()}
 
   defmacro __using__(_opts) do

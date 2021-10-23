@@ -24,7 +24,6 @@ defmodule Simulator.Phase.StartIteration do
 
   Example: a person wants to move up: [@dir_up, @person, @empty].
   """
-  # TODO update return
   @spec create_plans(Types.index(), Nx.t(), Nx.t(), fun()) :: Nx.t()
   defn create_plans(iteration, grid, object_data, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)

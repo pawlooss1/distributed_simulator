@@ -96,7 +96,7 @@ defmodule Simulator.WorkerActor do
         apply_update
       )
 
-    # TODO should probably get object data
+    # TODO in the future could get object data?
     generate_signal = &@module_prefix.Cell.generate_signal/1
     signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
 
