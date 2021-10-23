@@ -16,8 +16,9 @@ defmodule Simulator.Phase.RemotePlans do
 
   TODO make our own shuffle to use it in defn.
   """
-  @spec process_plans(Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: Nx.t()
-  def process_plans(grid, plans, object_data, is_update_valid?, apply_update) do
+  # TODO update spec
+  @spec process_plans(Nx.t(), Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: Nx.t()
+  def process_plans(grid, plans, state_plans, object_data, is_update_valid?, apply_update) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     order =
@@ -25,15 +26,31 @@ defmodule Simulator.Phase.RemotePlans do
       |> Enum.shuffle()
       |> Nx.tensor()
 
-    process_plans_in_order(grid, plans, object_data, order, is_update_valid?, apply_update)
+    process_plans_in_order(
+      grid,
+      plans,
+      state_plans,
+      object_data,
+      order,
+      is_update_valid?,
+      apply_update
+    )
   end
 
-  defnp process_plans_in_order(grid, plans, object_data, order, is_update_valid?, apply_update) do
+  defnp process_plans_in_order(
+          grid,
+          plans,
+          state_plans,
+          object_data,
+          order,
+          is_update_valid?,
+          apply_update
+        ) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
     {order_len} = Nx.shape(order)
 
-    {_i, _order, _plans, grid, object_data, _y_size, accepted_plans} =
-      while {i = 0, order, plans, grid, object_data, y_size,
+    {_i, _order, _plans, _state_plans, grid, object_data, _y_size, accepted_plans} =
+      while {i = 0, order, plans, state_plans, grid, object_data, y_size,
              accepted_plans = Nx.broadcast(@rejected, {x_size, y_size})},
             Nx.less(i, order_len) do
         ordinal = order[i]
@@ -44,6 +61,7 @@ defmodule Simulator.Phase.RemotePlans do
             x,
             y,
             plans,
+            state_plans,
             grid,
             accepted_plans,
             object_data,
@@ -51,7 +69,7 @@ defmodule Simulator.Phase.RemotePlans do
             apply_update
           )
 
-        {i + 1, order, plans, grid, object_data, y_size, accepted_plans}
+        {i + 1, order, plans, state_plans, grid, object_data, y_size, accepted_plans}
       end
 
     {grid, accepted_plans, object_data}
@@ -61,6 +79,7 @@ defmodule Simulator.Phase.RemotePlans do
           x,
           y,
           plans,
+          state_plans,
           grid,
           accepted_plans,
           object_data,
@@ -71,9 +90,13 @@ defmodule Simulator.Phase.RemotePlans do
 
     action = plans[x][y][1]
     object = grid[x_target][y_target][0]
+    # TODO state plans must have first 2 dim as grid - change init? ok?
+    new_state = state_plans[x][y]
 
     if is_update_valid?.(action, object) do
-      {grid, object_data} = apply_update.(grid, object_data, x_target, y_target, action, object)
+      {grid, object_data} =
+        apply_update.(grid, object_data, x_target, y_target, action, object, new_state)
+
       accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(@accepted, {1, 1}))
 
       {grid, accepted_plans, object_data}

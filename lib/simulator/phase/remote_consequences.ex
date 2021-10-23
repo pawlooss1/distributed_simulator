@@ -24,7 +24,10 @@ defmodule Simulator.Phase.RemoteConsequences do
               object = grid[i][j][0]
               consequence = plans[i][j][2]
 
-              {grid, object_data} = apply_update.(grid, object_data, i, j, consequence, object)
+              # TODO pass empty tensor in update consequence?
+              {grid, object_data} =
+                apply_update.(grid, object_data, i, j, consequence, object, object_data[i][j])
+
               {i, j + 1, grid, object_data, plans, accepted_plans}
             else
               {i, j + 1, grid, object_data, plans, accepted_plans}

@@ -26,7 +26,7 @@ defmodule Rabbits.PlanResolver do
   end
 
   @impl true
-  defn apply_update(grid, object_data, x, y, action, object) do
+  defn apply_update(grid, object_data, x, y, action, object, new_state) do
     cond do
       both_equal(action, @add_lettuce, object, @empty) -> {put_object(grid, x, y, @lettuce), object_data}
       both_equal(action, @add_rabbit, object, @empty) ->

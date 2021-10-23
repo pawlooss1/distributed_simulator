@@ -3,7 +3,7 @@ defmodule Simulator.PlanCreator do
   Module which should be `used` by exactly one module in every
   simulation. That module will be called PlanCreator module.
 
-  Using module have to implement function `create_plans/5` which will
+  Using module have to implement function `create_plan/7` which will
   be responsible for creating plans for every dynamic object in the
   simulation. Only `plans` in the returned tuple should be changed.
   Plan (tensor [direction, action, consequence]) should be put in
@@ -19,6 +19,7 @@ defmodule Simulator.PlanCreator do
               x_index :: Types.index(),
               y_index :: Types.index(),
               plans :: Nx.t(),
+              state_plans :: Nx.t(),
               grid :: Nx.t(),
               object_data :: Nx.t(),
               iterations :: Types.index()
@@ -27,6 +28,7 @@ defmodule Simulator.PlanCreator do
                 x_index :: Types.index(),
                 y_index :: Types.index(),
                 plans :: Nx.t(),
+                state_plans :: Nx.t(),
                 grid :: Nx.t(),
                 # object_data :: Nx.t(),
                 iterations :: Types.index()
