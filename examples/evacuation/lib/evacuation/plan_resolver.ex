@@ -23,7 +23,7 @@ defmodule Evacuation.PlanResolver do
   end
 
   @impl true
-  defn apply_update(grid, object_data, x, y, action, object) do
+  defn apply_update(grid, object_data, x, y, action, object, old_state) do
     {do_apply_update(grid, x, y, action, object),  object_data}
   end
 

@@ -20,7 +20,7 @@ defmodule Evacuation.PlanCreator do
       end
 
     plans = add_plan(plans, i, j, plan)
-    {i, j + 1, plans, grid, iteration}
+    {i, j + 1, plans, grid, object_data, iteration}
   end
 
   defnp create_plan_person(i, j, grid) do

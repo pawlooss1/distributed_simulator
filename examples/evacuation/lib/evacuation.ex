@@ -14,7 +14,7 @@ defmodule Evacuation do
   def start() do
     grid = read_grid("map_1")
     {x, y, _z} = Nx.shape(grid)
-    object_data = Nx.broadcast(0, {x, y, 1})
+    object_data = Nx.broadcast(0, {x, y})
 
     clean_grid_iterations()
 
