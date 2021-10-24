@@ -17,6 +17,30 @@ defmodule Rabbits.PlanResolver do
   end
 
   @impl true
+  defn apply_action(grid, object_data, x, y, plan, old_state) do
+    {x_target, y_target} = shift({x, y}, plan[0])
+
+    action = plan[1]
+    object = grid[x_target][y_target][0]
+    cond do
+      both_equal(action, @add_lettuce, object, @empty) ->
+        do_update(grid, object_data, x, y, @lettuce, old_state)
+
+      both_equal(action, @add_rabbit, object, @empty) ->
+        do_update(grid, object_data, x, y, @rabbit, old_state - 1)
+
+      both_equal(action, @add_rabbit, object, @lettuce) ->
+        do_update(grid, object_data, x, y, @rabbit, old_state + 1)
+
+      both_equal(action, @remove_rabbit, object, @rabbit) ->
+        do_update(grid, object_data, x, y, @empty, object_data[x][y])
+
+      true ->
+        {grid, object_data}
+    end
+  end
+
+  @impl true
   defn apply_update(grid, object_data, x, y, action, object, old_state) do
     cond do
       both_equal(action, @add_lettuce, object, @empty) ->

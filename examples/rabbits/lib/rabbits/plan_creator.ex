@@ -5,9 +5,10 @@ defmodule Rabbits.PlanCreator do
   import Nx.Defn
   import Simulator.Helpers
 
+  # TODO change create_plan api to return {dir, plan}
   @impl true
   defn create_plan(i, j, plans, grid, object_data, iteration) do
-    plan =
+    {dir, plan} =
       cond do
         Nx.equal(grid[i][j][0], @rabbit) ->
           create_plan_rabbit(i, j, grid, object_data)
@@ -19,7 +20,10 @@ defmodule Rabbits.PlanCreator do
           create_plan_other(i, j, grid)
       end
 
-    plans = add_plan(plans, i, j, plan)
+    dir = Nx.reshape(dir, {1})
+    dir_plan = Nx.concatenate([dir, plan])
+
+    plans = add_plan(plans, i, j, dir_plan)
     {i, j + 1, plans, grid, object_data, iteration}
   end
 
@@ -37,7 +41,7 @@ defmodule Rabbits.PlanCreator do
   end
 
   defnp rabbit_die() do
-    Nx.tensor([@dir_stay, @remove_rabbit, @keep])
+    {@dir_stay, @rabbit_die}
   end
 
   defnp rabbit_procreate(grid, i, j) do
@@ -57,11 +61,9 @@ defmodule Rabbits.PlanCreator do
 
     if availability_size > 0 do
       index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
-      direction = Nx.reshape(availability[index], {1})
-      action_consequence = Nx.tensor([@add_rabbit, @keep])
-      Nx.concatenate([direction, action_consequence])
+      {availability[index], @rabbit_procreate}
     else
-      Nx.tensor([@dir_stay, @keep, @keep])
+      {@dir_stay, @plan_stay}
     end
   end
 
@@ -84,12 +86,9 @@ defmodule Rabbits.PlanCreator do
 
     if signals |> Nx.reduce_max() |> Nx.greater(-@infinity) do
       direction = Nx.argmax(signals)
-
-      action_consequence = Nx.tensor([@add_rabbit, @remove_rabbit])
-
-      Nx.concatenate([Nx.reshape(direction, {1}), action_consequence])
+      {direction, @rabbit_move}
     else
-      Nx.tensor([@dir_stay, @keep, @keep])
+      {@dir_stay, @plan_stay}
     end
   end
 
@@ -112,21 +111,17 @@ defmodule Rabbits.PlanCreator do
       # TODO fire in EVACUATION will error when av size == 0
       if availability_size > 0 do
         index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
-
-        # to create [dir, mock, empty] we convert dir (scalar tensor) to tensor of shape [1]
-        direction = Nx.reshape(availability[index], {1})
-        action_consequence = Nx.tensor([@add_lettuce, @keep])
-        Nx.concatenate([direction, action_consequence])
+        {availability[index], @lettuce_grow}
       else
-        Nx.tensor([@dir_stay, @keep, @keep])
+      {@dir_stay, @plan_stay}
       end
     else
-      Nx.tensor([@dir_stay, @keep, @keep])
+      {@dir_stay, @plan_stay}
     end
   end
 
   defnp create_plan_other(_i, _j, _grid) do
-    Nx.tensor([@dir_stay, @keep, @keep])
+    {@dir_stay, @plan_stay}
   end
 
   defnp add_plan(plans, i, j, plan) do

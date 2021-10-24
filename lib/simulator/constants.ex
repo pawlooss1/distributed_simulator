@@ -64,6 +64,9 @@ defmodule Simulator.Constants do
           # action
           @keep 0
 
+          # plan
+          @plan_stay Nx.tensor([@keep, @keep])
+
           # for signals
           @infinity 1_000_000_000
 
