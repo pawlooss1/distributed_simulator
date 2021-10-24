@@ -5,10 +5,8 @@ defmodule Rabbits.PlanCreator do
   import Nx.Defn
   import Simulator.Helpers
 
-  # TODO change create_plan api to return {dir, plan}
   @impl true
   defn create_plan(i, j, plans, grid, object_data, iteration) do
-    {dir, plan} =
       cond do
         Nx.equal(grid[i][j][0], @rabbit) ->
           create_plan_rabbit(i, j, grid, object_data)
@@ -19,12 +17,6 @@ defmodule Rabbits.PlanCreator do
         :otherwise ->
           create_plan_other(i, j, grid)
       end
-
-    dir = Nx.reshape(dir, {1})
-    dir_plan = Nx.concatenate([dir, plan])
-
-    plans = add_plan(plans, i, j, dir_plan)
-    {i, j + 1, plans, grid, object_data, iteration}
   end
 
   defnp create_plan_rabbit(i, j, grid, object_data) do
@@ -122,9 +114,5 @@ defmodule Rabbits.PlanCreator do
 
   defnp create_plan_other(_i, _j, _grid) do
     {@dir_stay, @plan_keep}
-  end
-
-  defnp add_plan(plans, i, j, plan) do
-    Nx.put_slice(plans, [i, j, 0], Nx.broadcast(plan, {1, 1, 3}))
   end
 end

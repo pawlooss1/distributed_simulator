@@ -34,7 +34,9 @@ defmodule Simulator.Phase.StartIteration do
         {_i, _j, plans, _grid, _object_data, _iteration} =
           while {i, j = 0, plans, grid, object_data, iteration},
                 Nx.less(j, y_size) do
-            create_plan.(i, j, plans, grid, object_data, iteration)
+            plan_as_tuple = create_plan.(i, j, plans, grid, object_data, iteration)
+            plans = add_plan(plans, i, j, plan_to_tensor(plan_as_tuple))
+            {i, j + 1, plans, grid, object_data, iteration}
           end
 
         {i + 1, plans, grid, object_data, iteration}
@@ -44,6 +46,15 @@ defmodule Simulator.Phase.StartIteration do
   end
 
   defnp initial_plans(x_size, y_size) do
-    Nx.broadcast(Nx.tensor([@dir_stay, @empty, @empty]), {x_size, y_size, 3})
+    Nx.broadcast(Nx.tensor([@dir_stay, @keep, @keep]), {x_size, y_size, 3})
+  end
+
+  defnp plan_to_tensor({dir, plan}) do
+    dir = Nx.reshape(dir, {1})
+    Nx.concatenate([dir, plan])
+  end
+
+  defnp add_plan(plans, i, j, plan) do
+    Nx.put_slice(plans, [i, j, 0], Nx.broadcast(plan, {1, 1, 3}))
   end
 end
