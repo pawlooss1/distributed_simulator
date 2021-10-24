@@ -21,25 +21,25 @@ defmodule Rabbits.PlanResolver do
   defn apply_action(object, plan, old_state) do
     {new_object, new_state} =
     cond do
-      plans_equal(plan, @lettuce_grow, object, @empty) ->
+      plans_objects_match(plan, @lettuce_grow, object, @empty) ->
         {@lettuce, old_state}
 
-      plans_equal(plan, @rabbit_move, object, @empty) ->
+      plans_objects_match(plan, @rabbit_move, object, @empty) ->
         {@rabbit, old_state - 1}
 
-      plans_equal(plan, @rabbit_move, object, @lettuce) ->
+      plans_objects_match(plan, @rabbit_move, object, @lettuce) ->
         {@rabbit, old_state + 1}
 
-      plans_equal(plan, @rabbit_rest, object, @rabbit) ->
+      plans_objects_match(plan, @rabbit_rest, object, @rabbit) ->
         {@rabbit, old_state - 1}
 
-      plans_equal(plan, @rabbit_procreate, object, @empty) ->
+      plans_objects_match(plan, @rabbit_procreate, object, @empty) ->
         {@rabbit, @rabbit_start_energy}
 
-      plans_equal(plan, @rabbit_procreate, object, @lettuce) ->
+      plans_objects_match(plan, @rabbit_procreate, object, @lettuce) ->
         {@rabbit, old_state}
 
-      plans_equal(plan, @rabbit_die, object, @rabbit) ->
+      plans_objects_match(plan, @rabbit_die, object, @rabbit) ->
         {@empty, 0}
 
       true ->
@@ -52,21 +52,13 @@ defmodule Rabbits.PlanResolver do
   defn apply_consequence(object, plan, old_state) do
     {new_object, new_state} =
     cond do
-      plans_equal(plan, @rabbit_procreate, object, @rabbit) ->
+      plans_objects_match(plan, @rabbit_procreate, object, @rabbit) ->
         {@rabbit, old_state} # TODO procreation waste as a constant
-      plans_equal(plan, @rabbit_move, object, @rabbit) ->
+      plans_objects_match(plan, @rabbit_move, object, @rabbit) ->
         {@empty, old_state}
       :otherwise ->
         {object, old_state}
     end
     {new_object, Nx.broadcast(new_state, {1, 1})}
-  end
-
-  defnp put_state(object_data, loc, state) do
-    Nx.put_slice(object_data, loc, Nx.broadcast(state, {1, 1}))
-  end
-
-  defnp plans_equal(plan_a, plan_b, object_a, object_b) do
-    Nx.all?(Nx.equal(plan_a, plan_b)) and Nx.equal(object_a, object_b)
   end
 end

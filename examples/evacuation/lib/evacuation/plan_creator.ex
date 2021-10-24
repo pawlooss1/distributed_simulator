@@ -7,7 +7,6 @@ defmodule Evacuation.PlanCreator do
 
   @impl true
   defn create_plan(i, j, plans, grid, object_data, iteration) do
-    plan =
       cond do
         Nx.equal(grid[i][j][0], @person) ->
           create_plan_person(i, j, grid)
@@ -18,9 +17,6 @@ defmodule Evacuation.PlanCreator do
         :otherwise ->
           create_plan_other(i, j, grid)
       end
-
-    plans = add_plan(plans, i, j, plan)
-    {i, j + 1, plans, grid, object_data, iteration}
   end
 
   defnp create_plan_person(i, j, grid) do
@@ -42,12 +38,9 @@ defmodule Evacuation.PlanCreator do
 
     if signals |> Nx.reduce_max() |> Nx.greater(-@infinity) do
       direction = Nx.argmax(signals)
-
-      action_consequence = Nx.tensor([@add_person, @remove_person])
-
-      Nx.concatenate([Nx.reshape(direction, {1}), action_consequence])
+      {direction, @person_move}
     else
-      Nx.tensor([@dir_stay, @keep, @keep])
+      {@dir_stay, @plan_keep}
     end
   end
 
@@ -67,16 +60,14 @@ defmodule Evacuation.PlanCreator do
           end
         end
 
-      index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
-
-      # todo to_scalar doesn't work in defn, and tensor([scalar-tensor, scalar, scalar]) doesnt work,
-      # so to create [dir, mock, empty] we convert dir (scalar tensor)
-      # to tensor of shape [1]
-      direction = Nx.reshape(availability[index], {1})
-      action_consequence = Nx.tensor([@create_fire, @keep])
-      Nx.concatenate([direction, action_consequence])
+      if availability_size > 0 do
+        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
+        {availability[index], @fire_spread}
+      else
+        {@dir_stay, @plan_keep}
+      end
     else
-      Nx.tensor([@dir_stay, @keep, @keep])
+      {@dir_stay, @plan_keep}
     end
   end
 
@@ -87,10 +78,6 @@ defmodule Evacuation.PlanCreator do
   end
 
   defnp create_plan_other(_i, _j, _grid) do
-    Nx.tensor([@dir_stay, @keep, @keep])
-  end
-
-  defnp add_plan(plans, i, j, plan) do
-    Nx.put_slice(plans, [i, j, 0], Nx.broadcast(plan, {1, 1, 3}))
+    {@dir_stay, @plan_keep}
   end
 end

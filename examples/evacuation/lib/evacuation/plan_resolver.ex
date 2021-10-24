@@ -23,23 +23,26 @@ defmodule Evacuation.PlanResolver do
   end
 
   @impl true
-  defn apply_update(grid, object_data, x, y, action, object, old_state) do
-    {do_apply_update(grid, x, y, action, object),  object_data}
-  end
-
-  defnp do_apply_update(grid, x, y, action, object) do
+  defn apply_action(object, plan, old_state) do
+    {new_object, new_state} =
     cond do
-      both_equal(action, @add_person, object, @empty) -> put_object(grid, x, y, @person)
-      both_equal(action, @add_person, object, @exit) -> put_object(grid, x, y, @exit)
-      both_equal(action, @add_person, object, @fire) -> put_object(grid, x, y, @fire)
-
-      both_equal(action, @remove_person, object, @person) -> put_object(grid, x, y, @empty)
-
-      both_equal(action, @create_fire, object, @empty) -> put_object(grid, x, y, @fire)
-      both_equal(action, @create_fire, object, @person) -> put_object(grid, x, y, @fire)
-      both_equal(action, @create_fire, object, @exit) -> put_object(grid, x, y, @fire)
-
-      true -> grid
+      plans_objects_match(plan, @person_move, object, @empty) -> {@person, old_state}
+      plans_objects_match(plan, @person_move, object, @exit) -> {@exit, old_state}
+      plans_match(plan, @fire_spread) -> {@fire, old_state}
+      true -> {object, old_state}
     end
+    {new_object, Nx.broadcast(new_state, {1, 1})}
   end
+
+  @impl true
+  defn apply_consequence(object, plan, old_state) do
+    {new_object, new_state} =
+    cond do
+      plans_objects_match(plan, @person_move, object, @person) -> {@empty, old_state}
+      :otherwise ->
+        {object, old_state}
+    end
+    {new_object, Nx.broadcast(new_state, {1, 1})}
+  end
+
 end

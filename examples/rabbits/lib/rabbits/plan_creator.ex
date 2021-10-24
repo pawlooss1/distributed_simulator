@@ -100,7 +100,6 @@ defmodule Rabbits.PlanCreator do
           end
         end
 
-      # TODO fire in EVACUATION will error when av size == 0
       if availability_size > 0 do
         index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
         {availability[index], @lettuce_grow}
