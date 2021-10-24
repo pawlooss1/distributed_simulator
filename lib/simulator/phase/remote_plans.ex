@@ -17,7 +17,7 @@ defmodule Simulator.Phase.RemotePlans do
   TODO make our own shuffle to use it in defn.
   """
   @spec process_plans(Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: Nx.t()
-  def process_plans(grid, plans, object_data, is_update_valid?, apply_update) do
+  def process_plans(grid, plans, object_data, is_update_valid?, apply_action) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     order =
@@ -31,7 +31,7 @@ defmodule Simulator.Phase.RemotePlans do
       object_data,
       order,
       is_update_valid?,
-      apply_update
+      apply_action
     )
   end
 
@@ -41,7 +41,7 @@ defmodule Simulator.Phase.RemotePlans do
           object_data,
           order,
           is_update_valid?,
-          apply_update
+          apply_action
         ) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
     {order_len} = Nx.shape(order)
@@ -63,7 +63,7 @@ defmodule Simulator.Phase.RemotePlans do
             accepted_plans,
             object_data,
             is_update_valid?,
-            apply_update
+            apply_action
           )
 
         {i + 1, order, plans, old_states, grid, object_data, y_size, accepted_plans}
@@ -81,7 +81,7 @@ defmodule Simulator.Phase.RemotePlans do
           accepted_plans,
           object_data,
           is_update_valid?,
-          apply_update
+          apply_action
         ) do
     {x_target, y_target} = shift({x, y}, plans[x][y][0])
 
@@ -90,10 +90,11 @@ defmodule Simulator.Phase.RemotePlans do
 
     # TODO state plans must have first 2 dim as grid - mention in documentation - or delete this part and pass whole old_states?
     old_state = old_states[x][y]
+    plan = plans[x][y][1..2]
 
     if is_update_valid?.(action, object) do
       {grid, object_data} =
-        apply_update.(grid, object_data, x_target, y_target, action, object, old_state)
+        apply_action.(grid, object_data, [x_target, y_target], plan, old_state)
 
       accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(@accepted, {1, 1}))
 

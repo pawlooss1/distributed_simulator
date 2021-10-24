@@ -54,7 +54,7 @@ defmodule Simulator.WorkerActor do
 
     Printer.print_objects(grid, :start_iteration)
     Printer.write_to_file(grid, "grid_#{iteration}")
-    # Printer.print_plans(grid_plans)
+    # Printer.print_plans(plans)
     IO.inspect(state.object_data)
     distribute_plans(plans)
     {:noreply, state}
@@ -65,7 +65,7 @@ defmodule Simulator.WorkerActor do
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
     is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
-    apply_update = &@module_prefix.PlanResolver.apply_update/7
+    apply_action = &@module_prefix.PlanResolver.apply_action/5
 
     {updated_grid, accepted_plans, object_data} =
       RemotePlans.process_plans(
@@ -73,13 +73,13 @@ defmodule Simulator.WorkerActor do
         plans,
         state.object_data,
         is_update_valid?,
-        apply_update
+        apply_action
       )
 
     distribute_consequences(plans, accepted_plans)
 
     # IO.inspect(accepted_plans)
-    Printer.print_objects(updated_grid, :remote_plans)
+    # Printer.print_objects(updated_grid, :remote_plans)
 
     {:noreply, %{state | grid: updated_grid, object_data: object_data}}
   end
@@ -102,7 +102,7 @@ defmodule Simulator.WorkerActor do
 
     distribute_signal(signal_update)
 
-    Printer.print_objects(updated_grid, :remote_consequences)
+    # Printer.print_objects(updated_grid, :remote_consequences)
 
     {:noreply, %{state | grid: updated_grid, object_data: object_data}}
   end
@@ -114,7 +114,7 @@ defmodule Simulator.WorkerActor do
     signal_factor = &@module_prefix.Cell.signal_factor/1
     updated_grid = RemoteSignal.apply_signal_update(grid, signal_update, signal_factor)
 
-    Printer.print_objects(updated_grid, :remote_signal)
+    # Printer.print_objects(updated_grid, :remote_signal)
 
     start_next_iteration()
     {:noreply, %{state | grid: updated_grid, iteration: iteration + 1}}

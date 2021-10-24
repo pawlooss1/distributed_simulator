@@ -25,6 +25,13 @@ defmodule Simulator.PlanResolver do
               object :: Nx.t(),
               old_state :: Nx.t()
             ) :: {Nx.t(), Nx.t()}
+  @callback apply_action(
+              grid :: Nx.t(),
+              object_data :: Nx.t(),
+              to :: [Types.index()],
+              plan :: Nx.t(),
+              old_state :: Nx.t()
+            ) :: {Nx.t(), Nx.t()}
 
   defmacro __using__(_opts) do
     quote location: :keep do

@@ -11,15 +11,18 @@ defmodule Rabbits.Constants do
       @add_lettuce 2
       @remove_rabbit 3
       @remove_lettuce 4
+      @keep_rabbit 5
 
       @rabbit_move Nx.tensor([@add_rabbit, @remove_rabbit])
       @rabbit_die Nx.tensor([@remove_rabbit, @keep])
       @rabbit_procreate Nx.tensor([@add_rabbit, @keep])
+      @rabbit_rest Nx.tensor([@keep_rabbit, @keep])
 
       @lettuce_grow Nx.tensor([@add_lettuce, @keep])
 
       @lettuce_growth_factor 2
-      @rabbit_start_energy 5
+      @rabbit_reproduction_energy 8
+      @rabbit_start_energy 10
 
       @rabbit_signal -5
       @lettuce_signal 10

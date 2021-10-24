@@ -32,7 +32,7 @@ defmodule Rabbits.PlanCreator do
       Nx.less(object_data[i][j], 1) ->
         rabbit_die()
 
-      Nx.greater(object_data[i][j], 10) ->
+      Nx.greater(object_data[i][j], @rabbit_reproduction_energy) ->
         rabbit_procreate(grid, i, j)
 
       :otherwise ->
@@ -63,7 +63,7 @@ defmodule Rabbits.PlanCreator do
       index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
       {availability[index], @rabbit_procreate}
     else
-      {@dir_stay, @plan_stay}
+      {@dir_stay, @rabbit_rest}
     end
   end
 
@@ -88,7 +88,7 @@ defmodule Rabbits.PlanCreator do
       direction = Nx.argmax(signals)
       {direction, @rabbit_move}
     else
-      {@dir_stay, @plan_stay}
+      {@dir_stay, @rabbit_rest}
     end
   end
 
@@ -113,15 +113,15 @@ defmodule Rabbits.PlanCreator do
         index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
         {availability[index], @lettuce_grow}
       else
-      {@dir_stay, @plan_stay}
+      {@dir_stay, @plan_keep}
       end
     else
-      {@dir_stay, @plan_stay}
+      {@dir_stay, @plan_keep}
     end
   end
 
   defnp create_plan_other(_i, _j, _grid) do
-    {@dir_stay, @plan_stay}
+    {@dir_stay, @plan_keep}
   end
 
   defnp add_plan(plans, i, j, plan) do
