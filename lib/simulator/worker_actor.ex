@@ -65,7 +65,7 @@ defmodule Simulator.WorkerActor do
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
   def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
     is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
-    apply_action = &@module_prefix.PlanResolver.apply_action/5
+    apply_action = &@module_prefix.PlanResolver.apply_action/3
 
     {updated_grid, accepted_plans, object_data} =
       RemotePlans.process_plans(

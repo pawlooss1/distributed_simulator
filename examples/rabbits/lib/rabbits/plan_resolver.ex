@@ -17,37 +17,37 @@ defmodule Rabbits.PlanResolver do
     end
   end
 
-  # TODO return only object_at_target and state_at_target? get object as arg, dont get object
   @impl true
-  defn apply_action(grid, object_data, to, plan, old_state) do
+  defn apply_action(object, plan, old_state) do
     # TODO create function in framework object_at(grid, loc)
-    object = grid[to][0]
+    {new_object, new_state} =
     cond do
       both_equal(plan, @lettuce_grow, object, @empty) ->
-        do_update(grid, object_data, to, @lettuce, old_state)
+        {@lettuce, old_state}
 
       both_equal(plan, @rabbit_move, object, @empty) ->
-        do_update(grid, object_data, to, @rabbit, old_state - 1)
+        {@rabbit, old_state - 1}
 
       both_equal(plan, @rabbit_move, object, @lettuce) ->
-        do_update(grid, object_data, to, @rabbit, old_state + 1)
+        {@rabbit, old_state + 1}
 
       both_equal(plan, @rabbit_rest, object, @rabbit) ->
-        do_update(grid, object_data, to, @rabbit, old_state - 1)
+        {@rabbit, old_state - 1}
 
       both_equal(plan, @rabbit_procreate, object, @empty) ->
         # /2?
-        do_update(grid, object_data, to, @rabbit, @rabbit_start_energy)
+        {@rabbit, @rabbit_start_energy}
 
       both_equal(plan, @rabbit_procreate, object, @lettuce) ->
-        do_update(grid, object_data, to, @rabbit, old_state)
+        {@rabbit, old_state}
 
       both_equal(plan, @rabbit_die, object, @rabbit) ->
-        do_update(grid, object_data, to, @empty, 0)
+        {@empty, 0}
 
       true ->
-        {grid, object_data}
+        {object, old_state}
     end
+    {new_object, Nx.broadcast(new_state, {1, 1})}
   end
 
   @impl true

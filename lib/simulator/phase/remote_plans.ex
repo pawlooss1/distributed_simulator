@@ -88,13 +88,14 @@ defmodule Simulator.Phase.RemotePlans do
     action = plans[x][y][1]
     object = grid[x_target][y_target][0]
 
-    # TODO state plans must have first 2 dim as grid - mention in documentation - or delete this part and pass whole old_states?
+    # TODO state plans must have first 2 dim as grid - mention in documentation
     old_state = old_states[x][y]
     plan = plans[x][y][1..2]
 
     if is_update_valid?.(action, object) do
-      {grid, object_data} =
-        apply_action.(grid, object_data, [x_target, y_target], plan, old_state)
+      {new_object, new_state} = apply_action.(object, plan, old_state)
+      grid = put_object(grid, x_target, y_target, new_object)
+      object_data = Nx.put_slice(object_data, [x_target, y_target], new_state)
 
       accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(@accepted, {1, 1}))
 

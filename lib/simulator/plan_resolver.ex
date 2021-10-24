@@ -26,9 +26,7 @@ defmodule Simulator.PlanResolver do
               old_state :: Nx.t()
             ) :: {Nx.t(), Nx.t()}
   @callback apply_action(
-              grid :: Nx.t(),
-              object_data :: Nx.t(),
-              to :: [Types.index()],
+              object :: Nx.t(),
               plan :: Nx.t(),
               old_state :: Nx.t()
             ) :: {Nx.t(), Nx.t()}
