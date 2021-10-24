@@ -19,29 +19,27 @@ defmodule Rabbits.PlanResolver do
 
   @impl true
   defn apply_action(object, plan, old_state) do
-    # TODO create function in framework object_at(grid, loc)
     {new_object, new_state} =
     cond do
-      both_equal(plan, @lettuce_grow, object, @empty) ->
+      plans_equal(plan, @lettuce_grow, object, @empty) ->
         {@lettuce, old_state}
 
-      both_equal(plan, @rabbit_move, object, @empty) ->
+      plans_equal(plan, @rabbit_move, object, @empty) ->
         {@rabbit, old_state - 1}
 
-      both_equal(plan, @rabbit_move, object, @lettuce) ->
+      plans_equal(plan, @rabbit_move, object, @lettuce) ->
         {@rabbit, old_state + 1}
 
-      both_equal(plan, @rabbit_rest, object, @rabbit) ->
+      plans_equal(plan, @rabbit_rest, object, @rabbit) ->
         {@rabbit, old_state - 1}
 
-      both_equal(plan, @rabbit_procreate, object, @empty) ->
-        # /2?
+      plans_equal(plan, @rabbit_procreate, object, @empty) ->
         {@rabbit, @rabbit_start_energy}
 
-      both_equal(plan, @rabbit_procreate, object, @lettuce) ->
+      plans_equal(plan, @rabbit_procreate, object, @lettuce) ->
         {@rabbit, old_state}
 
-      both_equal(plan, @rabbit_die, object, @rabbit) ->
+      plans_equal(plan, @rabbit_die, object, @rabbit) ->
         {@empty, 0}
 
       true ->
@@ -51,32 +49,24 @@ defmodule Rabbits.PlanResolver do
   end
 
   @impl true
-  defn apply_update(grid, object_data, x, y, action, object, old_state) do
+  defn apply_consequence(object, plan, old_state) do
+    {new_object, new_state} =
     cond do
-      both_equal(action, @add_lettuce, object, @empty) ->
-        do_update(grid, object_data, [x, y], @lettuce, old_state)
-
-      both_equal(action, @add_rabbit, object, @empty) ->
-        do_update(grid, object_data, [x, y], @rabbit, old_state - 1)
-
-      both_equal(action, @add_rabbit, object, @lettuce) ->
-        do_update(grid, object_data, [x, y], @rabbit, old_state + 1)
-
-      both_equal(action, @remove_rabbit, object, @rabbit) ->
-        do_update(grid, object_data, [x, y], @empty, object_data[x][y])
-
-      true ->
-        {grid, object_data}
+      plans_equal(plan, @rabbit_procreate, object, @rabbit) ->
+        {@rabbit, old_state} # TODO procreation waste as a constant
+      plans_equal(plan, @rabbit_move, object, @rabbit) ->
+        {@empty, old_state}
+      :otherwise ->
+        {object, old_state}
     end
-  end
-
-  # TODO put_object loc instead x, y?
-  defnp do_update(grid, object_data, loc, new_object, new_state) do
-    [x,y] = loc
-    {put_object(grid, x, y, new_object), put_state(object_data, loc, new_state)}
+    {new_object, Nx.broadcast(new_state, {1, 1})}
   end
 
   defnp put_state(object_data, loc, state) do
     Nx.put_slice(object_data, loc, Nx.broadcast(state, {1, 1}))
+  end
+
+  defnp plans_equal(plan_a, plan_b, object_a, object_b) do
+    Nx.all?(Nx.equal(plan_a, plan_b)) and Nx.equal(object_a, object_b)
   end
 end

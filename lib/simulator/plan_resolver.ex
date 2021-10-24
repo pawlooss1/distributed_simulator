@@ -16,16 +16,12 @@ defmodule Simulator.PlanResolver do
   alias Simulator.Types
 
   @callback is_update_valid?(action :: Nx.t(), object :: Nx.t()) :: Nx.t()
-  @callback apply_update(
-              grid :: Nx.t(),
-              object_data :: Nx.t(),
-              x :: Types.index(),
-              y :: Types.index(),
-              action :: Nx.t(),
+  @callback apply_action(
               object :: Nx.t(),
+              plan :: Nx.t(),
               old_state :: Nx.t()
             ) :: {Nx.t(), Nx.t()}
-  @callback apply_action(
+  @callback apply_consequence(
               object :: Nx.t(),
               plan :: Nx.t(),
               old_state :: Nx.t()

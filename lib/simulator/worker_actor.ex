@@ -54,7 +54,7 @@ defmodule Simulator.WorkerActor do
 
     Printer.print_objects(grid, :start_iteration)
     Printer.write_to_file(grid, "grid_#{iteration}")
-    # Printer.print_plans(plans)
+    Printer.print_plans(plans)
     IO.inspect(state.object_data)
     distribute_plans(plans)
     {:noreply, state}
@@ -79,13 +79,13 @@ defmodule Simulator.WorkerActor do
     distribute_consequences(plans, accepted_plans)
 
     # IO.inspect(accepted_plans)
-    # Printer.print_objects(updated_grid, :remote_plans)
+    Printer.print_objects(updated_grid, :remote_plans)
 
     {:noreply, %{state | grid: updated_grid, object_data: object_data}}
   end
 
   def handle_info({:remote_consequences, plans, accepted_plans}, %{grid: grid} = state) do
-    apply_update = &@module_prefix.PlanResolver.apply_update/7
+    apply_consequence = &@module_prefix.PlanResolver.apply_consequence/3
 
     {updated_grid, object_data} =
       RemoteConsequences.apply_consequences(
@@ -93,7 +93,7 @@ defmodule Simulator.WorkerActor do
         state.object_data,
         plans,
         accepted_plans,
-        apply_update
+        apply_consequence
       )
 
     # TODO in the future could get object data?
@@ -102,7 +102,7 @@ defmodule Simulator.WorkerActor do
 
     distribute_signal(signal_update)
 
-    # Printer.print_objects(updated_grid, :remote_consequences)
+    Printer.print_objects(updated_grid, :remote_consequences)
 
     {:noreply, %{state | grid: updated_grid, object_data: object_data}}
   end
