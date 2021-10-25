@@ -14,11 +14,11 @@ defmodule Evacuation do
   def start() do
     grid = read_grid("map_1")
     {x, y, _z} = Nx.shape(grid)
-    object_data = Nx.broadcast(0, {x, y})
+    objects_state = Nx.broadcast(0, {x, y})
 
     clean_grid_iterations()
 
-    WorkerActor.start(grid: grid, object_data: object_data)
+    WorkerActor.start(grid: grid, objects_state: objects_state)
     Printer.write_to_file(grid, "grid_0")
     :ok
   end

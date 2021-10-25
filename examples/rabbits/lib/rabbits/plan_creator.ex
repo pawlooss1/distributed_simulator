@@ -6,10 +6,10 @@ defmodule Rabbits.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, plans, grid, object_data, iteration) do
+  defn create_plan(i, j, plans, grid, objects_state, iteration) do
       cond do
         Nx.equal(grid[i][j][0], @rabbit) ->
-          create_plan_rabbit(i, j, grid, object_data)
+          create_plan_rabbit(i, j, grid, objects_state)
 
         Nx.equal(grid[i][j][0], @lettuce) ->
           create_plan_lettuce(i, j, grid, iteration)
@@ -19,12 +19,12 @@ defmodule Rabbits.PlanCreator do
       end
   end
 
-  defnp create_plan_rabbit(i, j, grid, object_data) do
+  defnp create_plan_rabbit(i, j, grid, objects_state) do
     cond do
-      Nx.less(object_data[i][j], 1) ->
+      Nx.less(objects_state[i][j], 1) ->
         rabbit_die()
 
-      Nx.greater(object_data[i][j], @rabbit_reproduction_energy) ->
+      Nx.greater(objects_state[i][j], @rabbit_reproduction_energy) ->
         rabbit_procreate(grid, i, j)
 
       :otherwise ->

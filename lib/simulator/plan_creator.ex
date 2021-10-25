@@ -20,7 +20,7 @@ defmodule Simulator.PlanCreator do
               y_index :: Types.index(),
               plans :: Nx.t(),
               grid :: Nx.t(),
-              object_data :: Nx.t(),
+              objects_state :: Nx.t(),
               iterations :: Types.index()
             ) ::
               {

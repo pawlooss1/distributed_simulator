@@ -14,11 +14,11 @@ defmodule Rabbits do
   def start() do
     grid = read_grid("map_1")
     {x, y, _z} = Nx.shape(grid)
-    object_data = Nx.broadcast(@rabbit_start_energy, {x, y})
+    objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
 
     clean_grid_iterations()
 
-    WorkerActor.start(grid: grid, object_data: object_data)
+    WorkerActor.start(grid: grid, objects_state: objects_state)
     Printer.write_to_file(grid, "grid_0")
     :ok
   end

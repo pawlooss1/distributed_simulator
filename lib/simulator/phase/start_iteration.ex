@@ -25,21 +25,21 @@ defmodule Simulator.Phase.StartIteration do
   Example: a person wants to move up: [@dir_up, @person, @empty].
   """
   @spec create_plans(Types.index(), Nx.t(), Nx.t(), fun()) :: Nx.t()
-  defn create_plans(iteration, grid, object_data, create_plan) do
+  defn create_plans(iteration, grid, objects_state, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, plans, _grid, _object_data, _iteration} =
-      while {i = 0, plans = initial_plans(x_size, y_size), grid, object_data, iteration},
+      while {i = 0, plans = initial_plans(x_size, y_size), grid, objects_state, iteration},
             Nx.less(i, x_size) do
         {_i, _j, plans, _grid, _object_data, _iteration} =
-          while {i, j = 0, plans, grid, object_data, iteration},
+          while {i, j = 0, plans, grid, objects_state, iteration},
                 Nx.less(j, y_size) do
-            plan_as_tuple = create_plan.(i, j, plans, grid, object_data, iteration)
+            plan_as_tuple = create_plan.(i, j, plans, grid, objects_state, iteration)
             plans = add_plan(plans, i, j, plan_to_tensor(plan_as_tuple))
-            {i, j + 1, plans, grid, object_data, iteration}
+            {i, j + 1, plans, grid, objects_state, iteration}
           end
 
-        {i + 1, plans, grid, object_data, iteration}
+        {i + 1, plans, grid, objects_state, iteration}
       end
 
     plans

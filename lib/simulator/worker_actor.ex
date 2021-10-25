@@ -28,15 +28,15 @@ defmodule Simulator.WorkerActor do
   TODO use some supervisor.
   """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
-  def start(grid: grid, object_data: object_data) do
-    GenServer.start(__MODULE__, grid: grid, object_data: object_data)
+  def start(grid: grid, objects_state: objects_state) do
+    GenServer.start(__MODULE__, grid: grid, objects_state: objects_state)
   end
 
   @impl true
-  def init(grid: grid, object_data: object_data) do
+  def init(grid: grid, objects_state: objects_state) do
     send(self(), :start_iteration)
 
-    {:ok, %{grid: grid, object_data: object_data, iteration: 1}}
+    {:ok, %{grid: grid, objects_state: objects_state, iteration: 1}}
   end
 
   @impl true
@@ -50,12 +50,12 @@ defmodule Simulator.WorkerActor do
 
     create_plan = &@module_prefix.PlanCreator.create_plan/6
 
-    plans = StartIteration.create_plans(iteration, grid, state.object_data, create_plan)
+    plans = StartIteration.create_plans(iteration, grid, state.objects_state, create_plan)
 
     Printer.print_objects(grid, :start_iteration)
     Printer.write_to_file(grid, "grid_#{iteration}")
     # Printer.print_plans(plans)
-    IO.inspect(state.object_data)
+    IO.inspect(state.objects_state)
     distribute_plans(plans)
     {:noreply, state}
   end
@@ -67,11 +67,11 @@ defmodule Simulator.WorkerActor do
     is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
     apply_action = &@module_prefix.PlanResolver.apply_action/3
 
-    {updated_grid, accepted_plans, object_data} =
+    {updated_grid, accepted_plans, objects_state} =
       RemotePlans.process_plans(
         grid,
         plans,
-        state.object_data,
+        state.objects_state,
         is_update_valid?,
         apply_action
       )
@@ -81,16 +81,16 @@ defmodule Simulator.WorkerActor do
     # IO.inspect(accepted_plans)
     # Printer.print_objects(updated_grid, :remote_plans)
 
-    {:noreply, %{state | grid: updated_grid, object_data: object_data}}
+    {:noreply, %{state | grid: updated_grid, objects_state: objects_state}}
   end
 
   def handle_info({:remote_consequences, plans, accepted_plans}, %{grid: grid} = state) do
     apply_consequence = &@module_prefix.PlanResolver.apply_consequence/3
 
-    {updated_grid, object_data} =
+    {updated_grid, objects_state} =
       RemoteConsequences.apply_consequences(
         grid,
-        state.object_data,
+        state.objects_state,
         plans,
         accepted_plans,
         apply_consequence
@@ -104,7 +104,7 @@ defmodule Simulator.WorkerActor do
 
     # Printer.print_objects(updated_grid, :remote_consequences)
 
-    {:noreply, %{state | grid: updated_grid, object_data: object_data}}
+    {:noreply, %{state | grid: updated_grid, objects_state: objects_state}}
   end
 
   def handle_info({:remote_signal, signal_update}, state) do
