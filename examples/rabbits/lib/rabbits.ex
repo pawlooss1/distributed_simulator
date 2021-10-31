@@ -1,9 +1,9 @@
-defmodule Evacuation do
+defmodule Rabbits do
   @moduledoc """
-  Simulation of the evacuation using DistributedSimulator framework.
+  Simulation of the Rabbits using DistributedSimulator framework.
   """
 
-  use Evacuation.Constants
+  use Rabbits.Constants
 
   alias Simulator.{Printer, WorkerActor}
 
@@ -14,7 +14,7 @@ defmodule Evacuation do
   def start() do
     grid = read_grid("map_1")
     {x, y, _z} = Nx.shape(grid)
-    objects_state = Nx.broadcast(0, {x, y})
+    objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
 
     clean_grid_iterations()
 
@@ -36,11 +36,9 @@ defmodule Evacuation do
     |> Enum.map(fn letter ->
       case letter do
         "-" -> @empty
-        "p" -> @person
-        "o" -> @obstacle
-        "e" -> @exit
-        "f" -> @fire
-        _ -> raise("#{letter} is an invalid letter in the given evacuation map")
+        "r" -> @rabbit
+        "l" -> @lettuce
+        _ -> raise("#{letter} is an invalid letter in the given Rabbits map")
       end
     end)
     |> Enum.map(fn contents -> [contents, 0, 0, 0, 0, 0, 0, 0, 0] end)

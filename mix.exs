@@ -11,18 +11,15 @@ defmodule DistributedSimulator.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger]
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:typed_struct, "~> 0.2.1"},
-      #      {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla"},
+      # {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla"},
       # {:nx, path: "/home/sheldak/thesis/nx/nx", override: true}
       # {:nx, path: "/Users/samuelheldak/studies/nx/nx", override: true}
       {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true}

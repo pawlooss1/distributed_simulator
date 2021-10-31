@@ -25,25 +25,36 @@ defmodule Simulator.Phase.StartIteration do
   Example: a person wants to move up: [@dir_up, @person, @empty].
   """
   @spec create_plans(Types.index(), Nx.t(), Nx.t(), fun()) :: Nx.t()
-  defn create_plans(iteration, grid, object_data, create_plan) do
+  defn create_plans(iteration, grid, objects_state, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
-    {_i, plans, _grid, _iteration} =
-      while {i = 0, plans = initial_plans(x_size, y_size), grid, iteration},
+    {_i, plans, _grid, _objects_state, _iteration} =
+      while {i = 0, plans = initial_plans(x_size, y_size), grid, objects_state, iteration},
             Nx.less(i, x_size) do
-        {_i, _j, plans, _grid, _iteration} =
-          while {i, j = 0, plans, grid, iteration}, Nx.less(j, y_size) do
-            # TODO object_data not needed in loops?
-            create_plan.(i, j, plans, grid, object_data, iteration)
+        {_i, _j, plans, _grid, _objects_state, _iteration} =
+          while {i, j = 0, plans, grid, objects_state, iteration},
+                Nx.less(j, y_size) do
+            plan_as_tuple = create_plan.(i, j, plans, grid, objects_state, iteration)
+            plans = add_plan(plans, i, j, plan_to_tensor(plan_as_tuple))
+            {i, j + 1, plans, grid, objects_state, iteration}
           end
 
-        {i + 1, plans, grid, iteration}
+        {i + 1, plans, grid, objects_state, iteration}
       end
 
     plans
   end
 
   defnp initial_plans(x_size, y_size) do
-    Nx.broadcast(Nx.tensor([@dir_stay, @empty, @empty]), {x_size, y_size, 3})
+    Nx.broadcast(Nx.tensor([@dir_stay, @keep, @keep]), {x_size, y_size, 3})
+  end
+
+  defnp plan_to_tensor({direction, plan}) do
+    direction = Nx.reshape(direction, {1})
+    Nx.concatenate([direction, plan])
+  end
+
+  defnp add_plan(plans, i, j, plan) do
+    Nx.put_slice(plans, [i, j, 0], Nx.broadcast(plan, {1, 1, 3}))
   end
 end
