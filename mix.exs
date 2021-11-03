@@ -18,12 +18,14 @@ defmodule DistributedSimulator.MixProject do
   end
 
   defp deps do
-    [
-      # {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla"},
-      # {:nx, path: "/home/sheldak/thesis/nx/nx", override: true}
-      # {:nx, path: "/Users/samuelheldak/studies/nx/nx", override: true}
-      {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true}
-      # {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", branch: "main", sparse: "nx", override: true}
-    ]
+    if System.user_home() == "/Users/samuelheldak" do
+      [
+        {:nx, path: "/Users/samuelheldak/studies/nx/nx", override: true}
+      ]
+    else
+      [
+        {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true}
+      ]
+    end
   end
 end

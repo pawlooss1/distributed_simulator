@@ -32,3 +32,6 @@ grid_iterations/
 
 movie.mp4
 .ipynb_checkpoints/
+
+.vscode/
+.metals/
