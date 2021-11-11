@@ -51,7 +51,7 @@ defmodule Simulator.Phase.RemotePlans do
              accepted_plans = Nx.broadcast(@rejected, {x_size, y_size})},
             Nx.less(i, order_len) do
         ordinal = order[i]
-        {x, y} = {Nx.quotient(ordinal, x_size), Nx.remainder(ordinal, y_size)}
+        {x, y} = {Nx.quotient(ordinal, y_size), Nx.remainder(ordinal, y_size)}
 
         {grid, accepted_plans, objects_state} =
           process_plan(
