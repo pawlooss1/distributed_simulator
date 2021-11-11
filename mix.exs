@@ -20,7 +20,8 @@ defmodule DistributedSimulator.MixProject do
   defp deps do
     if System.user_home() == "/Users/samuelheldak" do
       [
-        {:nx, path: "/Users/samuelheldak/studies/nx/nx", override: true}
+        {:nx, path: "/Users/samuelheldak/studies/nx/nx", override: true},
+        {:exla, path: "/Users/samuelheldak/studies/nx/exla", override: true}
       ]
     else
       [
