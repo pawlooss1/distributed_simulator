@@ -5,7 +5,7 @@ defmodule Rabbits do
 
   use Rabbits.Constants
 
-  alias Simulator.{Printer, WorkerActor}
+  alias Simulator.{Printer, Simulation}
 
   @doc """
   Runs the simulation.
@@ -18,7 +18,7 @@ defmodule Rabbits do
 
     clean_grid_iterations()
 
-    WorkerActor.start(grid: grid, objects_state: objects_state)
+    Simulation.start(grid, objects_state)
     Printer.write_to_file(grid, "grid_0")
     :ok
   end
