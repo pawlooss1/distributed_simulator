@@ -24,6 +24,8 @@ defmodule DistributedSimulator.MixProject do
       ]
     else
       [
+        # {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla"},
+        {:exla, path: "/Users/agnieszkadutka/repos/inz/nx/exla", override: true},
         {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true}
       ]
     end

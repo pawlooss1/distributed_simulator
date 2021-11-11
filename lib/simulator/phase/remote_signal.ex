@@ -30,6 +30,7 @@ defmodule Simulator.Phase.RemoteSignal do
   TODO currently it truncates signal values if they are not integers.
     We can consider rounding them instead.
   """
+  @defn_compiler {EXLA, client: :default}
   @spec apply_signal_update(Nx.t(), Nx.t(), fun()) :: Nx.t()
   defn apply_signal_update(grid, signal_update, signal_factor) do
     signal_factors = map_signal_factor(grid, signal_factor)
