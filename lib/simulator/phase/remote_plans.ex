@@ -85,24 +85,35 @@ defmodule Simulator.Phase.RemotePlans do
           apply_action
         ) do
     {x_target, y_target} = shift({x, y}, plans[x][y][0])
-
-    action = plans[x][y][1]
-    object = grid[x_target][y_target][0]
-
-    # TODO state plans must have first 2 dim as grid - mention in documentation
-    old_state = old_states[x][y]
-    plan = plans[x][y][1..2]
-
-    if is_update_valid?.(action, object) do
-      {new_object, new_state} = apply_action.(object, plan, old_state)
-      grid = put_object(grid, x_target, y_target, new_object)
-      objects_state = Nx.put_slice(objects_state, [x_target, y_target], new_state)
-
-      accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(@accepted, {1, 1}))
-
+    # don't accept plans when target localization is on the edge - it belongs to other actor
+    if(on_the_edge(grid, {x_target, y_target})) do
       {grid, accepted_plans, objects_state}
     else
-      {grid, accepted_plans, objects_state}
+      action = plans[x][y][1]
+      object = grid[x_target][y_target][0]
+
+      if is_update_valid?.(action, object) do
+        # accept plan
+        # TODO state plans must have first 2 dim as grid - mention in documentation
+        old_state = old_states[x][y]
+        plan = plans[x][y][1..2]
+        {new_object, new_state} = apply_action.(object, plan, old_state)
+        grid = put_object(grid, x_target, y_target, new_object)
+        objects_state = Nx.put_slice(objects_state, [x_target, y_target], new_state)
+
+        accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(@accepted, {1, 1}))
+
+        {grid, accepted_plans, objects_state}
+      else
+        {grid, accepted_plans, objects_state}
+      end
     end
+  end
+
+  defnp on_the_edge(grid, {x, y}) do
+    {x_size, y_size, _z_size} = Nx.shape(grid)
+
+    Nx.equal(x, 0) or Nx.equal(y, 0) or
+      Nx.equal(x, x_size - 1) or Nx.equal(y, y_size - 1)
   end
 end

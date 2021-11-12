@@ -28,12 +28,13 @@ defmodule Simulator.Phase.StartIteration do
   defn create_plans(iteration, grid, objects_state, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
+    # create plans only for inner grid
     {_i, plans, _grid, _objects_state, _iteration} =
-      while {i = 0, plans = initial_plans(x_size, y_size), grid, objects_state, iteration},
-            Nx.less(i, x_size) do
+      while {i = 1, plans = initial_plans(x_size, y_size), grid, objects_state, iteration},
+            Nx.less(i, x_size - 1) do
         {_i, _j, plans, _grid, _objects_state, _iteration} =
-          while {i, j = 0, plans, grid, objects_state, iteration},
-                Nx.less(j, y_size) do
+          while {i, j = 1, plans, grid, objects_state, iteration},
+                Nx.less(j, y_size - 1) do
             plan_as_tuple = create_plan.(i, j, plans, grid, objects_state, iteration)
             plans = add_plan(plans, i, j, plan_to_tensor(plan_as_tuple))
             {i, j + 1, plans, grid, objects_state, iteration}

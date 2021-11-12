@@ -4,21 +4,21 @@ defmodule Simulator.Simulation do
   alias Simulator.{WorkerActor, Printer}
 
   def start(grid, objects_state, workers_by_dim \\ {2, 3}) do
-    split_grid(grid, workers_by_dim)
-    # WorkerActor.start(grid: grid, objects_state: objects_state)
+    grid = split_grid(grid, workers_by_dim)
+    WorkerActor.start(grid: grid, objects_state: objects_state)
   end
 
   def split_grid(grid, {workers_x, workers_y}) do
     {x, y, z} = Nx.shape(grid)
     bigger_grid = Nx.broadcast(0, {x + 2, y + 2, z})
     bigger_grid = Nx.put_slice(bigger_grid, [1, 1, 0], grid)
-    Printer.print_objects(grid, :start_iteration)
     Printer.print_objects(bigger_grid, :start_iteration)
 
     ranges_x = get_ranges(x, workers_x)
     ranges_y = get_ranges(y, workers_y)
     ranges = Enum.zip_with(ranges_x, ranges_y, fn x, y -> [x, y] end)
     IO.inspect(ranges, charlists: :as_lists)
+    bigger_grid
   end
 
   # get overlapping ranges
