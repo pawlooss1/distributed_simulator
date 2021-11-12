@@ -38,7 +38,7 @@ defmodule Simulator.Printer do
     |> Enum.map(fn num -> to_string(num) end)
     |> Enum.chunk_every(9)
     |> Enum.map(fn [object | rest] -> object end)
-    |> Enum.chunk_every(x_size)
+    |> Enum.chunk_every(y_size)
     |> Enum.map(fn line -> Enum.join(line, " ") end)
     |> Enum.join("\n")
     |> IO.puts()
