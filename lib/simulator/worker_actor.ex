@@ -63,6 +63,7 @@ defmodule Simulator.WorkerActor do
     {:noreply, state}
   end
 
+  # TODO hold in state received plans, wait for all neighbors
   # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
@@ -123,6 +124,7 @@ defmodule Simulator.WorkerActor do
     {:noreply, %{state | grid: updated_grid, iteration: iteration + 1}}
   end
 
+  # TODO send chunks in each direction
   # Sends each plan to worker managing cells affected by this plan.
   defp distribute_plans(plans) do
     send(self(), {:remote_plans, plans})
