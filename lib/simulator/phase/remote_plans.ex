@@ -35,6 +35,7 @@ defmodule Simulator.Phase.RemotePlans do
     )
   end
 
+  @defn_compiler {EXLA, client: :default}
   defnp process_plans_in_order(
           grid,
           plans,
