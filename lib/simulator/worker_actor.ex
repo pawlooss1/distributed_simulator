@@ -43,6 +43,11 @@ defmodule Simulator.WorkerActor do
     {:stop, :normal, state}
   end
 
+  def handle_info({:neighbors, neighbors}, state) do
+    state = state |> Map.put(:neighbors, neighbors)
+    {:noreply, state}
+  end
+
   def handle_info(:start_iteration, %{grid: grid, iteration: iteration} = state) do
     Process.sleep(300)
 

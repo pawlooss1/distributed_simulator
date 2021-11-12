@@ -3,7 +3,7 @@ defmodule Simulator.Simulation do
   """
   alias Simulator.{WorkerActor, Printer}
 
-  def start(grid, objects_state, workers_by_dim \\ {1, 2}) do
+  def start(grid, objects_state, workers_by_dim \\ {2, 3}) do
     grid = split_grid(grid, objects_state, workers_by_dim)
     {:ok, pid} = WorkerActor.start(grid: grid, objects_state: objects_state)
     # send(pid, :start_iteration)
@@ -51,6 +51,16 @@ defmodule Simulator.Simulation do
 
   defp link_workers(workers) do
     workers
+    |> Enum.each(fn {loc, worker} ->
+      neighbors = create_neighbors(loc, workers)
+      send(worker, {:neighbors, neighbors})
+    end)
+
+    workers
+  end
+
+  defp create_neighbors(loc, workers) do
+    0..8 |> Enum.map(fn dir -> workers[shift(loc, dir)] end)
   end
 
   defp start_idx(1, dim_size, worker_count), do: 0
@@ -63,5 +73,11 @@ defmodule Simulator.Simulation do
 
   defp end_idx(worker_nr, dim_size, worker_count) do
     div(dim_size, worker_count) * worker_nr
+  end
+
+  def shift({x, y}, direction) do
+    xs = {0, -1, -1, 0, 1, 1, 1, 0, -1}
+    ys = {0, 0, 1, 1, 1, 0, -1, -1, -1}
+    {x + elem(xs, direction), y + elem(ys, direction)}
   end
 end
