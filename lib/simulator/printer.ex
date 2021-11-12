@@ -44,6 +44,19 @@ defmodule Simulator.Printer do
     |> IO.puts()
   end
 
+  def print_state(grid, phase \\ nil) do
+    unless phase == nil, do: IO.inspect(phase)
+
+    {x_size, y_size} = Nx.shape(grid)
+
+    Nx.to_flat_list(grid)
+    |> Enum.map(fn num -> to_string(num) end)
+    |> Enum.chunk_every(y_size)
+    |> Enum.map(fn line -> Enum.join(line, " ") end)
+    |> Enum.join("\n")
+    |> IO.puts()
+  end
+
   def print_plans(plans) do
     {x_size, y_size, _} = Nx.shape(plans)
 

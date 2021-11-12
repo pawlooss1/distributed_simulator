@@ -34,8 +34,6 @@ defmodule Simulator.WorkerActor do
 
   @impl true
   def init(grid: grid, objects_state: objects_state) do
-    send(self(), :start_iteration)
-
     {:ok, %{grid: grid, objects_state: objects_state, iteration: 1}}
   end
 
