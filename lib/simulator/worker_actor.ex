@@ -28,13 +28,20 @@ defmodule Simulator.WorkerActor do
   TODO use some supervisor.
   """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
-  def start(grid: grid, objects_state: objects_state) do
-    GenServer.start(__MODULE__, grid: grid, objects_state: objects_state)
+  def start(grid: grid, objects_state: objects_state, location: location) do
+    GenServer.start(__MODULE__, grid: grid, objects_state: objects_state, location: location)
   end
 
   @impl true
-  def init(grid: grid, objects_state: objects_state) do
-    {:ok, %{grid: grid, objects_state: objects_state, iteration: 1}}
+  def init(grid: grid, objects_state: objects_state, location: location) do
+    state = %{
+      grid: grid,
+      location: location,
+      objects_state: objects_state,
+      iteration: 1
+    }
+
+    {:ok, state}
   end
 
   @impl true
@@ -44,7 +51,12 @@ defmodule Simulator.WorkerActor do
   end
 
   def handle_info({:neighbors, neighbors}, state) do
-    state = state |> Map.put(:neighbors, neighbors)
+    state = Map.merge(state, %{
+      neighbors: neighbors, 
+      neighbors_count: neighbors |> map_size() |> div(2),
+      processed_neighbors: 0
+      })
+
     {:noreply, state}
   end
 
@@ -52,40 +64,80 @@ defmodule Simulator.WorkerActor do
     Process.sleep(300)
 
     create_plan = &@module_prefix.PlanCreator.create_plan/6
-
     plans = StartIteration.create_plans(iteration, grid, state.objects_state, create_plan)
 
-    Printer.print_objects(grid, :start_iteration)
-    Printer.write_to_file(grid, "grid_#{iteration}")
+    # Printer.print_objects(grid, "grid - #{inspect(self())}")
+    # Printer.print_plans(plans, "self - #{inspect(self())}")
+    # IO.inspect {"self", plans}
+
+    # Printer.print_objects(grid, :start_iteration)
+    # Printer.write_to_file(grid, "grid_#{iteration}")
     # Printer.print_plans(plans)
-    IO.inspect(state.objects_state)
-    distribute_plans(plans)
+    # IO.inspect(state.objects_state)
+    distribute_plans(state, plans)
+
+    state = Map.merge(state, %{plans: plans, processed_nieghbors: 0})
     {:noreply, state}
   end
 
-  # TODO hold in state received plans, wait for all neighbors
   # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
-  def handle_info({:remote_plans, plans}, %{grid: grid} = state) do
-    is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
-    apply_action = &@module_prefix.PlanResolver.apply_action/3
+  def handle_info({:remote_plans, pid, tensor}, state) do
+    %{
+      grid: grid,
+      neighbors: neighbors,
+      neighbors_count: neighbors_count, 
+      objects_state: objects_state,
+      plans: plans,
+      processed_neighbors: processed_neighbors
+    } = state
 
-    {updated_grid, accepted_plans, objects_state} =
-      RemotePlans.process_plans(
-        grid,
-        plans,
-        state.objects_state,
-        is_update_valid?,
-        apply_action
-      )
+    {x_size, y_size, _z_size} = Nx.shape(plans)
+    
+    direction = neighbors[pid]
 
-    distribute_consequences(plans, accepted_plans)
+    location = case direction do
+      @dir_top -> [0, 1, 0]
+      @dir_top_right -> [0, y_size - 1, 0]
+      @dir_right -> [1, y_size - 1, 0]
+      @dir_bottom_right -> [x_size - 1, y_size - 1, 0]
+      @dir_bottom -> [x_size - 1, 1, 0]
+      @dir_bottom_left -> [x_size - 1, 0, 0]
+      @dir_left -> [1, 0, 0]
+      @dir_top_left -> [0, 0, 0]
+    end
 
-    # IO.inspect(accepted_plans)
-    # Printer.print_objects(updated_grid, :remote_plans)
+    plans = Nx.put_slice(plans, location, tensor)
 
-    {:noreply, %{state | grid: updated_grid, objects_state: objects_state}}
+    if neighbors_count == processed_neighbors + 1 do
+      is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
+      apply_action = &@module_prefix.PlanResolver.apply_action/3
+
+      {updated_grid, accepted_plans, objects_state} =
+        RemotePlans.process_plans(
+          grid,
+          plans,
+          objects_state,
+          is_update_valid?,
+          apply_action
+        )
+
+      # distribute_consequences(plans, accepted_plans)
+
+      # IO.inspect(accepted_plans)
+      # Printer.print_objects(updated_grid, :remote_plans)
+
+      state = Map.merge(state, %{
+        grid: updated_grid, 
+        objects_state: objects_state, 
+        processed_neighbors: 0
+      })
+
+      {:noreply, state}
+    else
+      {:noreply, %{state | plans: plans, processed_neighbors: processed_neighbors + 1}}
+    end
   end
 
   def handle_info({:remote_consequences, plans, accepted_plans}, %{grid: grid} = state) do
@@ -124,10 +176,27 @@ defmodule Simulator.WorkerActor do
     {:noreply, %{state | grid: updated_grid, iteration: iteration + 1}}
   end
 
-  # TODO send chunks in each direction
-  # Sends each plan to worker managing cells affected by this plan.
-  defp distribute_plans(plans) do
-    send(self(), {:remote_plans, plans})
+  # sends each plan to worker managing cells affected by this plan
+  defp distribute_plans(%{neighbors: neighbors}, plans) do
+    {x_size, y_size, _z_size} = Nx.shape(plans)
+
+    neighbors
+    |> Map.keys()
+    |> Enum.filter(fn key -> key in @directions end)
+    |> Enum.each(fn direction -> 
+      tensor = case direction do
+        @dir_top -> Nx.slice(plans, [1, 1, 0], [1, y_size - 2, 3])
+        @dir_top_right -> Nx.slice(plans, [1, y_size - 2, 0], [1, 1, 3])
+        @dir_right -> Nx.slice(plans, [1, y_size - 2, 0], [x_size - 2, 1, 3])
+        @dir_bottom_right -> Nx.slice(plans, [x_size - 2, y_size - 2, 0], [1, 1, 3])
+        @dir_bottom -> Nx.slice(plans, [x_size - 2, 1, 0], [1, y_size - 2, 3])
+        @dir_bottom_left -> Nx.slice(plans, [x_size - 2, 1, 0], [1, 1, 3])
+        @dir_left -> Nx.slice(plans, [1, 1, 0], [x_size - 2, 1, 3])
+        @dir_top_left -> Nx.slice(plans, [1, 1, 0], [1, 1, 3])
+      end
+
+      send(neighbors[direction], {:remote_plans, self(), tensor})
+    end)
   end
 
   # Sends each consequence to worker managing cells affected by this plan consequence.

@@ -1,12 +1,14 @@
 defmodule Simulator.Simulation do
   @moduledoc """
   """
-  alias Simulator.{WorkerActor, Printer}
+  use Simulator.BaseConstants
+
+  alias Simulator.{Helpers, WorkerActor, Printer}
 
   def start(grid, objects_state, workers_by_dim \\ {2, 3}) do
-    workers = split_grid_among_workers(grid, objects_state, workers_by_dim)
-    # TODO: start all workers
-    # send(pid, :start_iteration)
+    grid
+    |> split_grid_among_workers(objects_state, workers_by_dim)
+    |> Enum.each(fn {_location, worker_pid} -> send(worker_pid, :start_iteration) end) 
   end
 
   def split_grid_among_workers(grid, state, {workers_x, workers_y}) do
@@ -31,7 +33,8 @@ defmodule Simulator.Simulation do
     rem_dims_idxs = List.duplicate(0, tuple_size(state_shape) - 2)
 
     bigger_state =
-      Nx.broadcast(0, state_shape)
+      0
+      |> Nx.broadcast(state_shape)
       |> Nx.put_slice([1, 1 | rem_dims_idxs], state)
 
     {bigger_grid, bigger_state}
@@ -41,10 +44,12 @@ defmodule Simulator.Simulation do
     {x_size, y_size, _z_szie} = Nx.shape(grid)
     range_x = start_idx(x, x_size, workers_x)..end_idx(x, x_size, workers_x)
     range_y = start_idx(y, y_size, workers_y)..end_idx(y, y_size, workers_y)
+
     local_grid = grid[[range_x, range_y]]
     local_objects_state = bigger_state[[range_x, range_y]]
-    Printer.print_objects(local_grid, {x, y})
-    {:ok, pid} = WorkerActor.start(grid: local_grid, objects_state: local_objects_state)
+
+    # Printer.print_objects(local_grid, {x, y})
+    {:ok, pid} = WorkerActor.start(grid: local_grid, objects_state: local_objects_state, location: {x, y})
 
     {{x, y}, pid}
   end
@@ -58,8 +63,18 @@ defmodule Simulator.Simulation do
     workers
   end
 
-  defp create_neighbors(loc, workers) do
-    0..8 |> Enum.map(fn dir -> workers[shift(loc, dir)] end)
+  defp create_neighbors(location, workers) do
+    directions_to_pids =
+      @directions 
+      |> Enum.map(fn direction -> {direction, workers[shift(location, direction)]} end)
+      |> Enum.reject(fn {_direction, pid} -> pid == nil end)
+
+    pids_to_directions =
+      directions_to_pids
+      |> Enum.reject(fn {_direction, pid} -> pid == nil end)
+      |> Enum.map(fn {direction, pid} -> {pid, direction} end)
+
+    Map.new(directions_to_pids ++ pids_to_directions)
   end
 
   defp start_idx(1, dim_size, worker_count), do: 0
@@ -74,9 +89,8 @@ defmodule Simulator.Simulation do
     div(dim_size, worker_count) * worker_nr
   end
 
-  def shift({x, y}, direction) do
-    xs = {0, -1, -1, 0, 1, 1, 1, 0, -1}
-    ys = {0, 0, 1, 1, 1, 0, -1, -1, -1}
-    {x + elem(xs, direction), y + elem(ys, direction)}
+  def shift(location, direction) do
+    {x, y} = Helpers.shift(location, direction)
+    {Nx.to_scalar(x), Nx.to_scalar(y)}
   end
 end

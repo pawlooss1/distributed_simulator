@@ -35,7 +35,7 @@ defmodule Simulator.Phase.RemotePlans do
     )
   end
 
-  @defn_compiler {EXLA, client: :default}
+  # @defn_compiler {EXLA, client: :default}
   defnp process_plans_in_order(
           grid,
           plans,
@@ -85,8 +85,9 @@ defmodule Simulator.Phase.RemotePlans do
           apply_action
         ) do
     {x_target, y_target} = shift({x, y}, plans[x][y][0])
+
     # don't accept plans when target localization is on the edge - it belongs to other actor
-    if(on_the_edge(grid, {x_target, y_target})) do
+    if on_the_edge(grid, {x_target, y_target}) do
       {grid, accepted_plans, objects_state}
     else
       action = plans[x][y][1]
@@ -94,9 +95,10 @@ defmodule Simulator.Phase.RemotePlans do
 
       if is_update_valid?.(action, object) do
         # accept plan
-        # TODO state plans must have first 2 dim as grid - mention in documentation
+        # TODO state plans must have the first 2 dim same as grid - mention in documentation
         old_state = old_states[x][y]
         plan = plans[x][y][1..2]
+        
         {new_object, new_state} = apply_action.(object, plan, old_state)
         grid = put_object(grid, x_target, y_target, new_object)
         objects_state = Nx.put_slice(objects_state, [x_target, y_target], new_state)

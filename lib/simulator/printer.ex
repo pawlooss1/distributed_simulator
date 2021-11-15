@@ -29,19 +29,21 @@ defmodule Simulator.Printer do
   @doc """
   Prints only the objects from the given `grid`.
   """
-  def print_objects(grid, phase \\ nil) do
-    unless phase == nil, do: IO.inspect(phase)
+  def print_objects(grid, optional \\ nil) do
+    # unless phase == nil, do: IO.inspect(phase)
 
     {x_size, y_size, _} = Nx.shape(grid)
 
-    Nx.to_flat_list(grid)
-    |> Enum.map(fn num -> to_string(num) end)
-    |> Enum.chunk_every(9)
-    |> Enum.map(fn [object | rest] -> object end)
-    |> Enum.chunk_every(y_size)
-    |> Enum.map(fn line -> Enum.join(line, " ") end)
-    |> Enum.join("\n")
-    |> IO.puts()
+    string = 
+      Nx.to_flat_list(grid)
+      |> Enum.map(fn num -> to_string(num) end)
+      |> Enum.chunk_every(9)
+      |> Enum.map(fn [object | rest] -> object end)
+      |> Enum.chunk_every(y_size)
+      |> Enum.map(fn line -> Enum.join(line, " ") end)
+      |> Enum.join("\n")
+
+    IO.puts(if optional == nil, do: string, else: "#{optional}\n#{string}")
   end
 
   def print_state(grid, phase \\ nil) do
@@ -57,19 +59,21 @@ defmodule Simulator.Printer do
     |> IO.puts()
   end
 
-  def print_plans(plans) do
+  def print_plans(plans, optional \\ nil) do
     {x_size, y_size, _} = Nx.shape(plans)
 
-    Nx.to_flat_list(plans)
-    |> Enum.map(fn num -> to_string(num) end)
-    |> Enum.chunk_every(3 * x_size)
-    |> Enum.map(fn line ->
-      Enum.chunk_every(line, 3)
-      |> Enum.map(fn plan -> Enum.join(plan, " ") end)
-      |> Enum.join("\n")
-    end)
-    |> Enum.join("\n\n")
-    |> IO.puts()
+    plans = 
+      Nx.to_flat_list(plans)
+      |> Enum.map(fn num -> to_string(num) end)
+      |> Enum.chunk_every(3 * y_size)
+      |> Enum.map(fn line ->
+        Enum.chunk_every(line, 3)
+        |> Enum.map(fn plan -> Enum.join(plan, " ") end)
+        |> Enum.join("\n")
+      end)
+      |> Enum.join("\n\n")
+
+    IO.puts(if optional == nil, do: plans, else: "#{optional}\n#{plans}")
   end
 
   # Converts grid as tensor to (relatively) readable string.

@@ -28,7 +28,7 @@ defmodule Rabbits.MixProject do
       [
         {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true},
         {:distributed_simulator,
-        path: "/Users/agnieszkadutka/repos/inz/distributed_simulator", override: true}
+         path: "/Users/agnieszkadutka/repos/inz/distributed_simulator", override: true}
       ]
     end
   end
