@@ -97,17 +97,7 @@ defmodule Simulator.WorkerActor do
     
     direction = neighbors[pid]
 
-    location = case direction do
-      @dir_top -> [0, 1, 0]
-      @dir_top_right -> [0, y_size - 1, 0]
-      @dir_right -> [1, y_size - 1, 0]
-      @dir_bottom_right -> [x_size - 1, y_size - 1, 0]
-      @dir_bottom -> [x_size - 1, 1, 0]
-      @dir_bottom_left -> [x_size - 1, 0, 0]
-      @dir_left -> [1, 0, 0]
-      @dir_top_left -> [0, 0, 0]
-    end
-
+    location = get_put_slice_start(x_size, y_size, direction)
     plans = Nx.put_slice(plans, location, tensor)
 
     if neighbors_count == processed_neighbors + 1 do
@@ -123,7 +113,7 @@ defmodule Simulator.WorkerActor do
           apply_action
         )
 
-      # distribute_consequences(plans, accepted_plans)
+      # distribute_consequences(state, updated_grid, plans, accepted_plans)
 
       # IO.inspect(accepted_plans)
       # Printer.print_objects(updated_grid, :remote_plans)
@@ -140,7 +130,7 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info({:remote_consequences, plans, accepted_plans}, %{grid: grid} = state) do
+  def handle_info({:remote_consequences, pid, updated_grid, plans, accepted_plans}, %{grid: grid} = state) do
     apply_consequence = &@module_prefix.PlanResolver.apply_consequence/3
 
     {updated_grid, objects_state} =
@@ -156,11 +146,12 @@ defmodule Simulator.WorkerActor do
     generate_signal = &@module_prefix.Cell.generate_signal/1
     signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
 
-    distribute_signal(signal_update)
+    # distribute_signal(signal_update)
 
     # Printer.print_objects(updated_grid, :remote_consequences)
 
     {:noreply, %{state | grid: updated_grid, objects_state: objects_state}}
+    # {:noreply, state}
   end
 
   def handle_info({:remote_signal, signal_update}, state) do
@@ -180,28 +171,16 @@ defmodule Simulator.WorkerActor do
   defp distribute_plans(%{neighbors: neighbors}, plans) do
     {x_size, y_size, _z_size} = Nx.shape(plans)
 
-    neighbors
-    |> Map.keys()
-    |> Enum.filter(fn key -> key in @directions end)
-    |> Enum.each(fn direction -> 
-      tensor = case direction do
-        @dir_top -> Nx.slice(plans, [1, 1, 0], [1, y_size - 2, 3])
-        @dir_top_right -> Nx.slice(plans, [1, y_size - 2, 0], [1, 1, 3])
-        @dir_right -> Nx.slice(plans, [1, y_size - 2, 0], [x_size - 2, 1, 3])
-        @dir_bottom_right -> Nx.slice(plans, [x_size - 2, y_size - 2, 0], [1, 1, 3])
-        @dir_bottom -> Nx.slice(plans, [x_size - 2, 1, 0], [1, y_size - 2, 3])
-        @dir_bottom_left -> Nx.slice(plans, [x_size - 2, 1, 0], [1, 1, 3])
-        @dir_left -> Nx.slice(plans, [1, 1, 0], [x_size - 2, 1, 3])
-        @dir_top_left -> Nx.slice(plans, [1, 1, 0], [1, 1, 3])
-      end
-
-      send(neighbors[direction], {:remote_plans, self(), tensor})
-    end)
+    tensors = [plans]
+    send_to_neighbors(neighbors, x_size, y_size, :remote_plans, tensors)
   end
 
   # Sends each consequence to worker managing cells affected by this plan consequence.
-  defp distribute_consequences(plans, accepted_plans) do
-    send(self(), {:remote_consequences, plans, accepted_plans})
+  defp distribute_consequences(%{neighbors: neighbors}, updated_grid, plans, accepted_plans) do
+    {x_size, y_size, _z_size} = Nx.shape(plans)
+
+    tensors = [updated_grid, plans, accepted_plans]
+    send_to_neighbors(neighbors, x_size, y_size, :remote_consequences, tensors)
   end
 
   # Sends each signal to worker managing cells affected by this signal.
@@ -213,4 +192,49 @@ defmodule Simulator.WorkerActor do
   defp start_next_iteration() do
     send(self(), :start_iteration)
   end
+
+  defp send_to_neighbors(neighbors, x_size, y_size, message_atom, tensors) do
+    neighbors
+    |> Map.keys()
+    |> Enum.filter(fn key -> key in @directions end)
+    |> Enum.each(fn direction -> 
+      start = get_slice_start(x_size, y_size, direction)
+      length = get_slice_length(x_size, y_size, direction)
+
+      message =
+        tensors
+        |> Enum.map(fn tensor -> Nx.slice(tensor, start, length) end)
+        |> then(fn tensors -> [message_atom, self()] ++ tensors end)
+        |> List.to_tuple()
+
+      send(neighbors[direction], message)
+    end)
+  end
+
+  defp get_slice_start(_x_size, _y_size, @dir_top), do: [1, 1, 0]
+  defp get_slice_start(_x_size, y_size, @dir_top_right), do: [1, y_size - 2, 0]
+  defp get_slice_start(_x_size, y_size, @dir_right), do: [1, y_size - 2, 0]
+  defp get_slice_start(x_size, y_size, @dir_bottom_right), do: [x_size - 2, y_size - 2, 0]
+  defp get_slice_start(x_size, _y_size, @dir_bottom), do: [x_size - 2, 1, 0]
+  defp get_slice_start(x_size, _y_size, @dir_bottom_left), do: [x_size - 2, 1, 0]
+  defp get_slice_start(_x_size, _y_size, @dir_left), do: [1, 1, 0]
+  defp get_slice_start(_x_size, _y_size, @dir_top_left), do: [1, 1, 0]
+
+  defp get_slice_length(_x_size, y_size, @dir_top), do: [1, y_size - 2, 3]
+  defp get_slice_length(_x_size, _y_size, @dir_top_right), do: [1, 1, 3]
+  defp get_slice_length(x_size, _y_size, @dir_right), do: [x_size - 2, 1, 3]
+  defp get_slice_length(_x_size, _y_size, @dir_bottom_right), do: [1, 1, 3]
+  defp get_slice_length(_x_size, y_size, @dir_bottom), do: [1, y_size - 2, 3]
+  defp get_slice_length(_x_size, _y_size, @dir_bottom_left), do: [1, 1, 3]
+  defp get_slice_length(x_size, _y_size, @dir_left), do: [x_size - 2, 1, 3]
+  defp get_slice_length(_x_size, _y_size, @dir_top_left), do: [1, 1, 3]
+
+  defp get_put_slice_start(_x_size, _y_size, @dir_top), do: [0, 1, 0]
+  defp get_put_slice_start(_x_size, y_size, @dir_top_right), do: [0, y_size - 1, 0]
+  defp get_put_slice_start(_x_size, y_size, @dir_right), do: [1, y_size - 1, 0]
+  defp get_put_slice_start(x_size, y_size, @dir_bottom_right), do: [x_size - 1, y_size - 1, 0]
+  defp get_put_slice_start(x_size, _y_size, @dir_bottom), do: [x_size - 1, 1, 0]
+  defp get_put_slice_start(x_size, _y_size, @dir_bottom_left), do: [x_size - 1, 0, 0]
+  defp get_put_slice_start(_x_size, _y_size, @dir_left), do: [1, 0, 0]
+  defp get_put_slice_start(_x_size, _y_size, @dir_top_left), do: [0, 0, 0]
 end
