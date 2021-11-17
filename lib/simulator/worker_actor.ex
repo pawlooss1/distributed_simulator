@@ -97,7 +97,7 @@ defmodule Simulator.WorkerActor do
     
     direction = neighbors[pid]
 
-    location = get_put_slice_start(x_size, y_size, direction)
+    location = put_slice_start(x_size, y_size, direction)
     plans = Nx.put_slice(plans, location, tensor)
 
     if neighbors_count == processed_neighbors + 1 do
@@ -113,13 +113,14 @@ defmodule Simulator.WorkerActor do
           apply_action
         )
 
-      # distribute_consequences(state, updated_grid, plans, accepted_plans)
+      distribute_consequences(state, updated_grid, accepted_plans)
 
       # IO.inspect(accepted_plans)
       # Printer.print_objects(updated_grid, :remote_plans)
 
       state = Map.merge(state, %{
-        grid: updated_grid, 
+        accepted_plans: accepted_plans,
+        grid: updated_grid,
         objects_state: objects_state, 
         processed_neighbors: 0
       })
@@ -130,28 +131,64 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info({:remote_consequences, pid, updated_grid, plans, accepted_plans}, %{grid: grid} = state) do
-    apply_consequence = &@module_prefix.PlanResolver.apply_consequence/3
+  def handle_info({:remote_consequences, pid, updated_grid, new_accepted_plans}, state) do
+    %{
+      accepted_plans: accepted_plans,
+      grid: grid,
+      neighbors: neighbors,
+      neighbors_count: neighbors_count, 
+      objects_state: objects_state,
+      plans: plans,
+      processed_neighbors: processed_neighbors
+    } = state
 
-    {updated_grid, objects_state} =
-      RemoteConsequences.apply_consequences(
-        grid,
-        state.objects_state,
-        plans,
-        accepted_plans,
-        apply_consequence
-      )
+    {x_size, y_size, _z_size} = Nx.shape(updated_grid)
+    
+    direction = neighbors[pid]
 
-    # TODO in the future could get object state as well ?
-    generate_signal = &@module_prefix.Cell.generate_signal/1
-    signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
+    location_grid = put_slice_start(x_size, y_size, direction)
+    grid = Nx.put_slice(grid, location_grid, updated_grid)
 
-    # distribute_signal(signal_update)
+    location_plans = slice_start_plans(x_size, y_size, direction)
+    accepted_plans = Nx.put_slice(accepted_plans, location_plans, new_accepted_plans)
 
-    # Printer.print_objects(updated_grid, :remote_consequences)
+    if neighbors_count == processed_neighbors + 1 do
+      apply_consequence = &@module_prefix.PlanResolver.apply_consequence/3
 
-    {:noreply, %{state | grid: updated_grid, objects_state: objects_state}}
-    # {:noreply, state}
+      {updated_grid, objects_state} =
+        RemoteConsequences.apply_consequences(
+          grid,
+          state.objects_state,
+          plans,
+          accepted_plans,
+          apply_consequence
+        )
+
+      # TODO in the future could get object state as well ?
+      generate_signal = &@module_prefix.Cell.generate_signal/1
+      signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
+
+      # distribute_signal(signal_update)
+
+      # Printer.print_objects(updated_grid, :remote_consequences)
+
+      state = Map.merge(state, %{
+        grid: updated_grid,
+        objects_state: objects_state, 
+        processed_neighbors: 0,
+        signal_update: signal_update
+      })
+
+      {:noreply, state}
+    else
+      state = Map.merge(state, %{
+        accepted_plans: accepted_plans, 
+        grid: grid, 
+        processed_neighbors: processed_neighbors + 1
+      })
+
+      {:noreply, state}
+    end
   end
 
   def handle_info({:remote_signal, signal_update}, state) do
@@ -171,15 +208,18 @@ defmodule Simulator.WorkerActor do
   defp distribute_plans(%{neighbors: neighbors}, plans) do
     {x_size, y_size, _z_size} = Nx.shape(plans)
 
-    tensors = [plans]
+    tensors = [{plans, &slice_start/3, &slice_length/3}]
     send_to_neighbors(neighbors, x_size, y_size, :remote_plans, tensors)
   end
 
   # Sends each consequence to worker managing cells affected by this plan consequence.
-  defp distribute_consequences(%{neighbors: neighbors}, updated_grid, plans, accepted_plans) do
-    {x_size, y_size, _z_size} = Nx.shape(plans)
+  defp distribute_consequences(%{neighbors: neighbors}, updated_grid, accepted_plans) do
+    {x_size, y_size, _z_size} = Nx.shape(updated_grid)
 
-    tensors = [updated_grid, plans, accepted_plans]
+    tensors = [
+      {updated_grid, &slice_start/3, &slice_length/3},
+      {accepted_plans, &slice_start_plans/3, &slice_length_plans/3}
+    ]
     send_to_neighbors(neighbors, x_size, y_size, :remote_consequences, tensors)
   end
 
@@ -198,12 +238,14 @@ defmodule Simulator.WorkerActor do
     |> Map.keys()
     |> Enum.filter(fn key -> key in @directions end)
     |> Enum.each(fn direction -> 
-      start = get_slice_start(x_size, y_size, direction)
-      length = get_slice_length(x_size, y_size, direction)
-
       message =
         tensors
-        |> Enum.map(fn tensor -> Nx.slice(tensor, start, length) end)
+        |> Enum.map(fn {tensor, start_fun, length_fun} -> 
+          start = start_fun.(x_size, y_size, direction)
+          length = length_fun.(x_size, y_size, direction)
+
+          Nx.slice(tensor, start, length) 
+        end)
         |> then(fn tensors -> [message_atom, self()] ++ tensors end)
         |> List.to_tuple()
 
@@ -211,30 +253,49 @@ defmodule Simulator.WorkerActor do
     end)
   end
 
-  defp get_slice_start(_x_size, _y_size, @dir_top), do: [1, 1, 0]
-  defp get_slice_start(_x_size, y_size, @dir_top_right), do: [1, y_size - 2, 0]
-  defp get_slice_start(_x_size, y_size, @dir_right), do: [1, y_size - 2, 0]
-  defp get_slice_start(x_size, y_size, @dir_bottom_right), do: [x_size - 2, y_size - 2, 0]
-  defp get_slice_start(x_size, _y_size, @dir_bottom), do: [x_size - 2, 1, 0]
-  defp get_slice_start(x_size, _y_size, @dir_bottom_left), do: [x_size - 2, 1, 0]
-  defp get_slice_start(_x_size, _y_size, @dir_left), do: [1, 1, 0]
-  defp get_slice_start(_x_size, _y_size, @dir_top_left), do: [1, 1, 0]
+  # TODO use case and group to 3-4 categories (depending on corner)
+  defp slice_start(_x_size, _y_size, @dir_top), do: [1, 1, 0]
+  defp slice_start(_x_size, y_size, @dir_top_right), do: [1, y_size - 2, 0]
+  defp slice_start(_x_size, y_size, @dir_right), do: [1, y_size - 2, 0]
+  defp slice_start(x_size, y_size, @dir_bottom_right), do: [x_size - 2, y_size - 2, 0]
+  defp slice_start(x_size, _y_size, @dir_bottom), do: [x_size - 2, 1, 0]
+  defp slice_start(x_size, _y_size, @dir_bottom_left), do: [x_size - 2, 1, 0]
+  defp slice_start(_x_size, _y_size, @dir_left), do: [1, 1, 0]
+  defp slice_start(_x_size, _y_size, @dir_top_left), do: [1, 1, 0]
 
-  defp get_slice_length(_x_size, y_size, @dir_top), do: [1, y_size - 2, 3]
-  defp get_slice_length(_x_size, _y_size, @dir_top_right), do: [1, 1, 3]
-  defp get_slice_length(x_size, _y_size, @dir_right), do: [x_size - 2, 1, 3]
-  defp get_slice_length(_x_size, _y_size, @dir_bottom_right), do: [1, 1, 3]
-  defp get_slice_length(_x_size, y_size, @dir_bottom), do: [1, y_size - 2, 3]
-  defp get_slice_length(_x_size, _y_size, @dir_bottom_left), do: [1, 1, 3]
-  defp get_slice_length(x_size, _y_size, @dir_left), do: [x_size - 2, 1, 3]
-  defp get_slice_length(_x_size, _y_size, @dir_top_left), do: [1, 1, 3]
+  defp slice_length(_x_size, y_size, @dir_top), do: [1, y_size - 2, 3]
+  defp slice_length(_x_size, _y_size, @dir_top_right), do: [1, 1, 3]
+  defp slice_length(x_size, _y_size, @dir_right), do: [x_size - 2, 1, 3]
+  defp slice_length(_x_size, _y_size, @dir_bottom_right), do: [1, 1, 3]
+  defp slice_length(_x_size, y_size, @dir_bottom), do: [1, y_size - 2, 3]
+  defp slice_length(_x_size, _y_size, @dir_bottom_left), do: [1, 1, 3]
+  defp slice_length(x_size, _y_size, @dir_left), do: [x_size - 2, 1, 3]
+  defp slice_length(_x_size, _y_size, @dir_top_left), do: [1, 1, 3]
 
-  defp get_put_slice_start(_x_size, _y_size, @dir_top), do: [0, 1, 0]
-  defp get_put_slice_start(_x_size, y_size, @dir_top_right), do: [0, y_size - 1, 0]
-  defp get_put_slice_start(_x_size, y_size, @dir_right), do: [1, y_size - 1, 0]
-  defp get_put_slice_start(x_size, y_size, @dir_bottom_right), do: [x_size - 1, y_size - 1, 0]
-  defp get_put_slice_start(x_size, _y_size, @dir_bottom), do: [x_size - 1, 1, 0]
-  defp get_put_slice_start(x_size, _y_size, @dir_bottom_left), do: [x_size - 1, 0, 0]
-  defp get_put_slice_start(_x_size, _y_size, @dir_left), do: [1, 0, 0]
-  defp get_put_slice_start(_x_size, _y_size, @dir_top_left), do: [0, 0, 0]
+  defp put_slice_start(_x_size, _y_size, @dir_top), do: [0, 1, 0]
+  defp put_slice_start(_x_size, y_size, @dir_top_right), do: [0, y_size - 1, 0]
+  defp put_slice_start(_x_size, y_size, @dir_right), do: [1, y_size - 1, 0]
+  defp put_slice_start(x_size, y_size, @dir_bottom_right), do: [x_size - 1, y_size - 1, 0]
+  defp put_slice_start(x_size, _y_size, @dir_bottom), do: [x_size - 1, 1, 0]
+  defp put_slice_start(x_size, _y_size, @dir_bottom_left), do: [x_size - 1, 0, 0]
+  defp put_slice_start(_x_size, _y_size, @dir_left), do: [1, 0, 0]
+  defp put_slice_start(_x_size, _y_size, @dir_top_left), do: [0, 0, 0]
+
+  defp slice_start_plans(_x_size, _y_size, @dir_top), do: [0, 0]
+  defp slice_start_plans(_x_size, y_size, @dir_top_right), do: [0, y_size - 2]
+  defp slice_start_plans(_x_size, y_size, @dir_right), do: [0, y_size - 2]
+  defp slice_start_plans(x_size, y_size, @dir_bottom_right), do: [x_size - 2, y_size - 2]
+  defp slice_start_plans(x_size, _y_size, @dir_bottom), do: [x_size - 2, 0]
+  defp slice_start_plans(x_size, _y_size, @dir_bottom_left), do: [x_size - 2, 0]
+  defp slice_start_plans(_x_size, _y_size, @dir_left), do: [0, 0]
+  defp slice_start_plans(_x_size, _y_size, @dir_top_left), do: [0, 0]
+
+  defp slice_length_plans(_x_size, y_size, @dir_top), do: [2, y_size]
+  defp slice_length_plans(_x_size, _y_size, @dir_top_right), do: [2, 2]
+  defp slice_length_plans(x_size, _y_size, @dir_right), do: [x_size, 2]
+  defp slice_length_plans(_x_size, _y_size, @dir_bottom_right), do: [2, 2]
+  defp slice_length_plans(_x_size, y_size, @dir_bottom), do: [2, y_size]
+  defp slice_length_plans(_x_size, _y_size, @dir_bottom_left), do: [2, 2]
+  defp slice_length_plans(x_size, _y_size, @dir_left), do: [x_size, 2]
+  defp slice_length_plans(_x_size, _y_size, @dir_top_left), do: [2, 2]
 end
