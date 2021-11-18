@@ -1,7 +1,7 @@
 defmodule Simulator.WorkerActor do
   @moduledoc """
   GenServer responsible for simulating one shard.
-
+  TODO update because there is no start_iteration anymore
   There are four phases of every iteration:
   - `:start_iteration` - if iteration's number does not exceed the
     maxium number of iterations set in the cofiguration, plans are
@@ -28,28 +28,18 @@ defmodule Simulator.WorkerActor do
   TODO use some supervisor.
   """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
-  def start(grid: grid, objects_state: objects_state, location: location) do
-    GenServer.start(__MODULE__, grid: grid, objects_state: objects_state, location: location)
+  def start(grid: grid, objects_state: objects_state) do
+    GenServer.start(__MODULE__, grid: grid, objects_state: objects_state)
   end
 
   @impl true
-  def init(grid: grid, objects_state: objects_state, location: location) do
-    state = %{
-      grid: grid,
-      location: location,
-      objects_state: objects_state,
-      iteration: 1
-    }
+  def init(grid: grid, objects_state: objects_state) do
+    state = %{grid: grid, objects_state: objects_state, iteration: 0}
 
     {:ok, state}
   end
 
   @impl true
-  def handle_info(:start_iteration, %{iteration: iteration} = state)
-      when iteration > @max_iterations do
-    {:stop, :normal, state}
-  end
-
   def handle_info({:neighbors, neighbors}, state) do
     state = Map.merge(state, %{
       neighbors: neighbors, 
@@ -60,25 +50,7 @@ defmodule Simulator.WorkerActor do
     {:noreply, state}
   end
 
-  def handle_info(:start_iteration, %{grid: grid, iteration: iteration} = state) do
-    Process.sleep(300)
-
-    create_plan = &@module_prefix.PlanCreator.create_plan/6
-    plans = StartIteration.create_plans(iteration, grid, state.objects_state, create_plan)
-
-    # Printer.print_objects(grid, "grid - #{inspect(self())}")
-    # Printer.print_plans(plans, "self - #{inspect(self())}")
-    # IO.inspect {"self", plans}
-
-    # Printer.print_objects(grid, :start_iteration)
-    # Printer.write_to_file(grid, "grid_#{iteration}")
-    # Printer.print_plans(plans)
-    # IO.inspect(state.objects_state)
-    distribute_plans(state, plans)
-
-    state = Map.merge(state, %{plans: plans, processed_nieghbors: 0})
-    {:noreply, state}
-  end
+  def handle_info(:start, state), do: start_new_iteration(state)
 
   # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
@@ -114,9 +86,6 @@ defmodule Simulator.WorkerActor do
         )
 
       distribute_consequences(state, updated_grid, accepted_plans)
-
-      # IO.inspect(accepted_plans)
-      # Printer.print_objects(updated_grid, :remote_plans)
 
       state = Map.merge(state, %{
         accepted_plans: accepted_plans,
@@ -168,9 +137,7 @@ defmodule Simulator.WorkerActor do
       generate_signal = &@module_prefix.Cell.generate_signal/1
       signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
 
-      # distribute_signal(signal_update)
-
-      # Printer.print_objects(updated_grid, :remote_consequences)
+      distribute_signal(state, signal_update)
 
       state = Map.merge(state, %{
         grid: updated_grid,
@@ -191,17 +158,58 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info({:remote_signal, signal_update}, state) do
-    %{grid: grid, iteration: iteration} = state
+  def handle_info({:remote_signal, pid, remote_signal_update}, state) do
+    %{
+      grid: grid,
+      iteration: iteration,
+      neighbors: neighbors,
+      neighbors_count: neighbors_count, 
+      processed_neighbors: processed_neighbors,
+      signal_update: signal_update
+    } = state
 
-    # TODO should signal factor depend on object state?
-    signal_factor = &@module_prefix.Cell.signal_factor/1
-    updated_grid = RemoteSignal.apply_signal_update(grid, signal_update, signal_factor)
+    {x_size, y_size, _z_size} = Nx.shape(signal_update)
+    
+    direction = neighbors[pid]
 
-    # Printer.print_objects(updated_grid, :remote_signal)
+    location = put_slice_start(x_size, y_size, direction)
+    signal_update = Nx.put_slice(signal_update, location, remote_signal_update)
 
-    start_next_iteration()
-    {:noreply, %{state | grid: updated_grid, iteration: iteration + 1}}
+    if neighbors_count == processed_neighbors + 1 do
+      # TODO should signal factor depend on object state?
+      signal_factor = &@module_prefix.Cell.signal_factor/1
+      updated_grid = RemoteSignal.apply_signal_update(grid, signal_update, signal_factor)
+
+      state = Map.merge(state, %{
+        grid: updated_grid,
+        iteration: iteration + 1
+      })
+
+      start_new_iteration(state)
+    else
+      state = Map.merge(state, %{
+        processed_neighbors: processed_neighbors + 1,
+        signal_update: signal_update
+      })
+
+      {:noreply, state}
+    end
+  end
+
+  defp start_new_iteration(%{iteration: iteration} = state) when iteration > @max_iterations do
+    {:stop, :normal, state}
+  end
+
+  defp start_new_iteration(state) do
+    %{grid: grid, iteration: iteration, objects_state: objects_state} = state
+
+    create_plan = &@module_prefix.PlanCreator.create_plan/6
+    plans = StartIteration.create_plans(iteration, grid, objects_state, create_plan)
+
+    distribute_plans(state, plans)
+
+    state = Map.merge(state, %{plans: plans, processed_nieghbors: 0})
+    {:noreply, state}
   end
 
   # sends each plan to worker managing cells affected by this plan
@@ -224,13 +232,11 @@ defmodule Simulator.WorkerActor do
   end
 
   # Sends each signal to worker managing cells affected by this signal.
-  defp distribute_signal(signal_update) do
-    send(self(), {:remote_signal, signal_update})
-  end
+  defp distribute_signal(%{neighbors: neighbors}, signal_update) do
+    {x_size, y_size, _z_size} = Nx.shape(signal_update)
 
-  # Starts the next iteration by sending message.
-  defp start_next_iteration() do
-    send(self(), :start_iteration)
+    tensors = [{signal_update, &slice_start/3, &slice_length/3}]
+    send_to_neighbors(neighbors, x_size, y_size, :remote_signal, tensors)
   end
 
   defp send_to_neighbors(neighbors, x_size, y_size, message_atom, tensors) do
@@ -253,24 +259,29 @@ defmodule Simulator.WorkerActor do
     end)
   end
 
-  # TODO use case and group to 3-4 categories (depending on corner)
-  defp slice_start(_x_size, _y_size, @dir_top), do: [1, 1, 0]
-  defp slice_start(_x_size, y_size, @dir_top_right), do: [1, y_size - 2, 0]
-  defp slice_start(_x_size, y_size, @dir_right), do: [1, y_size - 2, 0]
-  defp slice_start(x_size, y_size, @dir_bottom_right), do: [x_size - 2, y_size - 2, 0]
-  defp slice_start(x_size, _y_size, @dir_bottom), do: [x_size - 2, 1, 0]
-  defp slice_start(x_size, _y_size, @dir_bottom_left), do: [x_size - 2, 1, 0]
-  defp slice_start(_x_size, _y_size, @dir_left), do: [1, 1, 0]
-  defp slice_start(_x_size, _y_size, @dir_top_left), do: [1, 1, 0]
+  defp slice_start(x_size, y_size, direction) do
+    cond do
+      # start in the top left corner
+      direction in [@dir_left, @dir_top_left, @dir_top] -> [1, 1, 0]
+      # start in the top right corner
+      direction in [@dir_top_right, @dir_right] -> [1, y_size - 2, 0]
+      # start in the bottom left corner
+      direction in [@dir_bottom, @dir_bottom_left] -> [x_size - 2, 1, 0]
+      # start in the bottom right corner
+      direction == @dir_bottom_right -> [x_size - 2, y_size - 2, 0]
+    end
+  end
 
-  defp slice_length(_x_size, y_size, @dir_top), do: [1, y_size - 2, 3]
-  defp slice_length(_x_size, _y_size, @dir_top_right), do: [1, 1, 3]
-  defp slice_length(x_size, _y_size, @dir_right), do: [x_size - 2, 1, 3]
-  defp slice_length(_x_size, _y_size, @dir_bottom_right), do: [1, 1, 3]
-  defp slice_length(_x_size, y_size, @dir_bottom), do: [1, y_size - 2, 3]
-  defp slice_length(_x_size, _y_size, @dir_bottom_left), do: [1, 1, 3]
-  defp slice_length(x_size, _y_size, @dir_left), do: [x_size - 2, 1, 3]
-  defp slice_length(_x_size, _y_size, @dir_top_left), do: [1, 1, 3]
+  defp slice_length(x_size, y_size, direction) do
+    cond do
+      # horizontal
+      direction in [@dir_top, @dir_bottom] -> [1, y_size - 2, 3]
+      # vertical
+      direction in [@dir_left, @dir_right] -> [x_size - 2, 1, 3]
+      # corners
+      true -> [1, 1, 3]
+    end
+  end
 
   defp put_slice_start(_x_size, _y_size, @dir_top), do: [0, 1, 0]
   defp put_slice_start(_x_size, y_size, @dir_top_right), do: [0, y_size - 1, 0]
@@ -281,21 +292,27 @@ defmodule Simulator.WorkerActor do
   defp put_slice_start(_x_size, _y_size, @dir_left), do: [1, 0, 0]
   defp put_slice_start(_x_size, _y_size, @dir_top_left), do: [0, 0, 0]
 
-  defp slice_start_plans(_x_size, _y_size, @dir_top), do: [0, 0]
-  defp slice_start_plans(_x_size, y_size, @dir_top_right), do: [0, y_size - 2]
-  defp slice_start_plans(_x_size, y_size, @dir_right), do: [0, y_size - 2]
-  defp slice_start_plans(x_size, y_size, @dir_bottom_right), do: [x_size - 2, y_size - 2]
-  defp slice_start_plans(x_size, _y_size, @dir_bottom), do: [x_size - 2, 0]
-  defp slice_start_plans(x_size, _y_size, @dir_bottom_left), do: [x_size - 2, 0]
-  defp slice_start_plans(_x_size, _y_size, @dir_left), do: [0, 0]
-  defp slice_start_plans(_x_size, _y_size, @dir_top_left), do: [0, 0]
+  defp slice_start_plans(x_size, y_size, direction) do
+    cond do
+      # start in the top left corner
+      direction in [@dir_left, @dir_top_left, @dir_top] -> [0, 0]
+      # start in the top right corner
+      direction in [@dir_top_right, @dir_right] -> [0, y_size - 2]
+      # start in the bottom left corner
+      direction in [@dir_bottom, @dir_bottom_left] -> [x_size - 2, 0]
+      # start in the bottom right corner
+      direction == @dir_bottom_right -> [x_size - 2, y_size - 2]
+    end
+  end
 
-  defp slice_length_plans(_x_size, y_size, @dir_top), do: [2, y_size]
-  defp slice_length_plans(_x_size, _y_size, @dir_top_right), do: [2, 2]
-  defp slice_length_plans(x_size, _y_size, @dir_right), do: [x_size, 2]
-  defp slice_length_plans(_x_size, _y_size, @dir_bottom_right), do: [2, 2]
-  defp slice_length_plans(_x_size, y_size, @dir_bottom), do: [2, y_size]
-  defp slice_length_plans(_x_size, _y_size, @dir_bottom_left), do: [2, 2]
-  defp slice_length_plans(x_size, _y_size, @dir_left), do: [x_size, 2]
-  defp slice_length_plans(_x_size, _y_size, @dir_top_left), do: [2, 2]
+  defp slice_length_plans(x_size, y_size, direction) do
+    cond do
+      # horizontal
+      direction in [@dir_top, @dir_bottom] -> [2, y_size]
+      # vertical
+      direction in [@dir_left, @dir_right] -> [x_size, 2]
+      # corners
+      true -> [2, 2]
+    end
+  end
 end
