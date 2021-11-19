@@ -49,7 +49,7 @@ defmodule Simulator.Simulation do
     local_objects_state = bigger_state[[range_x, range_y]]
 
     # Printer.print_objects(local_grid, {x, y})
-    {:ok, pid} = WorkerActor.start(grid: local_grid, objects_state: local_objects_state)
+    {:ok, pid} = WorkerActor.start(grid: local_grid, objects_state: local_objects_state, location: {x, y})
 
     {{x, y}, pid}
   end

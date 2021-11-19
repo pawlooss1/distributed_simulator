@@ -2,20 +2,44 @@ defmodule Simulator.Printer do
   @moduledoc """
   Prints grid in (relatively) readable way.
   """
+
   # TODO used one
   import Nx.Defn
 
+  @visualization_path "lib/grid_iterations"
+
   @doc """
   Writes grid as tensor to file. Firstly, it is converted to string.
-
-  Prints the string as well.
   """
-  def write_to_file(grid, file_name) do
-    IO.puts("writing")
+  def write_to_file(%{grid: grid, iteration: iteration, location: location}) do
     grid_as_string = tensor_to_string(grid)
-    # IO.inspect(grid_as_string)
 
-    File.write!("lib/grid_iterations/#{file_name}.txt", grid_as_string)
+    get_directory_from_location(location) <> "/grid_#{iteration}.txt"
+    |> File.write!(grid_as_string)
+
+    IO.puts("Iteration #{iteration} of worker #{inspect(location)} saved to file")
+  end
+
+  @doc """
+  Creates directory for visualization of the grid of the worker located in {`x`, `y`}.
+  """
+  def create_directory(location) do
+    unless File.exists?(@visualization_path) do
+      File.mkdir!(@visualization_path)
+    end
+
+    location
+    |> get_directory_from_location()
+    |> File.mkdir!()
+  end
+
+  @doc """
+  Delete all the contents of the directory with files for visualization.
+  """
+  def clean_grid_iterations() do
+    @visualization_path <> "/*"
+    |> Path.wildcard()
+    |> Enum.each(fn path -> File.rm_rf!(path) end)
   end
 
   @doc """
@@ -75,6 +99,8 @@ defmodule Simulator.Printer do
 
     IO.puts(if optional == nil, do: plans, else: "#{optional}\n#{plans}")
   end
+
+  defp get_directory_from_location({x, y}), do: @visualization_path <> "/#{x}_#{y}"
 
   # Converts grid as tensor to (relatively) readable string.
   defp tensor_to_string(tensor) do

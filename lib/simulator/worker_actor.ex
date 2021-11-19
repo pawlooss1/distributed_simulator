@@ -28,13 +28,15 @@ defmodule Simulator.WorkerActor do
   TODO use some supervisor.
   """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
-  def start(grid: grid, objects_state: objects_state) do
-    GenServer.start(__MODULE__, grid: grid, objects_state: objects_state)
+  def start(grid: grid, objects_state: objects_state, location: location) do
+    GenServer.start(__MODULE__, grid: grid, objects_state: objects_state, location: location)
   end
 
   @impl true
-  def init(grid: grid, objects_state: objects_state) do
-    state = %{grid: grid, objects_state: objects_state, iteration: 0}
+  def init(grid: grid, objects_state: objects_state, location: location) do
+    state = %{grid: grid, iteration: 0, location: location, objects_state: objects_state}
+
+    Printer.create_directory(location)
 
     {:ok, state}
   end
@@ -201,6 +203,8 @@ defmodule Simulator.WorkerActor do
   end
 
   defp start_new_iteration(state) do
+    Printer.write_to_file(state)
+
     %{grid: grid, iteration: iteration, objects_state: objects_state} = state
 
     create_plan = &@module_prefix.PlanCreator.create_plan/6

@@ -17,10 +17,9 @@ defmodule Rabbits do
     {x, y, _z} = Nx.shape(grid)
     objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
 
-    clean_grid_iterations()
+    Printer.clean_grid_iterations()
 
     Simulation.start(grid, objects_state)
-    # Printer.write_to_file(grid, "grid_0")
     :ok
   end
 
@@ -43,11 +42,5 @@ defmodule Rabbits do
       end
     end)
     |> Enum.map(fn contents -> [contents, 0, 0, 0, 0, 0, 0, 0, 0] end)
-  end
-
-  defp clean_grid_iterations() do
-    "lib/grid_iterations/*"
-    |> Path.wildcard()
-    |> Enum.each(fn path -> File.rm!(path) end)
   end
 end

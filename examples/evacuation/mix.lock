@@ -1,3 +1,5 @@
 %{
+  "elixir_make": {:hex, :elixir_make, "0.6.3", "bc07d53221216838d79e03a8019d0839786703129599e9619f4ab74c8c096eac", [:mix], [], "hexpm", "f5cbd651c5678bcaabdbb7857658ee106b12509cd976c2c2fca99688e1daf716"},
   "typed_struct": {:hex, :typed_struct, "0.2.1", "e1993414c371f09ff25231393b6430bd89d780e2a499ae3b2d2b00852f593d97", [:mix], [], "hexpm", "8f5218c35ec38262f627b2c522542f1eae41f625f92649c0af701a6fab2e11b3"},
+  "xla": {:hex, :xla, "0.2.0", "689887888afb22587168d461f0e9ff83d7b06040273ea7082dbf9ff7eca33dcc", [:make, :mix], [{:elixir_make, "~> 0.4", [hex: :elixir_make, repo: "hexpm", optional: false]}], "hexpm", "a2e7b81413db49a159eabfb12dbd784a7c04b5c68c7b4057238d5ec9b110f2ec"},
 }
