@@ -25,19 +25,19 @@ defmodule Rabbits.PlanResolver do
           {@lettuce, old_state}
 
         plans_objects_match(plan, @rabbit_move, object, @empty) ->
-          {@rabbit, old_state - 1}
+          {@rabbit, old_state - @move_cost}
 
         plans_objects_match(plan, @rabbit_move, object, @lettuce) ->
-          {@rabbit, old_state + 1}
+          {@rabbit, old_state + @lettuce_energy_boost}
 
         plans_objects_match(plan, @rabbit_rest, object, @rabbit) ->
-          {@rabbit, old_state - 1}
+          {@rabbit, old_state}
 
         plans_objects_match(plan, @rabbit_procreate, object, @empty) ->
-          {@rabbit, @rabbit_start_energy}
+          {@rabbit, @rabbit_reproduction_energy}
 
         plans_objects_match(plan, @rabbit_procreate, object, @lettuce) ->
-          {@rabbit, old_state}
+          {@rabbit, @rabbit_reproduction_energy + @lettuce_energy_boost}
 
         plans_objects_match(plan, @rabbit_die, object, @rabbit) ->
           {@empty, 0}
@@ -54,8 +54,7 @@ defmodule Rabbits.PlanResolver do
     {new_object, new_state} =
       cond do
         plans_objects_match(plan, @rabbit_procreate, object, @rabbit) ->
-          # TODO procreation waste as a constant
-          {@rabbit, old_state}
+          {@rabbit, old_state - @rabbit_reproduction_energy}
 
         plans_objects_match(plan, @rabbit_move, object, @rabbit) ->
           {@empty, old_state}

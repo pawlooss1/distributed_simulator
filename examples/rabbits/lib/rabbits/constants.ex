@@ -22,7 +22,10 @@ defmodule Rabbits.Constants do
 
       @lettuce_growth_factor 2
       @rabbit_reproduction_energy 8
-      @rabbit_start_energy 10
+      @rabbit_start_energy 12
+
+      @move_cost 1
+      @lettuce_energy_boost 1
 
       @rabbit_signal -5
       @lettuce_signal 10

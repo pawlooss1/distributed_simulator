@@ -23,7 +23,6 @@ defmodule Simulator.Phase.RemoteConsequences do
           while {i, j = 0, grid, objects_state, plans, accepted_plans}, Nx.less(j, y_size) do
             if Nx.equal(accepted_plans[i][j], @accepted) do
               object = grid[i][j][0]
-              consequence = plans[i][j][2]
 
               {new_object, new_state} =
                 apply_consequence.(object, plans[i][j][1..2], objects_state[i][j])

@@ -115,7 +115,7 @@ defmodule Simulator.Phase.RemotePlans do
   defnp on_the_edge(grid, {x, y}) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
-    Nx.equal(x, 0) or Nx.equal(y, 0) or
-      Nx.equal(x, x_size - 1) or Nx.equal(y, y_size - 1)
+    Nx.less_equal(x, 0) or Nx.less_equal(y, 0) or
+      Nx.greater_equal(x, x_size - 1) or Nx.greater_equal(y, y_size - 1)
   end
 end

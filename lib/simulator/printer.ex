@@ -67,7 +67,7 @@ defmodule Simulator.Printer do
       |> Enum.map(fn line -> Enum.join(line, " ") end)
       |> Enum.join("\n")
 
-    IO.puts(if optional == nil, do: string, else: "#{optional}\n#{string}")
+    IO.puts(if optional == nil, do: string, else: "#{optional}\n#{string}\n")
   end
 
   def print_state(grid, phase \\ nil) do
@@ -97,7 +97,33 @@ defmodule Simulator.Printer do
       end)
       |> Enum.join("\n\n")
 
-    IO.puts(if optional == nil, do: plans, else: "#{optional}\n#{plans}")
+    IO.puts(if optional == nil, do: plans, else: "#{optional}\n#{plans}\n")
+  end
+
+  def print_objects_state(objects_state, optional \\ nil) do
+    {x_size, y_size} = Nx.shape(objects_state)
+
+    string = 
+      Nx.to_flat_list(objects_state)
+      |> Enum.map(fn num -> to_string(num) end)
+      |> Enum.chunk_every(y_size)
+      |> Enum.map(fn line -> Enum.join(line, " ") end)
+      |> Enum.join("\n")
+
+    IO.puts(if optional == nil, do: string, else: "#{optional}\n#{string}\n")
+  end
+
+  def print_accepted_plans(accepted_plans, optional \\ nil) do
+    {x_size, y_size} = Nx.shape(accepted_plans)
+
+    string = 
+      Nx.to_flat_list(accepted_plans)
+      |> Enum.map(fn num -> to_string(num) end)
+      |> Enum.chunk_every(y_size)
+      |> Enum.map(fn line -> Enum.join(line, " ") end)
+      |> Enum.join("\n")
+
+    IO.puts(if optional == nil, do: string, else: "#{optional}\n#{string}\n")
   end
 
   defp get_directory_from_location({x, y}), do: @visualization_path <> "/#{x}_#{y}"
