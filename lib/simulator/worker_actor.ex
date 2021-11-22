@@ -67,8 +67,6 @@ defmodule Simulator.WorkerActor do
       processed_neighbors: processed_neighbors
     } = state
 
-    {x_size, y_size, _z_size} = Nx.shape(plans)
-    
     direction = neighbors[pid]
 
     location = put_slice_start(plans, direction)
@@ -77,6 +75,8 @@ defmodule Simulator.WorkerActor do
     if neighbors_count == processed_neighbors + 1 do
       is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
       apply_action = &@module_prefix.PlanResolver.apply_action/3
+
+      Printer.print_3d_tensor(plans, "plans - " <> inspect(state.location))
 
       {updated_grid, accepted_plans, objects_state} =
         RemotePlans.process_plans(
@@ -114,8 +114,6 @@ defmodule Simulator.WorkerActor do
       processed_neighbors: processed_neighbors
     } = state
 
-    {x_size, y_size, _z_size} = Nx.shape(updated_grid)
-    
     direction = neighbors[pid]
 
     location_grid = put_slice_start(grid, direction)
@@ -174,8 +172,6 @@ defmodule Simulator.WorkerActor do
       processed_neighbors: processed_neighbors,
       signal_update: signal_update
     } = state
-
-    {x_size, y_size, _z_size} = Nx.shape(signal_update)
     
     direction = neighbors[pid]
 
@@ -382,6 +378,6 @@ defmodule Simulator.WorkerActor do
     tensor
     |> Nx.shape()
     |> Tuple.to_list()
-    |> then(fn [x_size, y_size | rest] -> rest end)
+    |> then(fn [_x_size, _y_size | rest] -> rest end)
   end
 end

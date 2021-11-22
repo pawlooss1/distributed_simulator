@@ -27,8 +27,8 @@ defmodule Rabbits.Constants do
       @move_cost 1
       @lettuce_energy_boost 1
 
-      @rabbit_signal -5
-      @lettuce_signal 10
+      @rabbit_signal -10
+      @lettuce_signal 20
     end
   end
 end
