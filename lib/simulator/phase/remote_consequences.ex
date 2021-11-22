@@ -50,7 +50,8 @@ defmodule Simulator.Phase.RemoteConsequences do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, _grid, update_grid} =
-      while {i = 1, grid, update_grid = Nx.broadcast(0, Nx.shape(grid))}, Nx.less(i, x_size - 1) do
+      while {i = 1, grid, update_grid = Nx.broadcast(0, Nx.shape(grid))},
+            Nx.less(i, x_size - 1) do
         {_i, _j, grid, update_grid} =
           while {i, j = 1, grid, update_grid}, Nx.less(j, y_size - 1) do
             update_grid = signal_update_for_cell(i, j, grid, update_grid, generate_signal)

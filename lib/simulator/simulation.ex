@@ -8,7 +8,7 @@ defmodule Simulator.Simulation do
   def start(grid, objects_state, workers_by_dim \\ {2, 3}) do
     grid
     |> split_grid_among_workers(objects_state, workers_by_dim)
-    |> Enum.each(fn {_location, worker_pid} -> send(worker_pid, :start) end) 
+    |> Enum.each(fn {_location, worker_pid} -> send(worker_pid, :start) end)
   end
 
   def split_grid_among_workers(grid, state, {workers_x, workers_y}) do
@@ -49,7 +49,8 @@ defmodule Simulator.Simulation do
     local_objects_state = bigger_state[[range_x, range_y]]
 
     # Printer.print_objects(local_grid, {x, y})
-    {:ok, pid} = WorkerActor.start(grid: local_grid, objects_state: local_objects_state, location: {x, y})
+    {:ok, pid} =
+      WorkerActor.start(grid: local_grid, objects_state: local_objects_state, location: {x, y})
 
     {{x, y}, pid}
   end
@@ -65,7 +66,7 @@ defmodule Simulator.Simulation do
 
   defp create_neighbors(location, workers) do
     directions_to_pids =
-      @directions 
+      @directions
       |> Enum.map(fn direction -> {direction, workers[shift(location, direction)]} end)
       |> Enum.reject(fn {_direction, pid} -> pid == nil end)
 

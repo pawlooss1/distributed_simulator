@@ -14,7 +14,7 @@ defmodule Simulator.Printer do
   def write_to_file(%{grid: grid, iteration: iteration, location: location}) do
     grid_as_string = tensor_to_string(grid)
 
-    get_directory_from_location(location) <> "/grid_#{iteration}.txt"
+    (get_directory_from_location(location) <> "/grid_#{iteration}.txt")
     |> File.write!(grid_as_string)
 
     IO.puts("Iteration #{iteration} of worker #{inspect(location)} saved to file")
@@ -37,7 +37,7 @@ defmodule Simulator.Printer do
   Delete all the contents of the directory with files for visualization.
   """
   def clean_grid_iterations() do
-    @visualization_path <> "/*"
+    (@visualization_path <> "/*")
     |> Path.wildcard()
     |> Enum.each(fn path -> File.rm_rf!(path) end)
   end
@@ -56,7 +56,7 @@ defmodule Simulator.Printer do
   def print_objects(grid, description \\ nil) do
     {x_size, y_size, _} = Nx.shape(grid)
 
-    string = 
+    string =
       Nx.to_flat_list(grid)
       |> Enum.map(fn num -> to_string(num) end)
       |> Enum.chunk_every(9)
@@ -84,7 +84,7 @@ defmodule Simulator.Printer do
   def print_3d_tensor(tensor, description \\ nil) do
     {x_size, y_size, z_size} = Nx.shape(tensor)
 
-    string = 
+    string =
       Nx.to_flat_list(tensor)
       |> Enum.map(fn num -> to_string(num) end)
       |> Enum.chunk_every(z_size * y_size)
@@ -101,7 +101,7 @@ defmodule Simulator.Printer do
   def print_objects_state(objects_state, description \\ nil) do
     {x_size, y_size} = Nx.shape(objects_state)
 
-    string = 
+    string =
       Nx.to_flat_list(objects_state)
       |> Enum.map(fn num -> to_string(num) end)
       |> Enum.chunk_every(y_size)
@@ -114,7 +114,7 @@ defmodule Simulator.Printer do
   def print_accepted_plans(accepted_plans, description \\ nil) do
     {x_size, y_size} = Nx.shape(accepted_plans)
 
-    string = 
+    string =
       Nx.to_flat_list(accepted_plans)
       |> Enum.map(fn num -> to_string(num) end)
       |> Enum.chunk_every(y_size)

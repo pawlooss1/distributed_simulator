@@ -43,10 +43,11 @@ defmodule Simulator.WorkerActor do
 
   @impl true
   def handle_info({:neighbors, neighbors}, state) do
-    state = Map.merge(state, %{
-      neighbors: neighbors, 
-      neighbors_count: neighbors |> map_size() |> div(2),
-      processed_neighbors: 0
+    state =
+      Map.merge(state, %{
+        neighbors: neighbors,
+        neighbors_count: neighbors |> map_size() |> div(2),
+        processed_neighbors: 0
       })
 
     {:noreply, state}
@@ -61,7 +62,7 @@ defmodule Simulator.WorkerActor do
     %{
       grid: grid,
       neighbors: neighbors,
-      neighbors_count: neighbors_count, 
+      neighbors_count: neighbors_count,
       objects_state: objects_state,
       plans: plans,
       processed_neighbors: processed_neighbors
@@ -89,13 +90,14 @@ defmodule Simulator.WorkerActor do
 
       distribute_consequences(state, updated_grid, objects_state, accepted_plans)
 
-      state = Map.merge(state, %{
-        accepted_plans: accepted_plans,
-        grid: updated_grid,
-        objects_state: objects_state, 
-        plans: plans,
-        processed_neighbors: 0
-      })
+      state =
+        Map.merge(state, %{
+          accepted_plans: accepted_plans,
+          grid: updated_grid,
+          objects_state: objects_state,
+          plans: plans,
+          processed_neighbors: 0
+        })
 
       {:noreply, state}
     else
@@ -103,12 +105,15 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info({:remote_consequences, pid, updated_grid, update_objects_state, new_accepted_plans}, state) do
+  def handle_info(
+        {:remote_consequences, pid, updated_grid, update_objects_state, new_accepted_plans},
+        state
+      ) do
     %{
       accepted_plans: accepted_plans,
       grid: grid,
       neighbors: neighbors,
-      neighbors_count: neighbors_count, 
+      neighbors_count: neighbors_count,
       objects_state: objects_state,
       plans: plans,
       processed_neighbors: processed_neighbors
@@ -143,21 +148,23 @@ defmodule Simulator.WorkerActor do
 
       distribute_signal(state, signal_update)
 
-      state = Map.merge(state, %{
-        grid: updated_grid,
-        objects_state: objects_state, 
-        processed_neighbors: 0,
-        signal_update: signal_update
-      })
+      state =
+        Map.merge(state, %{
+          grid: updated_grid,
+          objects_state: objects_state,
+          processed_neighbors: 0,
+          signal_update: signal_update
+        })
 
       {:noreply, state}
     else
-      state = Map.merge(state, %{
-        accepted_plans: accepted_plans, 
-        grid: grid, 
-        objects_state: objects_state,
-        processed_neighbors: processed_neighbors + 1
-      })
+      state =
+        Map.merge(state, %{
+          accepted_plans: accepted_plans,
+          grid: grid,
+          objects_state: objects_state,
+          processed_neighbors: processed_neighbors + 1
+        })
 
       {:noreply, state}
     end
@@ -168,11 +175,11 @@ defmodule Simulator.WorkerActor do
       grid: grid,
       iteration: iteration,
       neighbors: neighbors,
-      neighbors_count: neighbors_count, 
+      neighbors_count: neighbors_count,
       processed_neighbors: processed_neighbors,
       signal_update: signal_update
     } = state
-    
+
     direction = neighbors[pid]
 
     location = put_slice_start(signal_update, direction)
@@ -183,17 +190,19 @@ defmodule Simulator.WorkerActor do
       signal_factor = &@module_prefix.Cell.signal_factor/1
       updated_grid = RemoteSignal.apply_signal_update(grid, signal_update, signal_factor)
 
-      state = Map.merge(state, %{
-        grid: updated_grid,
-        iteration: iteration + 1
-      })
+      state =
+        Map.merge(state, %{
+          grid: updated_grid,
+          iteration: iteration + 1
+        })
 
       start_new_iteration(state)
     else
-      state = Map.merge(state, %{
-        processed_neighbors: processed_neighbors + 1,
-        signal_update: signal_update
-      })
+      state =
+        Map.merge(state, %{
+          processed_neighbors: processed_neighbors + 1,
+          signal_update: signal_update
+        })
 
       {:noreply, state}
     end
@@ -226,7 +235,12 @@ defmodule Simulator.WorkerActor do
   end
 
   # Sends each consequence to worker managing cells affected by this plan consequence.
-  defp distribute_consequences(%{neighbors: neighbors}, updated_grid, objects_state, accepted_plans) do
+  defp distribute_consequences(
+         %{neighbors: neighbors},
+         updated_grid,
+         objects_state,
+         accepted_plans
+       ) do
     tensors = [
       {updated_grid, &slice_start/2, &slice_length/2},
       {objects_state, &slice_start/2, &slice_length/2},
@@ -246,14 +260,14 @@ defmodule Simulator.WorkerActor do
     neighbors
     |> Map.keys()
     |> Enum.filter(fn key -> key in @directions end)
-    |> Enum.each(fn direction -> 
+    |> Enum.each(fn direction ->
       message =
         tensors
-        |> Enum.map(fn {tensor, start_fun, length_fun} -> 
+        |> Enum.map(fn {tensor, start_fun, length_fun} ->
           start = start_fun.(tensor, direction)
           length = length_fun.(tensor, direction)
 
-          Nx.slice(tensor, start, length) 
+          Nx.slice(tensor, start, length)
         end)
         |> then(fn tensors -> [message_atom, self()] ++ tensors end)
         |> List.to_tuple()
@@ -266,7 +280,7 @@ defmodule Simulator.WorkerActor do
     {x_size, y_size} = get_shape(tensor)
     cell_dimensions = get_cell_dimensions(tensor)
 
-    location = 
+    location =
       cond do
         # start in the top left corner
         direction in [@dir_left, @dir_top_left, @dir_top] -> [1, 1]
@@ -285,7 +299,7 @@ defmodule Simulator.WorkerActor do
     {x_size, y_size} = get_shape(tensor)
     cell_shape = get_cell_shape(tensor)
 
-    length = 
+    length =
       cond do
         # horizontal
         direction in [@dir_top, @dir_bottom] -> [1, y_size - 2]
@@ -302,7 +316,7 @@ defmodule Simulator.WorkerActor do
     {x_size, y_size} = get_shape(tensor)
     cell_dimensions = get_cell_dimensions(tensor)
 
-    location = 
+    location =
       case direction do
         @dir_top -> [0, 1]
         @dir_top_right -> [0, y_size - 1]
@@ -321,7 +335,7 @@ defmodule Simulator.WorkerActor do
     {x_size, y_size} = get_shape(tensor)
     cell_dimensions = get_cell_dimensions(tensor)
 
-    location = 
+    location =
       cond do
         # start in the top left corner
         direction in [@dir_left, @dir_top_left, @dir_top] -> [0, 0]
@@ -340,7 +354,7 @@ defmodule Simulator.WorkerActor do
     {x_size, y_size} = get_shape(tensor)
     cell_shape = get_cell_shape(tensor)
 
-    length = 
+    length =
       cond do
         # horizontal
         direction in [@dir_top, @dir_bottom] -> [2, y_size]

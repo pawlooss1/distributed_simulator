@@ -98,7 +98,7 @@ defmodule Simulator.Phase.RemotePlans do
         # TODO state plans must have the first 2 dim same as grid - mention in documentation
         old_state = old_states[x][y]
         plan = plans[x][y][1..2]
-        
+
         {new_object, new_state} = apply_action.(object, plan, old_state)
         grid = put_object(grid, x_target, y_target, new_object)
         objects_state = Nx.put_slice(objects_state, [x_target, y_target], new_state)
