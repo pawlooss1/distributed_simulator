@@ -78,8 +78,6 @@ defmodule Simulator.WorkerActor do
       is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
       apply_action = &@module_prefix.PlanResolver.apply_action/3
 
-      Printer.print_plans(plans, "plans - " <> inspect(state.location))
-
       {updated_grid, accepted_plans, objects_state} =
         RemotePlans.process_plans(
           grid,
@@ -91,13 +89,11 @@ defmodule Simulator.WorkerActor do
 
       distribute_consequences(state, updated_grid, objects_state, accepted_plans)
 
-      Printer.print_objects(updated_grid, "self objects - " <> inspect(state.location))
-      Printer.print_accepted_plans(accepted_plans, "self accepted - " <> inspect(state.location))
-
       state = Map.merge(state, %{
         accepted_plans: accepted_plans,
         grid: updated_grid,
         objects_state: objects_state, 
+        plans: plans,
         processed_neighbors: 0
       })
 
@@ -122,10 +118,6 @@ defmodule Simulator.WorkerActor do
     
     direction = neighbors[pid]
 
-    Printer.print_objects(updated_grid, "remote objects - " <> inspect(state.location) <> " - #{direction}")
-    Printer.print_objects_state(update_objects_state, "remote objects state - " <> inspect(state.location) <> " - #{direction}")
-    Printer.print_accepted_plans(new_accepted_plans, "remote accepted - " <> inspect(state.location) <> " - #{direction}")
-
     location_grid = put_slice_start(grid, direction)
     grid = Nx.put_slice(grid, location_grid, updated_grid)
 
@@ -138,10 +130,6 @@ defmodule Simulator.WorkerActor do
     if neighbors_count == processed_neighbors + 1 do
       apply_consequence = &@module_prefix.PlanResolver.apply_consequence/3
 
-      Printer.print_objects(grid, "full objects - " <> inspect(state.location))
-      Printer.print_objects_state(objects_state, "full objects state - " <> inspect(state.location))
-      Printer.print_accepted_plans(accepted_plans, "full accepted - " <> inspect(state.location))
-
       {updated_grid, objects_state} =
         RemoteConsequences.apply_consequences(
           grid,
@@ -151,9 +139,6 @@ defmodule Simulator.WorkerActor do
           apply_consequence
         )
 
-      Printer.print_objects(updated_grid, "self objects end - " <> inspect(state.location))
-      Printer.print_objects_state(objects_state, "self objects state end - " <> inspect(state.location))
-      
       # TODO in the future could get object state as well ?
       generate_signal = &@module_prefix.Cell.generate_signal/1
       signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
@@ -172,6 +157,7 @@ defmodule Simulator.WorkerActor do
       state = Map.merge(state, %{
         accepted_plans: accepted_plans, 
         grid: grid, 
+        objects_state: objects_state,
         processed_neighbors: processed_neighbors + 1
       })
 
