@@ -58,7 +58,7 @@ defmodule Simulator.WorkerActor do
   # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
-  def handle_info({:remote_plans, pid, tensor}, state) do
+  def handle_info({:remote_plans, pid, tensor}, %{phase: :remote_plans} = state) do
     %{
       grid: grid,
       neighbors: neighbors,
@@ -77,8 +77,6 @@ defmodule Simulator.WorkerActor do
       is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
       apply_action = &@module_prefix.PlanResolver.apply_action/3
 
-      Printer.print_3d_tensor(plans, "plans - " <> inspect(state.location))
-
       {updated_grid, accepted_plans, objects_state} =
         RemotePlans.process_plans(
           grid,
@@ -95,6 +93,7 @@ defmodule Simulator.WorkerActor do
           accepted_plans: accepted_plans,
           grid: updated_grid,
           objects_state: objects_state,
+          phase: :remote_consequences,
           plans: plans,
           processed_neighbors: 0
         })
@@ -107,7 +106,7 @@ defmodule Simulator.WorkerActor do
 
   def handle_info(
         {:remote_consequences, pid, updated_grid, update_objects_state, new_accepted_plans},
-        state
+        %{phase: :remote_consequences} = state
       ) do
     %{
       accepted_plans: accepted_plans,
@@ -153,6 +152,7 @@ defmodule Simulator.WorkerActor do
           grid: updated_grid,
           objects_state: objects_state,
           processed_neighbors: 0,
+          phase: :remote_signal,
           signal_update: signal_update
         })
 
@@ -170,7 +170,7 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info({:remote_signal, pid, remote_signal_update}, state) do
+  def handle_info({:remote_signal, pid, remote_signal_update}, %{phase: :remote_signal} = state) do
     %{
       grid: grid,
       iteration: iteration,
@@ -208,6 +208,14 @@ defmodule Simulator.WorkerActor do
     end
   end
 
+  # when not getting proper message
+  # TODO it's a terrible solution. What about storing messages on our own in state? Or maybe another idea?
+  def handle_info(message, state) do
+    send(self(), message)
+
+    {:noreply, state}
+  end
+
   defp start_new_iteration(%{iteration: iteration} = state) when iteration >= @max_iterations do
     Printer.write_to_file(state)
     {:stop, :normal, state}
@@ -223,7 +231,7 @@ defmodule Simulator.WorkerActor do
 
     distribute_plans(state, plans)
 
-    state = Map.merge(state, %{plans: plans, processed_nieghbors: 0})
+    state = Map.merge(state, %{phase: :remote_plans, plans: plans, processed_neighbors: 0})
     {:noreply, state}
   end
 
