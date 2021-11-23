@@ -13,8 +13,6 @@ defmodule Simulator.PlanResolver do
   the exemplary usage.
   """
 
-  alias Simulator.Types
-
   @callback is_update_valid?(action :: Nx.t(), object :: Nx.t()) :: Nx.t()
   @callback apply_action(
               object :: Nx.t(),

@@ -54,13 +54,13 @@ defmodule Simulator.Printer do
   Prints only the objects from the given `grid`.
   """
   def print_objects(grid, description \\ nil) do
-    {x_size, y_size, _} = Nx.shape(grid)
+    {_x_size, y_size, _z_size} = Nx.shape(grid)
 
     string =
       Nx.to_flat_list(grid)
       |> Enum.map(fn num -> to_string(num) end)
       |> Enum.chunk_every(9)
-      |> Enum.map(fn [object | rest] -> object end)
+      |> Enum.map(fn [object | _rest] -> object end)
       |> Enum.chunk_every(y_size)
       |> Enum.map(fn line -> Enum.join(line, " ") end)
       |> Enum.join("\n")
@@ -71,7 +71,7 @@ defmodule Simulator.Printer do
   def print_state(grid, phase \\ nil) do
     unless phase == nil, do: IO.inspect(phase)
 
-    {x_size, y_size} = Nx.shape(grid)
+    {_x_size, y_size} = Nx.shape(grid)
 
     Nx.to_flat_list(grid)
     |> Enum.map(fn num -> to_string(num) end)
@@ -82,7 +82,7 @@ defmodule Simulator.Printer do
   end
 
   def print_3d_tensor(tensor, description \\ nil) do
-    {x_size, y_size, z_size} = Nx.shape(tensor)
+    {_x_size, y_size, z_size} = Nx.shape(tensor)
 
     string =
       Nx.to_flat_list(tensor)
@@ -99,7 +99,7 @@ defmodule Simulator.Printer do
   end
 
   def print_objects_state(objects_state, description \\ nil) do
-    {x_size, y_size} = Nx.shape(objects_state)
+    {_x_size, y_size} = Nx.shape(objects_state)
 
     string =
       Nx.to_flat_list(objects_state)
@@ -112,7 +112,7 @@ defmodule Simulator.Printer do
   end
 
   def print_accepted_plans(accepted_plans, description \\ nil) do
-    {x_size, y_size} = Nx.shape(accepted_plans)
+    {_x_size, y_size} = Nx.shape(accepted_plans)
 
     string =
       Nx.to_flat_list(accepted_plans)
@@ -137,59 +137,5 @@ defmodule Simulator.Printer do
       |> Enum.join(" ")
 
     ans
-  end
-
-  # From
-  # [ object top top-right right bottom-right bottom bottom-left left top-left ]
-
-  # to
-  # [ top-left    top    top-right
-  #   left        object right
-  #   bottom-left bottom bottom-right ]
-  defnp reconfigure(tensor) do
-    {x_size, y_size, _} = Nx.shape(tensor)
-
-    {_i, tensor} =
-      while {i = 0, tensor}, Nx.less(i, x_size) do
-        {_i, _j, tensor} =
-          while {i, j = 0, tensor}, Nx.less(j, y_size) do
-            cell = tensor[i][j]
-
-            reconfigured =
-              [cell[8], cell[1], cell[2], cell[7], cell[0], cell[3], cell[6], cell[5], cell[4]]
-              |> Nx.stack()
-              |> Nx.broadcast({1, 1, 9})
-
-            tensor = Nx.put_slice(tensor, [i, j, 0], reconfigured)
-
-            {i, j + 1, tensor}
-          end
-
-        {i + 1, tensor}
-      end
-
-    tensor
-  end
-
-  @doc """
-  Returns 4D list with tuples having indices of tensor to print it in such way:
-
-  sss sss
-  sos sos
-  sss sos
-
-  sss sss
-  sos sos
-  sss sss
-
-  where s is signal and o is object.
-  """
-  defp get_template(x_size, y_size) do
-    for x <- 0..(x_size - 1),
-        do:
-          for(
-            xx <- 0..2,
-            do: for(y <- 0..(y_size - 1), do: for(yy <- 0..2, do: {x, y, xx * 3 + yy}))
-          )
   end
 end
