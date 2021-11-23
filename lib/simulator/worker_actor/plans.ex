@@ -1,7 +1,19 @@
-defmodule Simulator.Phase.RemotePlans do
+defmodule Simulator.WorkerActor.Plans do
   @moduledoc """
-  Module contataining the function called during the
-  `:remote_plans` phase.
+  Module contataining Worker's functions responsible for the plans.
+
+  Each plan is a tensor: [direction, action, consequence].
+
+  `direction` - a plan contains an action towards a specific
+    neighboring cell. `Direction` indicates it.
+
+  `action` - what should be the state of the target cell (pointed by
+    `direction`).
+
+  `consequence` - what should be in the current cell if the plan will
+    be executed.
+
+  Example: a person wants to move up: [@dir_up, @person, @empty].
   """
 
   use Simulator.BaseConstants
@@ -9,12 +21,39 @@ defmodule Simulator.Phase.RemotePlans do
   import Nx.Defn
   import Simulator.Helpers
 
+  alias Simulator.Types
+
+  @doc """
+  Creates plans for every cell in the grid.
+  """
+  @spec create_plans(Types.index(), Nx.t(), Nx.t(), fun()) :: Nx.t()
+  defn create_plans(iteration, grid, objects_state, create_plan) do
+    {x_size, y_size, _z_size} = Nx.shape(grid)
+
+    # create plans only for inner grid
+    {_i, plans, _grid, _objects_state, _iteration} =
+      while {i = 1, plans = initial_plans(x_size, y_size), grid, objects_state, iteration},
+            Nx.less(i, x_size - 1) do
+        {_i, _j, plans, _grid, _objects_state, _iteration} =
+          while {i, j = 1, plans, grid, objects_state, iteration},
+                Nx.less(j, y_size - 1) do
+            plan_as_tuple = create_plan.(i, j, plans, grid, objects_state, iteration)
+            plans = add_plan(plans, i, j, plan_to_tensor(plan_as_tuple))
+            {i, j + 1, plans, grid, objects_state, iteration}
+          end
+
+        {i + 1, plans, grid, objects_state, iteration}
+      end
+
+    plans
+  end
+
   @doc """
   The function decides which plans are accepted and update the grid
   by putting `action` in the proper cells. `Consequences` will be
   applied in the `:remote_consequences` phase.
 
-  TODO make our own shuffle to use it in defn.
+  TODO use shuffle implemented in Nx.
   """
   @spec process_plans(Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: Nx.t()
   def process_plans(grid, plans, objects_state, is_update_valid?, apply_action) do
@@ -110,6 +149,19 @@ defmodule Simulator.Phase.RemotePlans do
         {grid, accepted_plans, objects_state}
       end
     end
+  end
+
+  defnp initial_plans(x_size, y_size) do
+    Nx.broadcast(Nx.tensor([@dir_stay, @keep, @keep]), {x_size, y_size, 3})
+  end
+
+  defnp plan_to_tensor({direction, plan}) do
+    direction = Nx.reshape(direction, {1})
+    Nx.concatenate([direction, plan])
+  end
+
+  defnp add_plan(plans, i, j, plan) do
+    Nx.put_slice(plans, [i, j, 0], Nx.broadcast(plan, {1, 1, 3}))
   end
 
   defnp on_the_edge(grid, {x, y}) do

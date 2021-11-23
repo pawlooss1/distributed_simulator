@@ -1,11 +1,8 @@
 defmodule Simulator.WorkerActor do
   @moduledoc """
   GenServer responsible for simulating one shard.
-  TODO update because there is no start_iteration anymore
-  There are four phases of every iteration:
-  - `:start_iteration` - if iteration's number does not exceed the
-    maxium number of iterations set in the cofiguration, plans are
-    created and distributed to the neighboring shards;
+
+  There are three phases of every iteration:
   - `:remote_plans` - plans are processed. Some of them are accepted,
     some discarded. Result of the processing is distributed among
     neighboring shards;
@@ -13,13 +10,18 @@ defmodule Simulator.WorkerActor do
     plans are applied to the grid. Additionally, signal update is
     calculated and distributed to the neighboring shards;
   - `:remote_signal` - signal is applied to the grid. Next iteration
-    is started.
+    is started. If iteration's number does not exceed the
+    maximum number of iterations set in the cofiguration, plans are
+    created and distributed to the neighboring shards;
+
+  First iteration starts with creating plans, so it is in the middle
+  of `:remote_signal` phase.
   """
 
   use GenServer
   use Simulator.BaseConstants
 
-  alias Simulator.Phase.{RemoteConsequences, RemotePlans, RemoteSignal, StartIteration}
+  alias Simulator.WorkerActor.{Consequences, Plans, Signal}
   alias Simulator.Printer
 
   @doc """
@@ -78,7 +80,7 @@ defmodule Simulator.WorkerActor do
       apply_action = &@module_prefix.PlanResolver.apply_action/3
 
       {updated_grid, accepted_plans, objects_state} =
-        RemotePlans.process_plans(
+        Plans.process_plans(
           grid,
           plans,
           objects_state,
@@ -133,7 +135,7 @@ defmodule Simulator.WorkerActor do
       apply_consequence = &@module_prefix.PlanResolver.apply_consequence/3
 
       {updated_grid, objects_state} =
-        RemoteConsequences.apply_consequences(
+        Consequences.apply_consequences(
           grid,
           objects_state,
           plans,
@@ -143,7 +145,7 @@ defmodule Simulator.WorkerActor do
 
       # TODO in the future could get object state as well ?
       generate_signal = &@module_prefix.Cell.generate_signal/1
-      signal_update = RemoteConsequences.calculate_signal_updates(updated_grid, generate_signal)
+      signal_update = Signal.calculate_signal_updates(updated_grid, generate_signal)
 
       distribute_signal(state, signal_update)
 
@@ -188,7 +190,7 @@ defmodule Simulator.WorkerActor do
     if neighbors_count == processed_neighbors + 1 do
       # TODO should signal factor depend on object state?
       signal_factor = &@module_prefix.Cell.signal_factor/1
-      updated_grid = RemoteSignal.apply_signal_update(grid, signal_update, signal_factor)
+      updated_grid = Signal.apply_signal_update(grid, signal_update, signal_factor)
 
       state =
         Map.merge(state, %{
@@ -227,7 +229,7 @@ defmodule Simulator.WorkerActor do
     %{grid: grid, iteration: iteration, objects_state: objects_state} = state
 
     create_plan = &@module_prefix.PlanCreator.create_plan/6
-    plans = StartIteration.create_plans(iteration, grid, objects_state, create_plan)
+    plans = Plans.create_plans(iteration, grid, objects_state, create_plan)
 
     distribute_plans(state, plans)
 
@@ -242,7 +244,7 @@ defmodule Simulator.WorkerActor do
     send_to_neighbors(neighbors, :remote_plans, tensors)
   end
 
-  # Sends each consequence to worker managing cells affected by this plan consequence.
+  # sends each consequence to worker managing cells affected by this plan consequence
   defp distribute_consequences(
          %{neighbors: neighbors},
          updated_grid,
@@ -258,7 +260,7 @@ defmodule Simulator.WorkerActor do
     send_to_neighbors(neighbors, :remote_consequences, tensors)
   end
 
-  # Sends each signal to worker managing cells affected by this signal.
+  # sends each signal to worker managing cells affected by this signal
   defp distribute_signal(%{neighbors: neighbors}, signal_update) do
     tensors = [{signal_update, &slice_start/2, &slice_length/2}]
     send_to_neighbors(neighbors, :remote_signal, tensors)
@@ -375,7 +377,7 @@ defmodule Simulator.WorkerActor do
     length ++ cell_shape
   end
 
-  # it requires information that @rejected = 0 and @accepted = 1
+  # it uses information that @rejected = 0 and @accepted = 1
   defp put_at(tensor, start, to_put) do
     @rejected
     |> Nx.broadcast(tensor)
