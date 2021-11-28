@@ -29,12 +29,13 @@ if len(sys.argv) == 3:
 else:
     projects_dir = "/Users/agnieszkadutka/repos/inz/distributed_simulator"
     simulation = 'rabbits'
-    grids_dir = f"{projects_dir}/examples/{simulation}/grids"
+    grids_dir = f"{projects_dir}/examples/{simulation}/lib/grid_iterations"
     config_path = f"{projects_dir}/examples/{simulation}/config/animation_config.csv"
     print(f"usage: python animation_distributed.py grids_dir config_path "
           f"\nusing default paths:\n\tgrids_dir: {grids_dir}\n\tconfig_path: {config_path} ")
 
-def read_workers(grids_dir, verbose=False):
+
+def read_workers_grids(grids_dir, verbose=False):
     """ reads grids from all the workers and converts them to frames.
     returns: map(worker_loc => frames)"""
     workers = {}
@@ -43,25 +44,18 @@ def read_workers(grids_dir, verbose=False):
         (x, y) = [int(c) for c in worker_dir.split("_")]
         if verbose:
             print(f"processing worker {(x, y)}")
-        workers[(x, y)] = create_frames(worker_dir_path)
+        workers[(x, y)] = read_grids(worker_dir_path)
     return workers
-
-
-def create_frames(worker_dir, verbose=False):
-    """ converts grids saved in given directory to matplotlib frames """
-    grids = read_grids(worker_dir, verbose)
-    color_map = read_config(config_path, verbose)
-    return grids_to_frames(grids, color_map)
 
 
 def read_grids(frames_dir, verbose=False):
     """ returns: numpy array of shape (n_frames, x_size, y_size, 9)"""
     x_size, y_size = 0, 0
     n_frames = len(os.listdir(frames_dir))
-    frames_3d = [0 for x in range(n_frames)]
+    grids = [0 for _x in range(n_frames)]
 
     for filename in os.listdir(frames_dir):
-        frame_nr = int(filename.split("_")[1].split(".")[0]) - 1
+        grid_nr = int(filename.split("_")[1].split(".")[0]) - 1
         path = os.path.join(frames_dir, filename)
         with open(path, 'r') as f:
             file = f.read()
@@ -69,13 +63,23 @@ def read_grids(frames_dir, verbose=False):
         [x_size, y_size] = file_int[:2]
         grid = file_int[2:]
         grid = np.array(grid).reshape((x_size, y_size, 9))
-        frames_3d[frame_nr] = (grid)
-    frames_3d = np.array(frames_3d)
+        grid = grid[1:-1, 1:-1]
+        grids[grid_nr] = grid
+    grids = np.array(grids)
     if verbose:
         print("--read_grids")
         print(f"found {n_frames} files")
         print(f"read grid shape: {x_size} x {y_size}")
-    return frames_3d
+    return grids
+
+
+def grids_to_frames(grids, config_path, verbose=False):
+    """ transform collection of 3d grids () into 2d frames"""
+    color_map = read_config(config_path, verbose)
+    objects, signals = to_objects_and_signals(grids)
+    objects_rgb = objects_to_colors(objects, color_map)
+    signals_rgb = signals_to_colors(signals)
+    return objects_rgb + signals_rgb
 
 
 def read_config(config_path, verbose=False):
@@ -92,14 +96,6 @@ def read_config(config_path, verbose=False):
         print(f"color - object map: {color_label_map}")
         print(f"number - color map: {nr_color_map}")
     return nr_color_map
-
-
-def grids_to_frames(grids, color_map):
-    """ transform collection of 3d grids () into 2d frames"""
-    objects, signals = to_objects_and_signals(grids)
-    objects_rgb = objects_to_colors(objects, color_map)
-    signals_rgb = signals_to_colors(signals)
-    return objects_rgb + signals_rgb
 
 
 def to_objects_and_signals(grids):
@@ -130,7 +126,8 @@ def objects_to_colors(objects, color_map):
         :returns np.array of shape (n_frames, x_size, y_size, 3)
     """
     shape = objects.shape
-    objects_rgb = [get_object_color(obj, color_map) for obj in objects.flatten()]
+    objects_rgb = [get_object_color(obj, color_map)
+                   for obj in objects.flatten()]
     return np.array(objects_rgb).reshape(*shape, -1)
 
 
@@ -146,7 +143,8 @@ def signals_to_colors(signals):
         :returns: np.array of shape  (n_frames, x_size, y_size, 3)
     """
     shape = signals.shape
-    signals_rgb = [np.array(colors.to_rgb('white')) * signal for signal in signals.flatten()]
+    signals_rgb = [np.array(colors.to_rgb('white')) *
+                   signal for signal in signals.flatten()]
     return np.array(signals_rgb).reshape(*shape, -1)
 
 
@@ -155,23 +153,26 @@ def get_signal_color(signal):
     return np.array(colors.to_rgb('white')) * signal
 
 
-def join_workers_frames(workers):
-    joined_frames = None
+def join_workers_grids(workers):
+    joined_grids = None
     x = 1
-    while (x,1) in workers.keys():
-        joined_row = workers[(x,1)]
+    while (x, 1) in workers.keys():
+        joined_row = workers[(x, 1)]
         y = 2
-        while (1,y) in workers.keys():
-            joined_row = np.concatenate((joined_row, workers[(x,y)]), axis=2)
-            y +=1
-        joined_frames = joined_row if joined_frames is None else np.concatenate((joined_frames, joined_row), axis=1)
+        while (1, y) in workers.keys():
+            joined_row = np.concatenate((joined_row, workers[(x, y)]), axis=2)
+            y += 1
+        joined_grids = joined_row if joined_grids is None else np.concatenate(
+            (joined_grids, joined_row), axis=1)
         x += 1
-    return joined_frames
+    return joined_grids
 
 
-workers = read_workers(grids_dir)
+workers = read_workers_grids(grids_dir)
+grids = join_workers_grids(workers)
+frames = grids_to_frames(grids, config_path)
+
 print(f"found workers: {workers.keys()}")
-frames = join_workers_frames(workers)
 (n_frames, x, y, _colors) = frames.shape
 print(f"created {n_frames} frames of size {(x,y)}")
 
