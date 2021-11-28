@@ -5,19 +5,19 @@ defmodule Simulator.Simulation do
 
   alias Simulator.{Helpers, WorkerActor, Printer}
 
-  def start(grid, objects_state, workers_by_dim \\ {2, 3}) do
+  def start(grid, objects_state, metrics \\ Nx.tensor([0]), workers_by_dim \\ {2, 3}) do
     grid
-    |> split_grid_among_workers(objects_state, workers_by_dim)
+    |> split_grid_among_workers(objects_state, workers_by_dim, metrics)
     |> Enum.each(fn {_location, worker_pid} -> send(worker_pid, :start) end)
   end
 
-  def split_grid_among_workers(grid, state, {workers_x, workers_y}) do
+  def split_grid_among_workers(grid, state, {workers_x, workers_y}, metrics) do
     {bigger_grid, bigger_state} = add_margins(grid, state)
 
     workers =
       for i <- 1..workers_x,
           j <- 1..workers_y,
-          do: create_worker(i, j, workers_x, workers_y, bigger_grid, bigger_state)
+          do: create_worker(i, j, workers_x, workers_y, bigger_grid, bigger_state, metrics)
 
     workers = Map.new(workers) |> link_workers()
 
@@ -40,8 +40,8 @@ defmodule Simulator.Simulation do
     {bigger_grid, bigger_state}
   end
 
-  defp create_worker(x, y, workers_x, workers_y, grid, bigger_state) do
-    {x_size, y_size, _z_szie} = Nx.shape(grid)
+  defp create_worker(x, y, workers_x, workers_y, grid, bigger_state, metrics) do
+    {x_size, y_size, _z_size} = Nx.shape(grid)
     range_x = start_idx(x, x_size, workers_x)..end_idx(x, x_size, workers_x)
     range_y = start_idx(y, y_size, workers_y)..end_idx(y, y_size, workers_y)
 
@@ -50,7 +50,13 @@ defmodule Simulator.Simulation do
 
     # Printer.print_objects(local_grid, {x, y})
     {:ok, pid} =
-      WorkerActor.start(grid: local_grid, objects_state: local_objects_state, location: {x, y})
+      WorkerActor.start(
+        grid: local_grid,
+        objects_state: local_objects_state,
+        location: {x, y},
+        # TODO pass init metrics
+        metrics: metrics
+      )
 
     {{x, y}, pid}
   end

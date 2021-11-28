@@ -7,15 +7,28 @@ defmodule Simulator.Printer do
   import Nx.Defn
 
   @visualization_path "lib/grid_iterations"
+  @metrics_path "metrics"
 
   @doc """
   Writes grid as tensor to file. Firstly, it is converted to string.
   """
-  def write_to_file(%{grid: grid, iteration: iteration, location: location}) do
+  def write_to_file(%{grid: grid, iteration: iteration, location: location, metrics: metrics}) do
     grid_as_string = tensor_to_string(grid)
 
-    (get_directory_from_location(location) <> "/grid_#{iteration}.txt")
+    (get_worker_visualization_path(location) <> "/grid_#{iteration}.txt")
     |> File.write!(grid_as_string)
+
+    if rem(iteration, 5) == 0 do
+      IO.puts("saving metrics")
+
+      data =
+        metrics
+        |> Nx.to_flat_list()
+        |> Enum.map(fn num -> to_string(num) end)
+        |> Enum.join(" ")
+
+      File.write!(get_worker_metrics_path(location), "#{iteration} #{data}\n", [:append])
+    end
 
     IO.puts("Iteration #{iteration} of worker #{inspect(location)} saved to file")
   end
@@ -23,14 +36,22 @@ defmodule Simulator.Printer do
   @doc """
   Creates directory for visualization of the grid of the worker located in {`x`, `y`}.
   """
-  def create_directory(location) do
+  def create_visualization_directory(location) do
     unless File.exists?(@visualization_path) do
       File.mkdir!(@visualization_path)
     end
 
     location
-    |> get_directory_from_location()
+    |> get_worker_visualization_path()
     |> File.mkdir!()
+  end
+
+  def create_metrics_directory(location) do
+    if File.exists?(@metrics_path) do
+      File.rm_rf!(@metrics_path)
+    end
+
+    File.mkdir!(@metrics_path)
   end
 
   @doc """
@@ -124,7 +145,9 @@ defmodule Simulator.Printer do
     IO.puts(if description == nil, do: string, else: "#{description}\n#{string}\n")
   end
 
-  defp get_directory_from_location({x, y}), do: @visualization_path <> "/#{x}_#{y}"
+  defp get_worker_visualization_path({x, y}), do: @visualization_path <> "/#{x}_#{y}"
+
+  defp get_worker_metrics_path({x, y}), do: @metrics_path <> "/#{x}_#{y}.txt"
 
   # Converts grid as tensor to (relatively) readable string.
   defp tensor_to_string(tensor) do

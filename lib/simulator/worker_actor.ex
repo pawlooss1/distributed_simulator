@@ -30,15 +30,27 @@ defmodule Simulator.WorkerActor do
   TODO use some supervisor.
   """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
-  def start(grid: grid, objects_state: objects_state, location: location) do
-    GenServer.start(__MODULE__, grid: grid, objects_state: objects_state, location: location)
+  def start(grid: grid, objects_state: objects_state, location: location, metrics: metrics) do
+    GenServer.start(__MODULE__,
+      grid: grid,
+      objects_state: objects_state,
+      location: location,
+      metrics: metrics
+    )
   end
 
   @impl true
-  def init(grid: grid, objects_state: objects_state, location: location) do
-    state = %{grid: grid, iteration: 0, location: location, objects_state: objects_state}
+  def init(grid: grid, objects_state: objects_state, location: location, metrics: metrics) do
+    state = %{
+      grid: grid,
+      iteration: 0,
+      location: location,
+      objects_state: objects_state,
+      metrics: metrics
+    }
 
-    Printer.create_directory(location)
+    Printer.create_visualization_directory(location)
+    Printer.create_metrics_directory(location)
 
     {:ok, state}
   end
@@ -79,7 +91,7 @@ defmodule Simulator.WorkerActor do
       is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
       apply_action = &@module_prefix.PlanResolver.apply_action/3
 
-      {updated_grid, accepted_plans, objects_state} =
+      {updated_grid, accepted_plans, updated_objects_state} =
         Plans.process_plans(
           grid,
           plans,
@@ -88,13 +100,15 @@ defmodule Simulator.WorkerActor do
           apply_action
         )
 
-      distribute_consequences(state, updated_grid, objects_state, accepted_plans)
+      distribute_consequences(state, updated_grid, updated_objects_state, accepted_plans)
 
       state =
         Map.merge(state, %{
           accepted_plans: accepted_plans,
           grid: updated_grid,
-          objects_state: objects_state,
+          old_grid: grid,
+          objects_state: updated_objects_state,
+          old_objects_state: objects_state,
           phase: :remote_consequences,
           plans: plans,
           processed_neighbors: 0
@@ -107,7 +121,7 @@ defmodule Simulator.WorkerActor do
   end
 
   def handle_info(
-        {:remote_consequences, pid, updated_grid, update_objects_state, new_accepted_plans},
+        {:remote_consequences, pid, updated_grid, updated_objects_state, new_accepted_plans},
         %{phase: :remote_consequences} = state
       ) do
     %{
@@ -126,7 +140,7 @@ defmodule Simulator.WorkerActor do
     grid = Nx.put_slice(grid, location_grid, updated_grid)
 
     location_objects_state = put_slice_start(objects_state, direction)
-    objects_state = Nx.put_slice(objects_state, location_objects_state, update_objects_state)
+    objects_state = Nx.put_slice(objects_state, location_objects_state, updated_objects_state)
 
     location_plans = slice_start_plans(accepted_plans, direction)
     accepted_plans = put_at(accepted_plans, location_plans, new_accepted_plans)
@@ -175,6 +189,10 @@ defmodule Simulator.WorkerActor do
   def handle_info({:remote_signal, pid, remote_signal_update}, %{phase: :remote_signal} = state) do
     %{
       grid: grid,
+      old_grid: old_grid,
+      objects_state: objects_state,
+      old_objects_state: old_objects_state,
+      metrics: metrics,
       iteration: iteration,
       neighbors: neighbors,
       neighbors_count: neighbors_count,
@@ -192,9 +210,16 @@ defmodule Simulator.WorkerActor do
       signal_factor = &@module_prefix.Cell.signal_factor/1
       updated_grid = Signal.apply_signal_update(grid, signal_update, signal_factor)
 
+      # TODO metrics function here
+      calculate_metrics = &@module_prefix.Metrics.calculate_metrics/6
+
+      new_metrics =
+        calculate_metrics.(metrics, old_grid, old_objects_state, grid, objects_state, iteration)
+
       state =
         Map.merge(state, %{
           grid: updated_grid,
+          metrics: new_metrics,
           iteration: iteration + 1
         })
 
