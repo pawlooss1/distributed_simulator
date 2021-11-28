@@ -12,17 +12,17 @@ defmodule Simulator.Printer do
   @doc """
   Writes grid as tensor to file. Firstly, it is converted to string.
   """
-  def write_to_file(%{grid: grid, iteration: iteration, location: location, metrics: metrics}) do
+  def write_to_file(%{grid: grid, iteration: iteration, location: location} = state) do
     grid_as_string = tensor_to_string(grid)
 
     (get_worker_visualization_path(location) <> "/grid_#{iteration}.txt")
     |> File.write!(grid_as_string)
 
-    if rem(iteration, 5) == 0 do
+    if rem(iteration, state.metrics_save_step) == 0 do
       IO.puts("saving metrics")
 
       data =
-        metrics
+        state.metrics
         |> Nx.to_flat_list()
         |> Enum.map(fn num -> to_string(num) end)
         |> Enum.join(" ")

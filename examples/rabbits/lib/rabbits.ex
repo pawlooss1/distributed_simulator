@@ -20,7 +20,7 @@ defmodule Rabbits do
 
     Printer.clean_grid_iterations()
 
-    Simulation.start(grid, objects_state, metrics)
+    Simulation.start(grid, objects_state, metrics, 10)
     :ok
   end
 

@@ -30,23 +30,37 @@ defmodule Simulator.WorkerActor do
   TODO use some supervisor.
   """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
-  def start(grid: grid, objects_state: objects_state, location: location, metrics: metrics) do
+  def start(
+        grid: grid,
+        objects_state: objects_state,
+        location: location,
+        metrics: metrics,
+        metrics_save_step: metrics_save_step
+      ) do
     GenServer.start(__MODULE__,
       grid: grid,
       objects_state: objects_state,
       location: location,
-      metrics: metrics
+      metrics: metrics,
+      metrics_save_step: metrics_save_step
     )
   end
 
   @impl true
-  def init(grid: grid, objects_state: objects_state, location: location, metrics: metrics) do
+  def init(
+        grid: grid,
+        objects_state: objects_state,
+        location: location,
+        metrics: metrics,
+        metrics_save_step: metrics_save_step
+      ) do
     state = %{
       grid: grid,
       iteration: 0,
       location: location,
       objects_state: objects_state,
-      metrics: metrics
+      metrics: metrics,
+      metrics_save_step: metrics_save_step
     }
 
     Printer.create_visualization_directory(location)
