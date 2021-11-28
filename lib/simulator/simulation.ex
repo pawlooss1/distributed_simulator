@@ -8,7 +8,7 @@ defmodule Simulator.Simulation do
   def start(
         grid,
         objects_state,
-        metrics,
+        metrics \\ Nx.tensor(0),
         metrics_save_step \\ 5,
         workers_by_dim \\ {2, 3}
       ) do
