@@ -15,10 +15,10 @@ defmodule Evacuation do
     grid = read_grid("map_1")
     {x, y, _z} = Nx.shape(grid)
     objects_state = Nx.broadcast(0, {x, y})
-
+    metrics = Nx.tensor([0,0,0])
     Printer.clean_grid_iterations()
 
-    Simulation.start(grid, objects_state)
+    Simulation.start(grid, objects_state, metrics)
     :ok
   end
 
