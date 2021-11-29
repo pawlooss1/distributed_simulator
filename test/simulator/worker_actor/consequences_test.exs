@@ -11,7 +11,7 @@ defmodule Simulator.WorkerActor.ConsequencesTest do
 
   alias Simulator.WorkerActor.{Plans, Consequences}
 
-	test "apply_consequences/5 applies consequences correctly" do
+  test "apply_consequences/5 applies consequences correctly" do
     {updated_grid, accepted_plans, updated_objects_state} =
       Plans.process_plans(grid(), plans(), objects_state(), &is_update_valid?/2, &apply_action/3)
 
@@ -20,7 +20,7 @@ defmodule Simulator.WorkerActor.ConsequencesTest do
       |> Nx.put_slice([1, 2, 0], Nx.tensor([[[@empty]]]))
       |> Nx.put_slice([1, 3, 0], Nx.tensor([[[@empty]]]))
 
-    expected_objects_state = 
+    expected_objects_state =
       updated_objects_state
       |> Nx.put_slice([1, 2], Nx.tensor([[0]]))
       |> Nx.put_slice([1, 3], Nx.tensor([[0]]))
@@ -34,7 +34,7 @@ defmodule Simulator.WorkerActor.ConsequencesTest do
         &apply_consequence/3
       )
 
-      assert updated_grid == expected_grid
-      assert updated_objects_state == expected_objects_state
+    assert updated_grid == expected_grid
+    assert updated_objects_state == expected_objects_state
   end
 end

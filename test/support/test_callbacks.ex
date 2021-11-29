@@ -3,7 +3,7 @@ defmodule Simulator.TestCallbacks do
   There are helper functions that mocks simulation callbacks. They 
   are meant to be very simple.
   """
-  
+
   use Simulator.TestConstants
 
   import Nx.Defn

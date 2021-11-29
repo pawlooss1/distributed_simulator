@@ -2,7 +2,7 @@ defmodule Simulator.TestConstants do
   @moduledoc """
   Constants needed in tests.
   """
-  
+
   use Simulator.Constants
 
   @impl true
@@ -19,6 +19,6 @@ defmodule Simulator.TestConstants do
       @destroy Nx.tensor([@remove_2, @keep])
 
       @full_plan_keep [@dir_stay, @keep, @keep]
-		end
+    end
   end
 end
