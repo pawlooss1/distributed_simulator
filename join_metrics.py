@@ -12,6 +12,7 @@ import pandas as pd
 
 names_aggs = [('alive_rabbits', np.sum), ('sum_rabbits', np.sum), ('avg_rabbits', np.mean),
               ('lettuce', np.sum), ('sum_lettuce', np.sum), ('avg_lettuce', np.mean)]
+output_path = "metrics_joined.csv"
 
 if len(sys.argv) == 2:
     metrics_dir = sys.argv[1]
@@ -56,4 +57,4 @@ def join_workers(workers):
 workers = read_workers_metrics(metrics_dir)
 result = join_workers(workers)
 print(result)
-result.to_csv("metrics_joined.csv")
+result.to_csv(output_path)
