@@ -95,4 +95,19 @@ defmodule Simulator.TestCallbacks do
 
     {new_object, Nx.broadcast(new_state, {1, 1})}
   end
+
+  defn generate_signal(object) do
+    cond do
+      Nx.equal(object, @object_1) -> 10
+      Nx.equal(object, @object_2) -> -10
+      true -> 0
+    end
+  end
+
+  defn signal_factor(object) do
+    cond do
+      Nx.equal(object, @object_2) -> 2
+      true -> 1
+    end
+  end
 end
