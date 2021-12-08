@@ -52,44 +52,22 @@ defmodule Simulator.WorkerActor.Plans do
   The function decides which plans are accepted and update the grid
   by putting `action` in the proper cells. `Consequences` will be
   applied in the `:remote_consequences` phase.
-
-  TODO use shuffle implemented in Nx.
   """
   @spec process_plans(Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: {Nx.t(), Nx.t(), Nx.t()}
-  def process_plans(grid, plans, objects_state, is_update_valid?, apply_action) do
+  @defn_compiler {EXLA, client: :default}
+  defn process_plans(grid, plans, objects_state, is_update_valid?, apply_action) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
+    order_length = x_size * y_size
 
     order =
-      0..(x_size * y_size - 1)
-      |> Enum.shuffle()
-      |> Nx.tensor()
-
-    process_plans_in_order(
-      grid,
-      plans,
-      objects_state,
-      order,
-      is_update_valid?,
-      apply_action
-    )
-  end
-
-  @defn_compiler {EXLA, client: :default}
-  defnp process_plans_in_order(
-          grid,
-          plans,
-          objects_state,
-          order,
-          is_update_valid?,
-          apply_action
-        ) do
-    {x_size, y_size, _z_size} = Nx.shape(grid)
-    {order_len} = Nx.shape(order)
+      {order_length}
+      |> Nx.iota()
+      |> Nx.shuffle()
 
     {_i, _order, _plans, _old_states, grid, objects_state, _y_size, accepted_plans} =
       while {i = 0, order, plans, old_states = objects_state, grid, objects_state, y_size,
              accepted_plans = Nx.broadcast(@rejected, {x_size, y_size})},
-            Nx.less(i, order_len) do
+            Nx.less(i, order_length) do
         ordinal = order[i]
         {x, y} = {Nx.quotient(ordinal, y_size), Nx.remainder(ordinal, y_size)}
 
