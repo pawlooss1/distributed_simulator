@@ -60,7 +60,8 @@ defmodule Simulator.WorkerActor do
       location: location,
       objects_state: objects_state,
       metrics: metrics,
-      metrics_save_step: metrics_save_step
+      metrics_save_step: metrics_save_step,
+      stashed: []
     }
 
     Printer.create_visualization_directory(location)
@@ -117,16 +118,18 @@ defmodule Simulator.WorkerActor do
       distribute_consequences(state, updated_grid, updated_objects_state, accepted_plans)
 
       state =
-        Map.merge(state, %{
-          accepted_plans: accepted_plans,
-          grid: updated_grid,
-          old_grid: grid,
-          objects_state: updated_objects_state,
-          old_objects_state: objects_state,
-          phase: :remote_consequences,
-          plans: plans,
-          processed_neighbors: 0
-        })
+        state
+        |> Map.merge(%{
+            accepted_plans: accepted_plans,
+            grid: updated_grid,
+            old_grid: grid,
+            objects_state: updated_objects_state,
+            old_objects_state: objects_state,
+            phase: :remote_consequences,
+            plans: plans,
+            processed_neighbors: 0
+          })
+        |> unstash_messages()
 
       {:noreply, state}
     else
@@ -178,13 +181,15 @@ defmodule Simulator.WorkerActor do
       distribute_signal(state, signal_update)
 
       state =
-        Map.merge(state, %{
-          grid: updated_grid,
-          objects_state: objects_state,
-          processed_neighbors: 0,
-          phase: :remote_signal,
-          signal_update: signal_update
-        })
+        state
+        |> Map.merge(%{
+            grid: updated_grid,
+            objects_state: objects_state,
+            processed_neighbors: 0,
+            phase: :remote_signal,
+            signal_update: signal_update
+          })
+        |> unstash_messages()
 
       {:noreply, state}
     else
@@ -249,11 +254,8 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  # when not getting proper message
-  # TODO it's a terrible solution. What about storing messages on our own in state? Or maybe another idea?
   def handle_info(message, state) do
-    send(self(), message)
-
+    state = Map.update!(state, :stashed, fn stashed -> [message | stashed] end)
     {:noreply, state}
   end
 
@@ -272,8 +274,17 @@ defmodule Simulator.WorkerActor do
 
     distribute_plans(state, plans)
 
-    state = Map.merge(state, %{phase: :remote_plans, plans: plans, processed_neighbors: 0})
+    state = 
+      state
+      |> Map.merge(%{phase: :remote_plans, plans: plans, processed_neighbors: 0})
+      |> unstash_messages()
+
     {:noreply, state}
+  end
+
+  def unstash_messages(%{stashed: stashed} = state) do
+    Enum.each(stashed, fn message -> send(self(), message) end)
+    %{state | stashed: []}
   end
 
   # sends each plan to worker managing cells affected by this plan
