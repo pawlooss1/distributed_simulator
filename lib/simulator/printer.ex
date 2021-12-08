@@ -47,11 +47,9 @@ defmodule Simulator.Printer do
   end
 
   def create_metrics_directory(location) do
-    if File.exists?(@metrics_path) do
-      File.rm_rf!(@metrics_path)
+    unless File.exists?(@metrics_path) do
+      File.mkdir!(@metrics_path)
     end
-
-    File.mkdir!(@metrics_path)
   end
 
   @doc """

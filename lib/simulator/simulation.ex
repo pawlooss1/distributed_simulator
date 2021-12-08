@@ -12,9 +12,21 @@ defmodule Simulator.Simulation do
         metrics_save_step \\ 5,
         workers_by_dim \\ {2, 3}
       ) do
+    node = get_random_node()
+    IO.inspect(node)
+
     grid
     |> split_grid_among_workers(objects_state, workers_by_dim, metrics, metrics_save_step)
-    |> Enum.each(fn {_location, worker_pid} -> send(worker_pid, :start) end)
+    |> Enum.each(fn {location, worker_pid} ->
+      IO.inspect(location)
+      IO.inspect(worker_pid)
+      # send(worker_pid, :start)
+      GenServer.cast({:global, location}, :start)
+    end)
+  end
+
+  def get_random_node() do
+    Node.list() |> Enum.random()
   end
 
   def split_grid_among_workers(grid, state, {workers_x, workers_y}, metrics, metrics_save_step) do
@@ -65,39 +77,74 @@ defmodule Simulator.Simulation do
     local_objects_state = bigger_state[[range_x, range_y]]
 
     # Printer.print_objects(local_grid, {x, y})
-    {:ok, pid} =
-      WorkerActor.start(
-        grid: local_grid,
-        objects_state: local_objects_state,
-        location: {x, y},
-        metrics: metrics,
-        metrics_save_step: metrics_save_step
+    node = get_random_node()
+
+    pid =
+      Node.spawn(
+        node,
+        GenServer,
+        :start_link,
+        [
+          WorkerActor,
+          [
+            grid: local_grid,
+            objects_state: local_objects_state,
+            location: {x, y},
+            metrics: metrics,
+            metrics_save_step: metrics_save_step
+          ],
+          [name: {:global, {x, y}}]
+        ]
       )
+
+    # pid =
+    #   Node.spawn(
+    #     node,
+    #     WorkerActor,
+    #     :start,
+    #     [
+    #       [
+    #         grid: local_grid,
+    #         objects_state: local_objects_state,
+    #         location: {x, y},
+    #         metrics: metrics,
+    #         metrics_save_step: metrics_save_step
+    #       ]
+    #     ]
+    #   )
+
+    # {:ok, pid} =
+    #   WorkerActor.start(
+    #     grid: local_grid,
+    #     objects_state: local_objects_state,
+    #     location: {x, y},
+    #     metrics: metrics,
+    #     metrics_save_step: metrics_save_step
+    #   )
 
     {{x, y}, pid}
   end
 
   defp link_workers(workers) do
     workers
-    |> Enum.each(fn {loc, worker} ->
-      send(worker, {:neighbors, create_neighbors(loc, workers)})
+    |> Enum.each(fn {loc, _pid} ->
+      GenServer.cast({:global, loc}, {:neighbors, create_neighbors(loc, workers)})
     end)
 
     workers
   end
 
   defp create_neighbors(location, workers) do
-    directions_to_pids =
+    directions_to_locs =
       @directions
-      |> Enum.map(fn direction -> {direction, workers[shift(location, direction)]} end)
-      |> Enum.reject(fn {_direction, pid} -> pid == nil end)
+      |> Enum.map(fn direction -> {direction, {:global, shift(location, direction)}} end)
+      |> Enum.reject(fn {_direction, {:global, loc}} -> workers[loc] == nil end)
 
-    pids_to_directions =
-      directions_to_pids
-      |> Enum.reject(fn {_direction, pid} -> pid == nil end)
-      |> Enum.map(fn {direction, pid} -> {pid, direction} end)
+    locs_to_directions =
+      directions_to_locs
+      |> Enum.map(fn {direction, loc} -> {loc, direction} end)
 
-    Map.new(directions_to_pids ++ pids_to_directions)
+    Map.new(directions_to_locs ++ locs_to_directions)
   end
 
   defp start_idx(1, dim_size, worker_count), do: 0
