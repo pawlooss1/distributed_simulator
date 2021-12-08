@@ -7,16 +7,16 @@ defmodule Rabbits.PlanCreator do
 
   @impl true
   defn create_plan(i, j, plans, grid, objects_state, iteration) do
-      cond do
-        Nx.equal(grid[i][j][0], @rabbit) ->
-          create_plan_rabbit(i, j, grid, objects_state)
+    cond do
+      Nx.equal(grid[i][j][0], @rabbit) ->
+        create_plan_rabbit(i, j, grid, objects_state)
 
-        Nx.equal(grid[i][j][0], @lettuce) ->
-          create_plan_lettuce(i, j, grid, iteration)
+      Nx.equal(grid[i][j][0], @lettuce) ->
+        create_plan_lettuce(i, j, grid, iteration)
 
-        :otherwise ->
-          create_plan_other(i, j, grid)
-      end
+      :otherwise ->
+        create_plan_other(i, j, grid)
+    end
   end
 
   defnp create_plan_rabbit(i, j, grid, objects_state) do
@@ -104,7 +104,7 @@ defmodule Rabbits.PlanCreator do
         index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
         {availability[index], @lettuce_grow}
       else
-      {@dir_stay, @plan_keep}
+        {@dir_stay, @plan_keep}
       end
     else
       {@dir_stay, @plan_keep}

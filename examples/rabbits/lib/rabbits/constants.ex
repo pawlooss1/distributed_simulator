@@ -21,11 +21,14 @@ defmodule Rabbits.Constants do
       @lettuce_grow Nx.tensor([@add_lettuce, @keep])
 
       @lettuce_growth_factor 2
-      @rabbit_reproduction_energy 8
-      @rabbit_start_energy 10
+      @rabbit_reproduction_energy 9
+      @rabbit_start_energy 8
 
-      @rabbit_signal -5
-      @lettuce_signal 10
+      @move_cost 1
+      @lettuce_energy_boost 1
+
+      @rabbit_signal -10
+      @lettuce_signal 20
     end
   end
 end

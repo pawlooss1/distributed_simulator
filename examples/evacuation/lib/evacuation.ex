@@ -5,7 +5,7 @@ defmodule Evacuation do
 
   use Evacuation.Constants
 
-  alias Simulator.{Printer, WorkerActor}
+  alias Simulator.{Printer, Simulation}
 
   @doc """
   Runs the simulation.
@@ -15,11 +15,10 @@ defmodule Evacuation do
     grid = read_grid("map_1")
     {x, y, _z} = Nx.shape(grid)
     objects_state = Nx.broadcast(0, {x, y})
+    metrics = Nx.tensor([0,0,0])
+    Printer.clean_grid_iterations()
 
-    clean_grid_iterations()
-
-    WorkerActor.start(grid: grid, objects_state: objects_state)
-    Printer.write_to_file(grid, "grid_0")
+    Simulation.start(grid, objects_state, metrics)
     :ok
   end
 
@@ -44,11 +43,5 @@ defmodule Evacuation do
       end
     end)
     |> Enum.map(fn contents -> [contents, 0, 0, 0, 0, 0, 0, 0, 0] end)
-  end
-
-  defp clean_grid_iterations() do
-    "lib/grid_iterations/*"
-    |> Path.wildcard()
-    |> Enum.each(fn path -> File.rm!(path) end)
   end
 end

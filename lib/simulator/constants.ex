@@ -54,6 +54,17 @@ defmodule Simulator.Constants do
           @dir_left 7
           @dir_top_left 8
 
+          @directions [
+            @dir_top,
+            @dir_top_right,
+            @dir_right,
+            @dir_bottom_right,
+            @dir_bottom,
+            @dir_bottom_left,
+            @dir_left,
+            @dir_top_left
+          ]
+
           # plans
           @rejected 0
           @accepted 1

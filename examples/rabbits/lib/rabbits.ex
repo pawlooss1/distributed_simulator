@@ -5,21 +5,22 @@ defmodule Rabbits do
 
   use Rabbits.Constants
 
-  alias Simulator.{Printer, WorkerActor}
+  alias Simulator.{Printer, Simulation}
 
   @doc """
   Runs the simulation.
   """
   @spec start() :: :ok
   def start() do
-    grid = read_grid("map_1")
+    # grid = read_grid("map_1")
+    grid = read_grid("map_3")
     {x, y, _z} = Nx.shape(grid)
     objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
+    metrics = Nx.tensor([0,0,0,0,0,0])
 
-    clean_grid_iterations()
+    Printer.clean_grid_iterations()
 
-    WorkerActor.start(grid: grid, objects_state: objects_state)
-    Printer.write_to_file(grid, "grid_0")
+    Simulation.start(grid, objects_state, metrics, 4)
     :ok
   end
 
@@ -42,11 +43,5 @@ defmodule Rabbits do
       end
     end)
     |> Enum.map(fn contents -> [contents, 0, 0, 0, 0, 0, 0, 0, 0] end)
-  end
-
-  defp clean_grid_iterations() do
-    "lib/grid_iterations/*"
-    |> Path.wildcard()
-    |> Enum.each(fn path -> File.rm!(path) end)
   end
 end
