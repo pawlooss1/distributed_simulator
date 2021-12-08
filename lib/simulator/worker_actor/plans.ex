@@ -55,7 +55,7 @@ defmodule Simulator.WorkerActor.Plans do
 
   TODO use shuffle implemented in Nx.
   """
-  @spec process_plans(Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: Nx.t()
+  @spec process_plans(Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: {Nx.t(), Nx.t(), Nx.t()}
   def process_plans(grid, plans, objects_state, is_update_valid?, apply_action) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
