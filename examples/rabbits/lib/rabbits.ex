@@ -16,9 +16,7 @@ defmodule Rabbits do
     grid = read_grid("map_3")
     {x, y, _z} = Nx.shape(grid)
     objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
-    metrics = Nx.tensor([0,0,0,0,0,0])
-
-    Printer.clean_grid_iterations()
+    metrics = Nx.tensor([0, 0, 0, 0, 0, 0])
 
     Simulation.start(grid, objects_state, metrics, 4)
     :ok

@@ -73,17 +73,21 @@ defmodule Simulator.WorkerActor do
     IO.inspect("init")
     Printer.create_visualization_directory(location)
     Printer.create_metrics_directory(location)
-    Process.send_after(self(), :start, 1000)
 
+    {x, y} = location
+    # GenServer.cast({:global, :"a#{x}_#{y}"}, :start2)
     {:ok, state}
   end
 
-  def handle_info(:start, state) do
-    IO.inspect("info")
-  end
+  # def handle_cast(:start2, state) do
+  #   IO.inspect("info")
+  #   {:noreply, state}
+  # end
 
   @impl true
   def handle_cast({:neighbors, neighbors}, state) do
+    IO.inspect("neighbors")
+
     state =
       Map.merge(state, %{
         neighbors: neighbors,
