@@ -21,8 +21,7 @@ defmodule Simulator.Simulation do
       IO.inspect(location)
       IO.inspect(worker_pid)
       # send(worker_pid, :start)
-      {x, y} = location
-      GenServer.cast({:"a#{x}_#{y}", :"samuel@192.168.83.120"}, :start)
+      GenServer.cast({:global, location}, :start)
     end)
   end
 
@@ -48,6 +47,7 @@ defmodule Simulator.Simulation do
               metrics_save_step
             )
 
+    :timer.sleep(1000)
     workers = Map.new(workers) |> link_workers()
 
     IO.inspect(workers)
@@ -81,21 +81,31 @@ defmodule Simulator.Simulation do
     node = get_random_node()
 
     pid =
-      Node.spawn_link(
+      Node.spawn(
         node,
         fn ->
           # IO.inspect("hi")
-          GenServer.start(
-            WorkerActor,
-            [
-              grid: local_grid,
-              objects_state: local_objects_state,
-              location: {x, y},
-              metrics: metrics,
-              metrics_save_step: metrics_save_step
-            ],
-            name: {:global, :"a#{x}_#{y}"}
-          )
+
+          {:ok, pid} =
+            GenServer.start(
+              WorkerActor,
+              [
+                grid: local_grid,
+                objects_state: local_objects_state,
+                location: {x, y},
+                metrics: metrics,
+                metrics_save_step: metrics_save_step
+              ],
+              name: {:global, {x, y}}
+            )
+
+          ref = Process.monitor(pid)
+
+          # Wait until the process monitored by `ref` is down.
+          receive do
+            {:DOWN, ^ref, _, _, _} ->
+              IO.puts("Process #{inspect(pid)} is down")
+          end
         end
       )
 
