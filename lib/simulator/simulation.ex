@@ -18,9 +18,7 @@ defmodule Simulator.Simulation do
     grid
     |> split_grid_among_workers(objects_state, workers_by_dim, metrics, metrics_save_step)
     |> Enum.each(fn {location, worker_pid} ->
-      IO.inspect(location)
-      IO.inspect(worker_pid)
-      # send(worker_pid, :start)
+      IO.inspect({location, worker_pid})
       GenServer.cast({:global, location}, :start)
     end)
   end
@@ -84,8 +82,6 @@ defmodule Simulator.Simulation do
       Node.spawn(
         node,
         fn ->
-          # IO.inspect("hi")
-
           {:ok, pid} =
             GenServer.start(
               WorkerActor,
@@ -108,31 +104,6 @@ defmodule Simulator.Simulation do
           end
         end
       )
-
-    # pid =
-    #   Node.spawn(
-    #     node,
-    #     WorkerActor,
-    #     :start,
-    #     [
-    #       [
-    #         grid: local_grid,
-    #         objects_state: local_objects_state,
-    #         location: {x, y},
-    #         metrics: metrics,
-    #         metrics_save_step: metrics_save_step
-    #       ]
-    #     ]
-    #   )
-
-    # {:ok, pid} =
-    #   WorkerActor.start(
-    #     grid: local_grid,
-    #     objects_state: local_objects_state,
-    #     location: {x, y},
-    #     metrics: metrics,
-    #     metrics_save_step: metrics_save_step
-    #   )
 
     {{x, y}, pid}
   end
