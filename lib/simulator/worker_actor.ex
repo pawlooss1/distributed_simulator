@@ -37,19 +37,13 @@ defmodule Simulator.WorkerActor do
         metrics: metrics,
         metrics_save_step: metrics_save_step
       ) do
-    IO.inspect("starting")
-
-    res =
-      GenServer.start(__MODULE__,
-        grid: grid,
-        objects_state: objects_state,
-        location: location,
-        metrics: metrics,
-        metrics_save_step: metrics_save_step
-      )
-
-    IO.inspect(res)
-    res
+    GenServer.start(__MODULE__,
+      grid: grid,
+      objects_state: objects_state,
+      location: location,
+      metrics: metrics,
+      metrics_save_step: metrics_save_step
+    )
   end
 
   @impl true
@@ -70,24 +64,15 @@ defmodule Simulator.WorkerActor do
       stashed: []
     }
 
-    IO.inspect("init")
     Printer.create_visualization_directory(location)
     Printer.create_metrics_directory(location)
 
     {x, y} = location
-    # GenServer.cast({:global, :"a#{x}_#{y}"}, :start2)
     {:ok, state}
   end
 
-  # def handle_cast(:start2, state) do
-  #   IO.inspect("info")
-  #   {:noreply, state}
-  # end
-
   @impl true
   def handle_cast({:neighbors, neighbors}, state) do
-    IO.inspect("neighbors")
-
     state =
       Map.merge(state, %{
         neighbors: neighbors,
@@ -99,7 +84,6 @@ defmodule Simulator.WorkerActor do
   end
 
   def handle_cast(:start, state), do: start_new_iteration(state)
-  # def handle_cast(:start, state), do: start_new_iteration(state)
 
   # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
@@ -282,7 +266,6 @@ defmodule Simulator.WorkerActor do
   end
 
   defp start_new_iteration(state) do
-    IO.inspect("started!")
     Printer.write_to_file(state)
 
     %{grid: grid, iteration: iteration, objects_state: objects_state} = state
