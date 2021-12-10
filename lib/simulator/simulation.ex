@@ -21,7 +21,8 @@ defmodule Simulator.Simulation do
       IO.inspect(location)
       IO.inspect(worker_pid)
       # send(worker_pid, :start)
-      GenServer.cast({:global, location}, :start)
+      {x, y} = location
+      GenServer.cast({:"a#{x}_#{y}", :"samuel@192.168.83.120"}, :start)
     end)
   end
 
@@ -80,21 +81,22 @@ defmodule Simulator.Simulation do
     node = get_random_node()
 
     pid =
-      Node.spawn(
+      Node.spawn_link(
         node,
-        GenServer,
-        :start_link,
-        [
-          WorkerActor,
-          [
-            grid: local_grid,
-            objects_state: local_objects_state,
-            location: {x, y},
-            metrics: metrics,
-            metrics_save_step: metrics_save_step
-          ],
-          [name: {:global, {x, y}}]
-        ]
+        fn ->
+          # IO.inspect("hi")
+          GenServer.start(
+            WorkerActor,
+            [
+              grid: local_grid,
+              objects_state: local_objects_state,
+              location: {x, y},
+              metrics: metrics,
+              metrics_save_step: metrics_save_step
+            ],
+            name: {:global, :"a#{x}_#{y}"}
+          )
+        end
       )
 
     # pid =

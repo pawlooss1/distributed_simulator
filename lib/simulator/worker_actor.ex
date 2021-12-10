@@ -70,10 +70,16 @@ defmodule Simulator.WorkerActor do
       stashed: []
     }
 
+    IO.inspect("init")
     Printer.create_visualization_directory(location)
     Printer.create_metrics_directory(location)
+    Process.send_after(self(), :start, 1000)
 
     {:ok, state}
+  end
+
+  def handle_info(:start, state) do
+    IO.inspect("info")
   end
 
   @impl true
@@ -268,12 +274,12 @@ defmodule Simulator.WorkerActor do
   end
 
   defp start_new_iteration(%{iteration: iteration} = state) when iteration >= @max_iterations do
-    IO.inspect("started!")
     Printer.write_to_file(state)
     {:stop, :normal, state}
   end
 
   defp start_new_iteration(state) do
+    IO.inspect("started!")
     Printer.write_to_file(state)
 
     %{grid: grid, iteration: iteration, objects_state: objects_state} = state
