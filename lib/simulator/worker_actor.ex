@@ -255,7 +255,7 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info(message, state) do
+  def handle_cast(message, state) do
     state = Map.update!(state, :stashed, fn stashed -> [message | stashed] end)
     {:noreply, state}
   end
@@ -283,8 +283,8 @@ defmodule Simulator.WorkerActor do
     {:noreply, state}
   end
 
-  def unstash_messages(%{stashed: stashed} = state) do
-    Enum.each(stashed, fn message -> send(self(), message) end)
+  def unstash_messages(%{location: location, stashed: stashed} = state) do
+    Enum.each(stashed, fn message -> GenServer.cast({:global, location}, message) end)
     %{state | stashed: []}
   end
 
