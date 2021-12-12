@@ -12,9 +12,6 @@ defmodule Simulator.Simulation do
         metrics_save_step \\ 5,
         workers_by_dim \\ {2, 3}
       ) do
-    node = get_random_node()
-    IO.inspect(node)
-
     grid
     |> split_grid_among_workers(objects_state, workers_by_dim, metrics, metrics_save_step)
     |> Enum.each(fn {location, worker_pid} ->
@@ -23,8 +20,12 @@ defmodule Simulator.Simulation do
     end)
   end
 
-  def get_random_node() do
-    Node.list() |> Enum.random()
+  def get_next_node(x, y, workers_x, workers_y) do
+    num_nodes = length(Node.list()) + 1
+    worker_n = workers_x * (y - 1) + x - 1
+    all_workers = workers_x * workers_y
+    idx = div(worker_n * num_nodes, all_workers)
+    [Node.self() | Node.list()] |> Enum.at(idx)
   end
 
   def split_grid_among_workers(grid, state, {workers_x, workers_y}, metrics, metrics_save_step) do
@@ -76,7 +77,7 @@ defmodule Simulator.Simulation do
     local_objects_state = bigger_state[[range_x, range_y]]
 
     # Printer.print_objects(local_grid, {x, y})
-    node = get_random_node()
+    node = get_next_node(x, y, workers_x, workers_y)
 
     pid =
       Node.spawn(
