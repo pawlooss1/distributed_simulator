@@ -20,6 +20,7 @@ defmodule Simulator.Simulation do
     end)
   end
 
+  @spec get_next_node(integer, integer, integer, integer) :: any
   def get_next_node(x, y, workers_x, workers_y) do
     num_nodes = length(Node.list()) + 1
     worker_n = workers_x * (y - 1) + x - 1
