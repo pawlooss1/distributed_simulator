@@ -21,12 +21,14 @@ defmodule Simulator.Simulation do
   end
 
   @spec get_next_node(integer, integer, integer, integer) :: any
-  def get_next_node(x, y, workers_x, workers_y) do
+  def get_next_node(r, c, workers_rows, workers_cols) do
     num_nodes = length(Node.list()) + 1
-    worker_n = workers_x * (y - 1) + x - 1
-    all_workers = workers_x * workers_y
-    idx = div(worker_n * num_nodes, all_workers)
-    [Node.self() | Node.list()] |> Enum.at(idx)
+    worker_idx = workers_cols * (r - 1) + c - 1
+
+    all_workers = workers_cols * workers_rows
+    node_idx = div(worker_idx * num_nodes, all_workers)
+
+    [Node.self() | Node.list()] |> Enum.at(node_idx)
   end
 
   def split_grid_among_workers(grid, state, {workers_x, workers_y}, metrics, metrics_save_step) do
