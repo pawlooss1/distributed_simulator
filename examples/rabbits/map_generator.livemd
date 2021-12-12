@@ -46,7 +46,7 @@ end
 
 ## Inputs
 
-<!-- livebook:{"livebook_object":"cell_input","name":"output directory","type":"text","value":"examples/rabbits/lib/maps"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"output directory","type":"text","value":"lib/maps"} -->
 
 <!-- livebook:{"livebook_object":"cell_input","name":"file name","type":"text","value":"map_100x100.txt"} -->
 
@@ -54,9 +54,9 @@ end
 
 <!-- livebook:{"livebook_object":"cell_input","name":"height","type":"number","value":"100"} -->
 
-<!-- livebook:{"livebook_object":"cell_input","name":"rabbit chance","type":"text","value":"0.05"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"rabbit chance","type":"text","value":"0.01"} -->
 
-<!-- livebook:{"livebook_object":"cell_input","name":"lettuce chance","type":"text","value":"0.1"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"lettuce chance","type":"text","value":"0.05"} -->
 
 ## Running
 
