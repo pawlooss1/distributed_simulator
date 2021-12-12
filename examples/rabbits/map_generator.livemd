@@ -1,0 +1,65 @@
+# Map generator - Rabbits and Lettuce
+
+## Code
+
+```elixir
+generate_row = fn rabbit_chance, lettuce_chance, width ->
+  1..width
+  |> Enum.map(fn _index ->
+    selected = :rand.uniform()
+
+    cond do
+      selected <= rabbit_chance -> "r"
+      selected <= rabbit_chance + lettuce_chance -> "l"
+      :otherwise -> "-"
+    end
+  end)
+  |> Enum.join()
+end
+
+generate_map = fn ->
+  [rabbit_chance, lettuce_chance] =
+    ["rabbit chance", "lettuce chance"]
+    |> Enum.map(&IO.gets/1)
+    |> Enum.map(&String.trim/1)
+    |> Enum.map(&String.to_float/1)
+
+  [width, height] =
+    ["width", "height"]
+    |> Enum.map(&IO.gets/1)
+    |> Enum.map(&String.trim/1)
+    |> Enum.map(&String.to_integer/1)
+
+  map =
+    1..height
+    |> Enum.map(fn _row -> generate_row.(rabbit_chance, lettuce_chance, width) end)
+    |> Enum.join("\n")
+
+  output_directory = IO.gets("output directory") |> String.trim()
+  file_name = IO.gets("file name") |> String.trim()
+
+  output_file = "#{output_directory}/#{file_name}"
+
+  File.write(output_file, map)
+end
+```
+
+## Inputs
+
+<!-- livebook:{"livebook_object":"cell_input","name":"output directory","type":"text","value":"examples/rabbits/lib/maps"} -->
+
+<!-- livebook:{"livebook_object":"cell_input","name":"file name","type":"text","value":"map_100x100.txt"} -->
+
+<!-- livebook:{"livebook_object":"cell_input","name":"width","type":"number","value":"100"} -->
+
+<!-- livebook:{"livebook_object":"cell_input","name":"height","type":"number","value":"100"} -->
+
+<!-- livebook:{"livebook_object":"cell_input","name":"rabbit chance","type":"text","value":"0.05"} -->
+
+<!-- livebook:{"livebook_object":"cell_input","name":"lettuce chance","type":"text","value":"0.1"} -->
+
+## Running
+
+```elixir
+generate_map.()
+```
