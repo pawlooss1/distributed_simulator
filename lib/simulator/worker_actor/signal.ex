@@ -12,19 +12,24 @@ defmodule Simulator.WorkerActor.Signal do
   Calculates signal update for all cells.
   """
   @spec calculate_signal_updates(Nx.t(), fun()) :: Nx.t()
+  @defn_compiler {EXLA, client: :default}
   defn calculate_signal_updates(grid, generate_signal) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     {_i, _grid, update_grid} =
       while {i = 1, grid, update_grid = Nx.broadcast(0, Nx.shape(grid))},
             Nx.less(i, x_size - 1) do
-        {_i, _j, grid, update_grid} =
-          while {i, j = 1, grid, update_grid}, Nx.less(j, y_size - 1) do
-            update_grid = signal_update_for_cell(i, j, grid, update_grid, generate_signal)
+        update_for_row = Nx.broadcast(0, {y_size, 8})
+        
+        {_i, _j, grid, update_for_row} =
+          while {i, j = 1, grid, update_for_row}, Nx.less(j, y_size - 1) do
+            update_for_cell = signal_update_for_cell(i, j, grid, generate_signal)
+            update_for_row = Nx.put_slice(update_for_row, [j, 1], Nx.broadcast(update_for_cell, {1, 8}))
 
-            {i, j + 1, grid, update_grid}
+            {i, j + 1, grid, update_for_row}
           end
 
+        update_grid = Nx.put_slice(update_grid, [i, 1, 1], Nx.broadcast(update_for_row, {1, y_size, 8}))  
         {i + 1, grid, update_grid}
       end
 
@@ -32,25 +37,27 @@ defmodule Simulator.WorkerActor.Signal do
   end
 
   # Standard signal update for given cell.
-  defnp signal_update_for_cell(x, y, grid, update_grid, generate_signal) do
-    {_x, _y, _dir, _grid, update_grid} =
-      while {x, y, dir = 1, grid, update_grid}, Nx.less(dir, 9) do
+  defnp signal_update_for_cell(x, y, grid, generate_signal) do
+    signals_update = Nx.broadcast(0, {8})
+
+    {_x, _y, _dir, _grid, signals_update} =
+      while {x, y, dir = 1, grid, signals_update}, Nx.less(dir, 9) do
         # coords of a cell that we consider signal from
         {x2, y2} = shift({x, y}, dir)
 
         if is_valid({x2, y2}, grid) do
           update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
 
-          update_grid =
-            Nx.put_slice(update_grid, [x, y, dir], Nx.broadcast(update_value, {1, 1, 1}))
+          signals_update = 
+            Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
 
-          {x, y, dir + 1, grid, update_grid}
+          {x, y, dir + 1, grid, signals_update}
         else
-          {x, y, dir + 1, grid, update_grid}
+          {x, y, dir + 1, grid, signals_update}
         end
       end
 
-    update_grid
+    signals_update
   end
 
   # Calculate generated + propagated signal.

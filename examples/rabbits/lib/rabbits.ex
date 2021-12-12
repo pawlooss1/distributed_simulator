@@ -18,7 +18,7 @@ defmodule Rabbits do
     objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
     metrics = Nx.tensor([0, 0, 0, 0, 0, 0])
 
-    Simulation.start(grid, objects_state, metrics, 4, {4, 8})
+    Simulation.start(grid, objects_state, metrics, 4, {4, 4})
     :ok
   end
 

@@ -27,6 +27,7 @@ defmodule Simulator.WorkerActor.Plans do
   Creates plans for every cell in the grid.
   """
   @spec create_plans(Types.index(), Nx.t(), Nx.t(), fun()) :: Nx.t()
+  @defn_compiler {EXLA, client: :default}
   defn create_plans(iteration, grid, objects_state, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
