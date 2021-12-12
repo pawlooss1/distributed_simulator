@@ -61,13 +61,12 @@ defmodule Simulator.WorkerActor do
       objects_state: objects_state,
       metrics: metrics,
       metrics_save_step: metrics_save_step,
+      start_time: DateTime.utc_now(),
       stashed: []
     }
 
     Printer.create_visualization_directory(location)
     Printer.create_metrics_directory(location)
-
-    {x, y} = location
     {:ok, state}
   end
 
@@ -121,15 +120,15 @@ defmodule Simulator.WorkerActor do
       state =
         state
         |> Map.merge(%{
-            accepted_plans: accepted_plans,
-            grid: updated_grid,
-            old_grid: grid,
-            objects_state: updated_objects_state,
-            old_objects_state: objects_state,
-            phase: :remote_consequences,
-            plans: plans,
-            processed_neighbors: 0
-          })
+          accepted_plans: accepted_plans,
+          grid: updated_grid,
+          old_grid: grid,
+          objects_state: updated_objects_state,
+          old_objects_state: objects_state,
+          phase: :remote_consequences,
+          plans: plans,
+          processed_neighbors: 0
+        })
         |> unstash_messages()
 
       {:noreply, state}
@@ -184,12 +183,12 @@ defmodule Simulator.WorkerActor do
       state =
         state
         |> Map.merge(%{
-            grid: updated_grid,
-            objects_state: objects_state,
-            processed_neighbors: 0,
-            phase: :remote_signal,
-            signal_update: signal_update
-          })
+          grid: updated_grid,
+          objects_state: objects_state,
+          processed_neighbors: 0,
+          phase: :remote_signal,
+          signal_update: signal_update
+        })
         |> unstash_messages()
 
       {:noreply, state}
@@ -261,12 +260,16 @@ defmodule Simulator.WorkerActor do
   end
 
   defp start_new_iteration(%{iteration: iteration} = state) when iteration >= @max_iterations do
-    Printer.write_to_file(state)
+    # Printer.write_to_file(state)
+    {x, y} = state.location
+    dt2 = DateTime.utc_now()
+    diff = DateTime.diff(dt2, state.start_time, :millisecond)
+    IO.inspect("all done for #{x} #{y} in #{diff}")
     {:stop, :normal, state}
   end
 
   defp start_new_iteration(state) do
-    Printer.write_to_file(state)
+    # Printer.write_to_file(state)
 
     %{grid: grid, iteration: iteration, objects_state: objects_state} = state
 
@@ -275,7 +278,7 @@ defmodule Simulator.WorkerActor do
 
     distribute_plans(state, plans)
 
-    state = 
+    state =
       state
       |> Map.merge(%{phase: :remote_plans, plans: plans, processed_neighbors: 0})
       |> unstash_messages()
