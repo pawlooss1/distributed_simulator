@@ -14,7 +14,21 @@ defmodule Simulator.Simulation do
       ) do
     grid
     |> split_grid_among_workers(objects_state, workers_by_dim, metrics, metrics_save_step)
-    |> Enum.each(fn {_location, worker_pid} -> send(worker_pid, :start) end)
+    |> Enum.each(fn {location, worker_pid} ->
+      IO.inspect({location, worker_pid})
+      GenServer.cast({:global, location}, :start)
+    end)
+  end
+
+  @spec get_next_node(integer, integer, integer, integer) :: any
+  def get_next_node(r, c, workers_rows, workers_cols) do
+    num_nodes = length(Node.list()) + 1
+    worker_idx = workers_cols * (r - 1) + c - 1
+
+    all_workers = workers_cols * workers_rows
+    node_idx = div(worker_idx * num_nodes, all_workers)
+
+    [Node.self() | Node.list()] |> Enum.at(node_idx)
   end
 
   def split_grid_among_workers(grid, state, {workers_x, workers_y}, metrics, metrics_save_step) do
@@ -35,6 +49,7 @@ defmodule Simulator.Simulation do
               metrics_save_step
             )
 
+    :timer.sleep(1000)
     workers = Map.new(workers) |> link_workers()
 
     IO.inspect(workers)
@@ -65,13 +80,33 @@ defmodule Simulator.Simulation do
     local_objects_state = bigger_state[[range_x, range_y]]
 
     # Printer.print_objects(local_grid, {x, y})
-    {:ok, pid} =
-      WorkerActor.start(
-        grid: local_grid,
-        objects_state: local_objects_state,
-        location: {x, y},
-        metrics: metrics,
-        metrics_save_step: metrics_save_step
+    node = get_next_node(x, y, workers_x, workers_y)
+
+    pid =
+      Node.spawn(
+        node,
+        fn ->
+          {:ok, pid} =
+            GenServer.start(
+              WorkerActor,
+              [
+                grid: local_grid,
+                objects_state: local_objects_state,
+                location: {x, y},
+                metrics: metrics,
+                metrics_save_step: metrics_save_step
+              ],
+              name: {:global, {x, y}}
+            )
+
+          ref = Process.monitor(pid)
+
+          # Wait until the process monitored by `ref` is down.
+          receive do
+            {:DOWN, ^ref, _, _, _} ->
+              IO.puts("Process #{inspect(pid)} is down")
+          end
+        end
       )
 
     {{x, y}, pid}
@@ -79,25 +114,24 @@ defmodule Simulator.Simulation do
 
   defp link_workers(workers) do
     workers
-    |> Enum.each(fn {loc, worker} ->
-      send(worker, {:neighbors, create_neighbors(loc, workers)})
+    |> Enum.each(fn {loc, _pid} ->
+      GenServer.cast({:global, loc}, {:neighbors, create_neighbors(loc, workers)})
     end)
 
     workers
   end
 
   defp create_neighbors(location, workers) do
-    directions_to_pids =
+    directions_to_locs =
       @directions
-      |> Enum.map(fn direction -> {direction, workers[shift(location, direction)]} end)
-      |> Enum.reject(fn {_direction, pid} -> pid == nil end)
+      |> Enum.map(fn direction -> {direction, {:global, shift(location, direction)}} end)
+      |> Enum.reject(fn {_direction, {:global, loc}} -> workers[loc] == nil end)
 
-    pids_to_directions =
-      directions_to_pids
-      |> Enum.reject(fn {_direction, pid} -> pid == nil end)
-      |> Enum.map(fn {direction, pid} -> {pid, direction} end)
+    locs_to_directions =
+      directions_to_locs
+      |> Enum.map(fn {direction, loc} -> {loc, direction} end)
 
-    Map.new(directions_to_pids ++ pids_to_directions)
+    Map.new(directions_to_locs ++ locs_to_directions)
   end
 
   defp start_idx(1, dim_size, worker_count), do: 0

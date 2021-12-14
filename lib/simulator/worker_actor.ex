@@ -61,17 +61,17 @@ defmodule Simulator.WorkerActor do
       objects_state: objects_state,
       metrics: metrics,
       metrics_save_step: metrics_save_step,
+      start_time: DateTime.utc_now(),
       stashed: []
     }
 
     Printer.create_visualization_directory(location)
     Printer.create_metrics_directory(location)
-
     {:ok, state}
   end
 
   @impl true
-  def handle_info({:neighbors, neighbors}, state) do
+  def handle_cast({:neighbors, neighbors}, state) do
     state =
       Map.merge(state, %{
         neighbors: neighbors,
@@ -82,12 +82,12 @@ defmodule Simulator.WorkerActor do
     {:noreply, state}
   end
 
-  def handle_info(:start, state), do: start_new_iteration(state)
+  def handle_cast(:start, state), do: start_new_iteration(state)
 
   # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
-  def handle_info({:remote_plans, pid, tensor}, %{phase: :remote_plans} = state) do
+  def handle_cast({:remote_plans, pid, tensor}, %{phase: :remote_plans} = state) do
     %{
       grid: grid,
       neighbors: neighbors,
@@ -120,15 +120,15 @@ defmodule Simulator.WorkerActor do
       state =
         state
         |> Map.merge(%{
-            accepted_plans: accepted_plans,
-            grid: updated_grid,
-            old_grid: grid,
-            objects_state: updated_objects_state,
-            old_objects_state: objects_state,
-            phase: :remote_consequences,
-            plans: plans,
-            processed_neighbors: 0
-          })
+          accepted_plans: accepted_plans,
+          grid: updated_grid,
+          old_grid: grid,
+          objects_state: updated_objects_state,
+          old_objects_state: objects_state,
+          phase: :remote_consequences,
+          plans: plans,
+          processed_neighbors: 0
+        })
         |> unstash_messages()
 
       {:noreply, state}
@@ -137,7 +137,7 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info(
+  def handle_cast(
         {:remote_consequences, pid, updated_grid, updated_objects_state, new_accepted_plans},
         %{phase: :remote_consequences} = state
       ) do
@@ -176,19 +176,19 @@ defmodule Simulator.WorkerActor do
 
       # TODO in the future could get object state as well ?
       generate_signal = &@module_prefix.Cell.generate_signal/1
-      signal_update = Signal.calculate_signal_updates(updated_grid, generate_signal)
+      signal_update = EXLA.jit(&Signal.calculate_signal_updates(&1, generate_signal), [updated_grid])
 
       distribute_signal(state, signal_update)
 
       state =
         state
         |> Map.merge(%{
-            grid: updated_grid,
-            objects_state: objects_state,
-            processed_neighbors: 0,
-            phase: :remote_signal,
-            signal_update: signal_update
-          })
+          grid: updated_grid,
+          objects_state: objects_state,
+          processed_neighbors: 0,
+          phase: :remote_signal,
+          signal_update: signal_update
+        })
         |> unstash_messages()
 
       {:noreply, state}
@@ -205,7 +205,7 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info({:remote_signal, pid, remote_signal_update}, %{phase: :remote_signal} = state) do
+  def handle_cast({:remote_signal, pid, remote_signal_update}, %{phase: :remote_signal} = state) do
     %{
       grid: grid,
       old_grid: old_grid,
@@ -254,18 +254,22 @@ defmodule Simulator.WorkerActor do
     end
   end
 
-  def handle_info(message, state) do
+  def handle_cast(message, state) do
     state = Map.update!(state, :stashed, fn stashed -> [message | stashed] end)
     {:noreply, state}
   end
 
   defp start_new_iteration(%{iteration: iteration} = state) when iteration >= @max_iterations do
-    Printer.write_to_file(state)
+    # Printer.write_to_file(state)
+    {x, y} = state.location
+    dt2 = DateTime.utc_now()
+    diff = DateTime.diff(dt2, state.start_time, :millisecond)
+    IO.inspect("all done for #{x} #{y} in #{diff}")
     {:stop, :normal, state}
   end
 
   defp start_new_iteration(state) do
-    Printer.write_to_file(state)
+    # Printer.write_to_file(state)
 
     %{grid: grid, iteration: iteration, objects_state: objects_state} = state
 
@@ -274,7 +278,7 @@ defmodule Simulator.WorkerActor do
 
     distribute_plans(state, plans)
 
-    state = 
+    state =
       state
       |> Map.merge(%{phase: :remote_plans, plans: plans, processed_neighbors: 0})
       |> unstash_messages()
@@ -282,21 +286,21 @@ defmodule Simulator.WorkerActor do
     {:noreply, state}
   end
 
-  def unstash_messages(%{stashed: stashed} = state) do
-    Enum.each(stashed, fn message -> send(self(), message) end)
+  def unstash_messages(%{location: location, stashed: stashed} = state) do
+    Enum.each(stashed, fn message -> GenServer.cast({:global, location}, message) end)
     %{state | stashed: []}
   end
 
   # sends each plan to worker managing cells affected by this plan
-  defp distribute_plans(%{neighbors: neighbors}, plans) do
+  defp distribute_plans(%{neighbors: neighbors, location: loc}, plans) do
     tensors = [{plans, &slice_start/2, &slice_length/2}]
 
-    send_to_neighbors(neighbors, :remote_plans, tensors)
+    send_to_neighbors(neighbors, :remote_plans, tensors, loc)
   end
 
   # sends each consequence to worker managing cells affected by this plan consequence
   defp distribute_consequences(
-         %{neighbors: neighbors},
+         %{neighbors: neighbors, location: loc},
          updated_grid,
          objects_state,
          accepted_plans
@@ -307,16 +311,16 @@ defmodule Simulator.WorkerActor do
       {accepted_plans, &slice_start_plans/2, &slice_length_plans/2}
     ]
 
-    send_to_neighbors(neighbors, :remote_consequences, tensors)
+    send_to_neighbors(neighbors, :remote_consequences, tensors, loc)
   end
 
   # sends each signal to worker managing cells affected by this signal
-  defp distribute_signal(%{neighbors: neighbors}, signal_update) do
+  defp distribute_signal(%{neighbors: neighbors, location: loc}, signal_update) do
     tensors = [{signal_update, &slice_start/2, &slice_length/2}]
-    send_to_neighbors(neighbors, :remote_signal, tensors)
+    send_to_neighbors(neighbors, :remote_signal, tensors, loc)
   end
 
-  defp send_to_neighbors(neighbors, message_atom, tensors) do
+  defp send_to_neighbors(neighbors, message_atom, tensors, loc) do
     neighbors
     |> Map.keys()
     |> Enum.filter(fn key -> key in @directions end)
@@ -329,10 +333,10 @@ defmodule Simulator.WorkerActor do
 
           Nx.slice(tensor, start, length)
         end)
-        |> then(fn tensors -> [message_atom, self()] ++ tensors end)
+        |> then(fn tensors -> [message_atom, {:global, loc}] ++ tensors end)
         |> List.to_tuple()
 
-      send(neighbors[direction], message)
+      GenServer.cast(neighbors[direction], message)
     end)
   end
 
@@ -453,5 +457,10 @@ defmodule Simulator.WorkerActor do
     |> Nx.shape()
     |> Tuple.to_list()
     |> then(fn [_x_size, _y_size | rest] -> rest end)
+  end
+
+  def unstash_messages(%{stashed: stashed} = state) do
+    Enum.each(stashed, fn message -> GenServer.cast(self(), message) end)
+    %{state | stashed: []}
   end
 end
