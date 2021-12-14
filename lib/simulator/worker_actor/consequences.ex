@@ -14,7 +14,6 @@ defmodule Simulator.WorkerActor.Consequences do
   # TODO maybe should receive old objects_state as well?
   """
   @spec apply_consequences(Nx.t(), Nx.t(), Nx.t(), Nx.t(), fun()) :: {Nx.t(), Nx.t()}
-  @defn_compiler {EXLA, client: :default}
   defn apply_consequences(grid, objects_state, plans, accepted_plans, apply_consequence) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 

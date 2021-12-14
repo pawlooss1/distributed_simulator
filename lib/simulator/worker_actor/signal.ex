@@ -12,7 +12,6 @@ defmodule Simulator.WorkerActor.Signal do
   Calculates signal update for all cells.
   """
   @spec calculate_signal_updates(Nx.t(), fun()) :: Nx.t()
-  @defn_compiler {EXLA, client: :default}
   defn calculate_signal_updates(grid, generate_signal) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
@@ -104,7 +103,6 @@ defmodule Simulator.WorkerActor.Signal do
   TODO currently it truncates signal values if they are not integers.
     We can consider rounding them instead.
   """
-  @defn_compiler {EXLA, client: :default}
   @spec apply_signal_update(Nx.t(), Nx.t(), fun()) :: Nx.t()
   defn apply_signal_update(grid, signal_update, signal_factor) do
     signal_factors = map_signal_factor(grid, signal_factor)

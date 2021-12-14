@@ -27,7 +27,6 @@ defmodule Simulator.WorkerActor.Plans do
   Creates plans for every cell in the grid.
   """
   @spec create_plans(Types.index(), Nx.t(), Nx.t(), fun()) :: Nx.t()
-  @defn_compiler {EXLA, client: :default}
   defn create_plans(iteration, grid, objects_state, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
@@ -55,7 +54,6 @@ defmodule Simulator.WorkerActor.Plans do
   applied in the `:remote_consequences` phase.
   """
   @spec process_plans(Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: {Nx.t(), Nx.t(), Nx.t()}
-  @defn_compiler {EXLA, client: :default}
   defn process_plans(grid, plans, objects_state, is_update_valid?, apply_action) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
     order_length = x_size * y_size

@@ -176,7 +176,7 @@ defmodule Simulator.WorkerActor do
 
       # TODO in the future could get object state as well ?
       generate_signal = &@module_prefix.Cell.generate_signal/1
-      signal_update = Signal.calculate_signal_updates(updated_grid, generate_signal)
+      signal_update = EXLA.jit(&Signal.calculate_signal_updates(&1, generate_signal), [updated_grid])
 
       distribute_signal(state, signal_update)
 

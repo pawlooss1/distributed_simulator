@@ -12,13 +12,12 @@ defmodule Rabbits do
   """
   @spec start() :: :ok
   def start() do
-    # grid = read_grid("map_1")
-    grid = read_grid("map_4")
+    grid = read_grid("map_100x100")
     {x, y, _z} = Nx.shape(grid)
     objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
     metrics = Nx.tensor([0, 0, 0, 0, 0, 0])
 
-    Simulation.start(grid, objects_state, metrics, 4, {1, 2})
+    Simulation.start(grid, objects_state, metrics, 4, {4, 4})
     :ok
   end
 
