@@ -229,7 +229,6 @@ defmodule Simulator.WorkerActor do
       signal_factor = &@module_prefix.Cell.signal_factor/1
       updated_grid = Signal.apply_signal_update(grid, signal_update, signal_factor)
 
-      # TODO metrics function here
       calculate_metrics = &@module_prefix.Metrics.calculate_metrics/6
 
       new_metrics =

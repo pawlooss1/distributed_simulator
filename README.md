@@ -1,35 +1,22 @@
 # Distributed Simulator
+Framework for creating generic distributed simulations.
 
-Firstly, install dependencies:
+It requires implementing a few callbacks to create a new simulation. There are two example simulations for reference. 
+## Installation
+It requires Elixir 1.11 or newer and Erlang 22 or newer.
+
+## Testing
+Framework works only with some simulation. However, you can run tests.
+
+Firstly, download dependencies:
 ```bash
 mix deps.get
 ```
 
-Then run:
+And then run the tests:
 ```bash
-mix run --no-halt run.exs
+mix test
 ```
-
-Optionally, you can provide environment variable `APP_MODE` to run specified implementation, e.g.:
-```bash
-APP_MODE=comparison mix run --no-halt run.exs
-```
-There are three modes: `nx`, `standard` and `comparison`. `nx` is default.
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `distributed_simulator` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:distributed_simulator, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/distributed_simulator](https://hexdocs.pm/distributed_simulator).
+## Documentation
+Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc).
 

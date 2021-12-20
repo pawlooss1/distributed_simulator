@@ -3,7 +3,8 @@ defmodule Simulator.Metrics do
   Module which should be `used` by exactly one module in every
   simulation. That module will be called Metrics module.
 
-  TODO more
+  The only callback is `calculate_metrics/6`. Among them arguments it
+  receives metrics from previous iterations and returns new ones.
   """
 
   alias Simulator.Types
