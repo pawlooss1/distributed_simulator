@@ -1,6 +1,6 @@
 # Rabbits
 
-Implementation of Rabbits using Distributed Simulator framework.
+Implementation of Rabbits and Lettuce using Distributed Simulator framework.
 
 To run the simulation type:
 

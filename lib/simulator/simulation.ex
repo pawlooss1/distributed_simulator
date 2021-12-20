@@ -1,9 +1,12 @@
 defmodule Simulator.Simulation do
   @moduledoc """
+  Entry point. Every simulation should call 
+  Simulator.Simulation.start/5.
   """
+
   use Simulator.BaseConstants
 
-  alias Simulator.{Helpers, WorkerActor, Printer}
+  alias Simulator.{Helpers, Printer, WorkerActor}
 
   def start(
         grid,
