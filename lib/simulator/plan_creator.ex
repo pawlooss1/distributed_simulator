@@ -3,7 +3,7 @@ defmodule Simulator.PlanCreator do
   Module which should be `used` by exactly one module in every
   simulation. That module will be called PlanCreator module.
 
-  Using module have to implement function `create_plan/6` which will
+  Using module have to implement function `create_plan/5` which will
   be responsible for creating plans for every dynamic object in the
   simulation. Function should return a tuple `{direction, plan}`
   where `plan` is a one dimensional tensor with two elements: `[action, consequence]`
@@ -17,7 +17,6 @@ defmodule Simulator.PlanCreator do
   @callback create_plan(
               x_index :: Types.index(),
               y_index :: Types.index(),
-              plans :: Nx.t(),
               grid :: Nx.t(),
               objects_state :: Nx.t(),
               iterations :: Types.index()

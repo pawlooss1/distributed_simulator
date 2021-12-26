@@ -24,7 +24,8 @@ defmodule Evacuation.MixProject do
       [
         {:nx, path: "/Users/samuelheldak/studies/nx/nx", override: true},
         {:distributed_simulator,
-         path: "/Users/samuelheldak/studies/distributed_simulator", override: true}
+         path: "/Users/samuelheldak/studies/distributed_simulator",},
+         {:exla, path: "/Users/samuelheldak/studies/nx/exla", override: true}
       ]
     else
       [

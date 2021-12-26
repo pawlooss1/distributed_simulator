@@ -9,7 +9,7 @@ defmodule Simulator.TestCallbacks do
   import Nx.Defn
   import Simulator.Helpers
 
-  defn create_plan(i, j, _plans, grid, _objects_state, _iteration) do
+  defn create_plan(i, j, grid, _objects_state, _iteration) do
     cond do
       Nx.equal(grid[i][j][0], @object_1) ->
         create_plan_object_1(i, j, grid)

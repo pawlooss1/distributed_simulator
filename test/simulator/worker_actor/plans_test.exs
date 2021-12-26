@@ -11,7 +11,7 @@ defmodule Simulator.WorkerActor.PlansTest do
   alias Simulator.WorkerActor.Plans
 
   test "create_plans/4 creates plans correctly" do
-    assert Plans.create_plans(0, grid(), 0, &create_plan/6) == plans()
+    assert Plans.create_plans(0, grid(), 0, &create_plan/5) == plans()
   end
 
   test "process_plans/5 processes plans correctly" do

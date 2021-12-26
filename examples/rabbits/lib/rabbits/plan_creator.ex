@@ -6,7 +6,7 @@ defmodule Rabbits.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, plans, grid, objects_state, iteration) do
+  defn create_plan(i, j, grid, objects_state, iteration) do
     cond do
       Nx.equal(grid[i][j][0], @rabbit) ->
         create_plan_rabbit(i, j, grid, objects_state)

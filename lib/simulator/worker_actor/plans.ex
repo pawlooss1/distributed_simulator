@@ -37,7 +37,7 @@ defmodule Simulator.WorkerActor.Plans do
         {_i, _j, plans, _grid, _objects_state, _iteration} =
           while {i, j = 1, plans, grid, objects_state, iteration},
                 Nx.less(j, y_size - 1) do
-            plan_as_tuple = create_plan.(i, j, plans, grid, objects_state, iteration)
+            plan_as_tuple = create_plan.(i, j, grid, objects_state, iteration)
             plans = add_plan(plans, i, j, plan_to_tensor(plan_as_tuple))
             {i, j + 1, plans, grid, objects_state, iteration}
           end

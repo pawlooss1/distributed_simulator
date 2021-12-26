@@ -176,7 +176,9 @@ defmodule Simulator.WorkerActor do
 
       # TODO in the future could get object state as well ?
       generate_signal = &@module_prefix.Cell.generate_signal/1
-      signal_update = EXLA.jit(&Signal.calculate_signal_updates(&1, generate_signal), [updated_grid])
+
+      signal_update =
+        EXLA.jit(&Signal.calculate_signal_updates(&1, generate_signal), [updated_grid])
 
       distribute_signal(state, signal_update)
 
@@ -259,7 +261,7 @@ defmodule Simulator.WorkerActor do
   end
 
   defp start_new_iteration(%{iteration: iteration} = state) when iteration >= @max_iterations do
-    # Printer.write_to_file(state)
+    Printer.write_to_file(state)
     {x, y} = state.location
     dt2 = DateTime.utc_now()
     diff = DateTime.diff(dt2, state.start_time, :millisecond)
@@ -268,11 +270,18 @@ defmodule Simulator.WorkerActor do
   end
 
   defp start_new_iteration(state) do
-    # Printer.write_to_file(state)
+    %{
+      grid: grid,
+      iteration: iteration,
+      objects_state: objects_state,
+      metrics_save_step: metrics_save_step
+    } = state
 
-    %{grid: grid, iteration: iteration, objects_state: objects_state} = state
+    if rem(iteration, metrics_save_step) == 0 do
+      Printer.write_to_file(state)
+    end
 
-    create_plan = &@module_prefix.PlanCreator.create_plan/6
+    create_plan = &@module_prefix.PlanCreator.create_plan/5
     plans = Plans.create_plans(iteration, grid, objects_state, create_plan)
 
     distribute_plans(state, plans)

@@ -19,16 +19,20 @@ defmodule Simulator.WorkerActor.Signal do
       while {i = 1, grid, update_grid = Nx.broadcast(0, Nx.shape(grid))},
             Nx.less(i, x_size - 1) do
         update_for_row = Nx.broadcast(0, {y_size, 8})
-        
+
         {_i, _j, grid, update_for_row} =
           while {i, j = 1, grid, update_for_row}, Nx.less(j, y_size - 1) do
             update_for_cell = signal_update_for_cell(i, j, grid, generate_signal)
-            update_for_row = Nx.put_slice(update_for_row, [j, 1], Nx.broadcast(update_for_cell, {1, 8}))
+
+            update_for_row =
+              Nx.put_slice(update_for_row, [j, 1], Nx.broadcast(update_for_cell, {1, 8}))
 
             {i, j + 1, grid, update_for_row}
           end
 
-        update_grid = Nx.put_slice(update_grid, [i, 1, 1], Nx.broadcast(update_for_row, {1, y_size, 8}))  
+        update_grid =
+          Nx.put_slice(update_grid, [i, 1, 1], Nx.broadcast(update_for_row, {1, y_size, 8}))
+
         {i + 1, grid, update_grid}
       end
 
@@ -47,7 +51,7 @@ defmodule Simulator.WorkerActor.Signal do
         if is_valid({x2, y2}, grid) do
           update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
 
-          signals_update = 
+          signals_update =
             Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
 
           {x, y, dir + 1, grid, signals_update}

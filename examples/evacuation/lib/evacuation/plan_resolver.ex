@@ -44,5 +44,4 @@ defmodule Evacuation.PlanResolver do
     end
     {new_object, Nx.broadcast(new_state, {1, 1})}
   end
-
 end
