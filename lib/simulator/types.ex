@@ -1,6 +1,6 @@
 defmodule Simulator.Types do
   @moduledoc """
-  Module containing types shared between modules in te Simulator.
+  Module containing type shared between modules in the Simulator.
   """
 
   @type index :: non_neg_integer

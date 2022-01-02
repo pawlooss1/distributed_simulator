@@ -1,9 +1,9 @@
 defmodule Simulator.Printer do
   @moduledoc """
-  Prints grid in (relatively) readable way.
+  Module responsible for saving visualization data and metrics to
+  the files. Additionally contatins functions helpful in debugging.
   """
 
-  # TODO used one
   import Nx.Defn
 
   @visualization_path "lib/grid_iterations"
@@ -48,7 +48,10 @@ defmodule Simulator.Printer do
     end
   end
 
-  def create_metrics_directory(location) do
+  @doc """
+  Creates directory for metrics of the worker located in {`x`, `y`}.
+  """
+  def create_metrics_directory(_location) do
     unless File.exists?(@metrics_path) do
       File.mkdir!(@metrics_path)
     end
@@ -89,19 +92,9 @@ defmodule Simulator.Printer do
     IO.puts(if description == nil, do: string, else: "#{description}\n#{string}\n")
   end
 
-  def print_state(grid, phase \\ nil) do
-    unless phase == nil, do: IO.inspect(phase)
-
-    {_x_size, y_size} = Nx.shape(grid)
-
-    Nx.to_flat_list(grid)
-    |> Enum.map(fn num -> to_string(num) end)
-    |> Enum.chunk_every(y_size)
-    |> Enum.map(fn line -> Enum.join(line, " ") end)
-    |> Enum.join("\n")
-    |> IO.puts()
-  end
-
+  @doc """
+  Prints 3D tensor in readable way. Useful during debugging. 
+  """
   def print_3d_tensor(tensor, description \\ nil) do
     {_x_size, y_size, z_size} = Nx.shape(tensor)
 
@@ -119,6 +112,9 @@ defmodule Simulator.Printer do
     IO.puts(if description == nil, do: string, else: "#{description}\n#{string}\n")
   end
 
+  @doc """
+  Prints objects state in readable way. Useful during debugging. 
+  """
   def print_objects_state(objects_state, description \\ nil) do
     {_x_size, y_size} = Nx.shape(objects_state)
 
@@ -132,6 +128,9 @@ defmodule Simulator.Printer do
     IO.puts(if description == nil, do: string, else: "#{description}\n#{string}\n")
   end
 
+  @doc """
+  Prints accepted plans in readable way. Useful during debugging. 
+  """
   def print_accepted_plans(accepted_plans, description \\ nil) do
     {_x_size, y_size} = Nx.shape(accepted_plans)
 

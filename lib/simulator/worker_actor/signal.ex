@@ -103,9 +103,6 @@ defmodule Simulator.WorkerActor.Signal do
   - A - `@signal_attenuation_factor`;
   - f - `signal_factor` function - returned value depends on the
     contents of the cell.
-
-  TODO currently it truncates signal values if they are not integers.
-    We can consider rounding them instead.
   """
   @spec apply_signal_update(Nx.t(), Nx.t(), fun()) :: Nx.t()
   defn apply_signal_update(grid, signal_update, signal_factor) do

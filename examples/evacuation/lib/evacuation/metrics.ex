@@ -2,10 +2,8 @@ defmodule Evacuation.Metrics do
   use Evacuation.Constants
   use Simulator.Metrics
 
-  import Nx.Defn
-
   @impl true
-  def calculate_metrics(metrics, old_grid, old_objects_state, grid, objects_state, iterations) do
+  def calculate_metrics(metrics, old_grid, _old_objects_state, _grid, _objects_state, iterations) do
       iterations = max(iterations, 1)
       {x, y, _z} = Nx.shape(old_grid)
       fire_cells =

@@ -6,7 +6,7 @@ defmodule Simulator.Simulation do
 
   use Simulator.BaseConstants
 
-  alias Simulator.{Helpers, Printer, WorkerActor}
+  alias Simulator.{Helpers, WorkerActor}
 
   def start(
         grid,

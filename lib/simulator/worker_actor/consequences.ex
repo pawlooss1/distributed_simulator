@@ -11,7 +11,6 @@ defmodule Simulator.WorkerActor.Consequences do
 
   @doc """
   Applies all consequences from the accepted plans.
-  # TODO maybe should receive old objects_state as well?
   """
   @spec apply_consequences(Nx.t(), Nx.t(), Nx.t(), Nx.t(), fun()) :: {Nx.t(), Nx.t()}
   defn apply_consequences(grid, objects_state, plans, accepted_plans, apply_consequence) do

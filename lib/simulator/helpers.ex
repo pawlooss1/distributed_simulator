@@ -55,11 +55,17 @@ defmodule Simulator.Helpers do
     |> Nx.all?()
   end
 
+  @doc """
+  Checks whether `plan_a == plan_b and object_a == object_b`.
+  """
   @spec plans_objects_match(Nx.t(), Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
   defn plans_objects_match(plan_a, plan_b, object_a, object_b) do
     plans_match(plan_a, plan_b) and Nx.equal(object_a, object_b)
   end
 
+  @doc """
+  Checks whether `plan_a == plan_b`.
+  """
   @spec plans_match(Nx.t(), Nx.t()) :: Nx.t()
   defn plans_match(plan_a, plan_b) do
     Nx.all?(Nx.equal(plan_a, plan_b))

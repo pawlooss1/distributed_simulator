@@ -466,9 +466,4 @@ defmodule Simulator.WorkerActor do
     |> Tuple.to_list()
     |> then(fn [_x_size, _y_size | rest] -> rest end)
   end
-
-  def unstash_messages(%{stashed: stashed} = state) do
-    Enum.each(stashed, fn message -> GenServer.cast(self(), message) end)
-    %{state | stashed: []}
-  end
 end
