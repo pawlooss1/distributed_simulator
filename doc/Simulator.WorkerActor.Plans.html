@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.26.0">
+    <meta name="project" content="distributed_simulator v0.1.0">
+
+    <title>Simulator.WorkerActor.Plans — distributed_simulator v0.1.0</title>
+    <link rel="stylesheet" href="dist/elixir-b5076885a795c65e636c.css" />
+
+    <script src="dist/sidebar_items-9ed9036304.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/app-a404e1e870b77c874f9e.js"></script>
+
+
+  </head>
+  <body data-type="modules">
+    <script>
+
+      try {
+        if (localStorage.getItem('night-mode') === 'true') {
+          document.body.classList.add('night-mode');
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+<button class="sidebar-button sidebar-toggle">
+  <span class="icon-menu" title="Collapse/expand sidebar"></span>
+</button>
+
+<section class="sidebar">
+  <form class="sidebar-search" action="search.html">
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <span class="icon-search" aria-hidden="true" title="Submit search"></span>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
+      <span class="icon-cross" aria-hidden="true" title="Cancel search"></span>
+    </button>
+    <label class="search-label">
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" />
+    </label>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectDetails">
+      <a href="readme.html" class="sidebar-projectName" translate="no">
+distributed_simulator
+      </a>
+      <strong class="sidebar-projectVersion" translate="no">
+        v0.1.0
+      </strong>
+    </div>
+
+  </div>
+
+  <ul class="sidebar-listNav">
+    <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+
+      <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+
+
+  </ul>
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1>
+  <span translate="no">Simulator.WorkerActor.Plans</span> 
+  <small class="app-vsn" translate="no">(distributed_simulator v0.1.0)</small>
+
+
+</h1>
+
+
+  <section id="moduledoc">
+<p>Module contataining Worker's functions responsible for the plans.</p><p>Each plan is a tensor: [direction, action, consequence].</p><p><code class="inline">direction</code> - a plan contains an action towards a specific
+  neighboring cell. <code class="inline">Direction</code> indicates it.</p><p><code class="inline">action</code> - what should be the state of the target cell (pointed by
+  <code class="inline">direction</code>).</p><p><code class="inline">consequence</code> - what should be in the current cell if the plan will
+  be executed.</p><p>Example: a person wants to move up: [@dir_up, @person, @empty].</p>
+  </section>
+
+
+  <section id="summary" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#summary">
+        <span class="icon-link" aria-hidden="true"></span>
+        <span class="sr-only">Link to this section</span>
+      </a>
+      Summary
+    </h1>
+
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#create_plans/4" translate="no">create_plans(iteration, grid, objects_state, create_plan)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>Creates plans for every cell in the grid.</p></div>
+
+      </div>
+
+      <div class="summary-row">
+        <div class="summary-signature">
+          <a href="#process_plans/5" translate="no">process_plans(grid, plans, objects_state, is_update_valid?, apply_action)</a>
+
+        </div>
+
+          <div class="summary-synopsis"><p>The function decides which plans are accepted and update the grid
+by putting <code class="inline">action</code> in the proper cells. <code class="inline">Consequences</code> will be
+applied in the <code class="inline">:remote_consequences</code> phase.</p></div>
+
+      </div>
+
+  </div>
+
+  </section>
+
+
+  <section id="functions" class="details-list">
+    <h1 class="section-heading">
+      <a class="hover-link" href="#functions">
+        <span class="icon-link" aria-hidden="true"></span>
+        <span class="sr-only">Link to this section</span>
+      </a>
+Functions
+    </h1>
+    <div class="functions-list">
+<section class="detail" id="create_plans/4">
+
+  <div class="detail-header">
+    <a href="#create_plans/4" class="detail-link" title="Link to this function">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">create_plans(iteration, grid, objects_state, create_plan)</h1>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <h2>Specs</h2>
+      <div class="specs">
+
+          <pre translate="no">create_plans(<a href="Simulator.Types.html#t:index/0">Simulator.Types.index</a>(), <a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>(), <a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>(), (... -&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>())) :: <a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>()</pre>
+
+      </div>
+
+<p>Creates plans for every cell in the grid.</p>
+  </section>
+</section>
+<section class="detail" id="process_plans/5">
+
+  <div class="detail-header">
+    <a href="#process_plans/5" class="detail-link" title="Link to this function">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">process_plans(grid, plans, objects_state, is_update_valid?, apply_action)</h1>
+
+
+  </div>
+
+  <section class="docstring">
+
+      <h2>Specs</h2>
+      <div class="specs">
+
+          <pre translate="no">process_plans(<a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>(), <a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>(), <a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>(), (... -&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>()), (... -&gt; <a href="https://hexdocs.pm/elixir/typespecs.html#basic-types">any</a>())) ::
+  {<a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>(), <a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>(), <a href="https://hexdocs.pm/nx/0.1.0-dev/Nx.html#t:t/0">Nx.t</a>()}</pre>
+
+      </div>
+
+<p>The function decides which plans are accepted and update the grid
+by putting <code class="inline">action</code> in the proper cells. <code class="inline">Consequences</code> will be
+applied in the <code class="inline">:remote_consequences</code> phase.</p>
+  </section>
+</section>
+
+    </div>
+  </section>
+
+      <footer class="footer">
+
+        <p>
+          <span class="line">
+            Built using
+            <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.26.0) for the
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>.
+          </span>
+          <span class="line">
+            Designed by
+            <a href="https://twitter.com/dignifiedquire" target="_blank" rel="noopener" title="@dignifiedquire" translate="no">Friedel Ziegelmayer</a>.
+          </span>
+        </p>
+        <p>
+
+            <a href="api-reference.html" title="API reference" class="line footer-button">API Reference</a>
+
+          <button class="line footer-button display-shortcuts-help">
+            Display keyboard shortcuts
+          </button>
+          <button class="line footer-button display-quick-switch">
+            Go to a HexDocs package
+          </button>
+          <button class="line footer-button display-settings">
+            Settings
+          </button>
+        </p>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+
+
+  </body>
+</html>

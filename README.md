@@ -1,7 +1,12 @@
 # Distributed Simulator
 Framework for creating generic distributed simulations.
 
-It requires implementing a few callbacks to create a new simulation. There are two example simulations for reference. 
+It requires implementing a few callbacks to create a new simulation. 
+
+There are two example simulations for reference:
+- [Evacuation](https://github.com/agga1/distributed_simulator/tree/master/examples/evacuation)
+- [Rabbits and Lettuce](https://github.com/agga1/distributed_simulator/tree/master/examples/rabbits)
+
 ## Installation
 It requires Elixir 1.11 or newer and Erlang 22 or newer.
 

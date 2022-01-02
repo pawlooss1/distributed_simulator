@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.26.0">
+    <meta name="project" content="distributed_simulator v0.1.0">
+
+    <title>API Reference — distributed_simulator v0.1.0</title>
+    <link rel="stylesheet" href="dist/elixir-b5076885a795c65e636c.css" />
+
+    <script src="dist/sidebar_items-9ed9036304.js"></script>
+
+      <script src="docs_config.js"></script>
+
+    <script async src="dist/app-a404e1e870b77c874f9e.js"></script>
+
+
+  </head>
+  <body data-type="extras">
+    <script>
+
+      try {
+        if (localStorage.getItem('night-mode') === 'true') {
+          document.body.classList.add('night-mode');
+        }
+      } catch (error) { }
+    </script>
+
+<div class="main">
+
+<button class="sidebar-button sidebar-toggle">
+  <span class="icon-menu" title="Collapse/expand sidebar"></span>
+</button>
+
+<section class="sidebar">
+  <form class="sidebar-search" action="search.html">
+    <button type="submit" class="search-button" aria-label="Submit Search">
+      <span class="icon-search" aria-hidden="true" title="Submit search"></span>
+    </button>
+    <button type="button" tabindex="-1" class="search-close-button" aria-label="Cancel Search">
+      <span class="icon-cross" aria-hidden="true" title="Cancel search"></span>
+    </button>
+    <label class="search-label">
+      <input name="q" type="text" class="search-input" placeholder="Search..." aria-label="Input your search terms" autocomplete="off" />
+    </label>
+  </form>
+
+  <div class="autocomplete">
+    <div class="autocomplete-results">
+    </div>
+  </div>
+
+  <div class="sidebar-header">
+    <div class="sidebar-projectDetails">
+      <a href="readme.html" class="sidebar-projectName" translate="no">
+distributed_simulator
+      </a>
+      <strong class="sidebar-projectVersion" translate="no">
+        v0.1.0
+      </strong>
+    </div>
+
+  </div>
+
+  <ul class="sidebar-listNav">
+    <li><a id="extras-list-link" href="#full-list">Pages</a></li>
+
+      <li><a id="modules-list-link" href="#full-list">Modules</a></li>
+
+
+  </ul>
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+<h1 id="content">
+API Reference <small class="app-vsn">distributed_simulator v0.1.0</small>
+
+</h1>
+
+
+  <section class="details-list">
+    <h2 id="modules" class="section-heading">
+  <a href="#modules" class="hover-link"><span class="icon-link" aria-hidden="true"></span></a>
+  Modules
+</h2>
+
+    <div class="summary">
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.BaseConstants.html" translate="no">Simulator.BaseConstants</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Constant module to be used inside framework core. Contatins only
+base constants which are shared between all simulations.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.Cell.html" translate="no">Simulator.Cell</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module which should be <code class="inline">used</code> by exactly one module in every
+simulation. That module will be called Cell module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.Constants.html" translate="no">Simulator.Constants</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module which should be <code class="inline">used</code> in the Constant module in every
+simulation. Constant module provides other modules with useful
+constants (as Nx requires numbers, it is a workaround to make code
+more readables).</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.Helpers.html" translate="no">Simulator.Helpers</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module containing useful functions (<code class="inline">defn</code>s).</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.Metrics.html" translate="no">Simulator.Metrics</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module which should be <code class="inline">used</code> by exactly one module in every
+simulation. That module will be called Metrics module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.PlanCreator.html" translate="no">Simulator.PlanCreator</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module which should be <code class="inline">used</code> by exactly one module in every
+simulation. That module will be called PlanCreator module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.PlanResolver.html" translate="no">Simulator.PlanResolver</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module which should be <code class="inline">used</code> by exactly one module in every
+simulation. That module will be called PlanResolver module.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.Printer.html" translate="no">Simulator.Printer</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module responsible for saving visualization data and metrics to
+the files. Additionally contatins functions helpful in debugging.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.Simulation.html" translate="no">Simulator.Simulation</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Entry point. Every simulation should call 
+Simulator.Simulation.start/5.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.Types.html" translate="no">Simulator.Types</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module containing type shared between modules in the Simulator.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.WorkerActor.html" translate="no">Simulator.WorkerActor</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>GenServer responsible for simulating one shard.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.WorkerActor.Consequences.html" translate="no">Simulator.WorkerActor.Consequences</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module contataining a Worker's function responsible for the 
+consequences.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.WorkerActor.Plans.html" translate="no">Simulator.WorkerActor.Plans</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module contataining Worker's functions responsible for the plans.</p></div>
+
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="Simulator.WorkerActor.Signal.html" translate="no">Simulator.WorkerActor.Signal</a>
+
+  </div>
+
+    <div class="summary-synopsis"><p>Module contataining Worker's functions responsible for the signal.</p></div>
+
+</div>
+
+    </div>
+  </section>
+
+
+<div class="bottom-actions">
+  <div class="bottom-actions-item">
+
+  </div>
+  <div class="bottom-actions-item">
+
+      <a href="readme.html" class="bottom-actions-button" rel="next">
+        <span class="subheader">
+          Next Page →
+        </span>
+        <span class="title">
+Distributed Simulator
+        </span>
+      </a>
+
+  </div>
+</div>
+
+      <footer class="footer">
+
+        <p>
+          <span class="line">
+            Built using
+            <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" target="_blank" rel="help noopener" translate="no">ExDoc</a> (v0.26.0) for the
+            <a href="https://elixir-lang.org" title="Elixir" target="_blank" translate="no">Elixir programming language</a>.
+          </span>
+          <span class="line">
+            Designed by
+            <a href="https://twitter.com/dignifiedquire" target="_blank" rel="noopener" title="@dignifiedquire" translate="no">Friedel Ziegelmayer</a>.
+          </span>
+        </p>
+        <p>
+
+            <a href="api-reference.html" title="API reference" class="line footer-button">API Reference</a>
+
+          <button class="line footer-button display-shortcuts-help">
+            Display keyboard shortcuts
+          </button>
+          <button class="line footer-button display-quick-switch">
+            Go to a HexDocs package
+          </button>
+          <button class="line footer-button display-settings">
+            Settings
+          </button>
+        </p>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+
+
+  </body>
+</html>
