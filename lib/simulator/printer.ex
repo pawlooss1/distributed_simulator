@@ -4,8 +4,6 @@ defmodule Simulator.Printer do
   the files. Additionally contatins functions helpful in debugging.
   """
 
-  import Nx.Defn
-
   @visualization_path "lib/grid_iterations"
   @metrics_path "metrics"
 

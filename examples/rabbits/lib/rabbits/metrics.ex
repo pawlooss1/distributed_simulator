@@ -2,8 +2,6 @@ defmodule Rabbits.Metrics do
   use Rabbits.Constants
   use Simulator.Metrics
 
-  import Nx.Defn
-
   @impl true
   def calculate_metrics(metrics, old_grid, old_objects_state, grid, objects_state, iterations) do
     # metrics store 6 values: rabbits alive now, sum of rabbits alive in all previous steps, average alive rabbits in any step,

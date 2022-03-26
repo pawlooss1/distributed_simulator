@@ -40,7 +40,7 @@ defmodule DistributedSimulator.MixProject do
       [
         {:nx, path: "/Users/agnieszkadutka/repos/inz/nx/nx", override: true},
         {:exla, path: "/Users/agnieszkadutka/repos/inz/nx/exla", override: true},
-        {:ex_doc, "~> 0.24", only: :dev,}
+        {:ex_doc, "~> 0.24", only: :dev}
       ]
     end
   end

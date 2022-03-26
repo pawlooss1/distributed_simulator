@@ -18,8 +18,15 @@ defmodule Evacuation do
     metrics = Nx.tensor([0,0,0])
     Printer.clean_grid_iterations()
 
-    Simulation.start(grid, objects_state, metrics)
-    :ok
+    parameters = %{
+      grid: grid,
+      metrics: metrics,
+      metrics_save_step: 5,
+      objects_state: objects_state,
+      workers_by_dim: {3, 2}
+    }
+
+    Simulation.start(parameters)
   end
 
   defp read_grid(file_name) do

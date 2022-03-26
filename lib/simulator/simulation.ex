@@ -1,123 +1,142 @@
 defmodule Simulator.Simulation do
   @moduledoc """
-  Entry point. Every simulation should call 
-  Simulator.Simulation.start/5.
+  Entry point of the simulation. Every simulation should call Simulator.Simulation.start/5.
   """
 
   use Simulator.BaseConstants
 
   alias Simulator.{Helpers, WorkerActor}
 
-  def start(
-        grid,
-        objects_state,
-        metrics \\ Nx.tensor(0),
-        metrics_save_step \\ 5,
-        workers_by_dim \\ {2, 3}
-      ) do
-    grid
-    |> split_grid_among_workers(objects_state, workers_by_dim, metrics, metrics_save_step)
-    |> Enum.each(fn {location, worker_pid} ->
-      IO.inspect({location, worker_pid})
-      GenServer.cast({:global, location}, :start)
-    end)
+  @typedoc """
+  Parameters needed to initialize a simulation.
+
+  ## Fields
+
+    * `grid` - Initial grid as 3D tensor.
+    * `metrics` - Initial metrics as 3D tensor.
+    * `metrics_save_step` - Number of iterations between saving metrics.
+    * `objects_state` - Initial state of objects in the grid (Nx tensor). At least two dimensions.
+    * `workers_by_dim` - Number of workers in both dimensions (grid has to be rectangular).
+
+  """
+  @type simulation_params_t :: %{
+          grid: Nx.t(),
+          metrics: Nx.t(),
+          metrics_save_step: pos_integer(),
+          objects_state: Nx.t(),
+          workers_by_dim: {pos_integer(), pos_integer()}
+        }
+
+  @spec start(simulation_params_t()) :: :ok
+  def start(params) do
+    params
+    |> extend_grid()
+    |> split_grid_among_workers()
+    |> link_workers()
+    |> start_workers()
   end
 
-  @spec get_next_node(integer, integer, integer, integer) :: any
-  def get_next_node(r, c, workers_rows, workers_cols) do
-    num_nodes = length(Node.list()) + 1
-    worker_idx = workers_cols * (r - 1) + c - 1
-
-    all_workers = workers_cols * workers_rows
-    node_idx = div(worker_idx * num_nodes, all_workers)
-
-    [Node.self() | Node.list()] |> Enum.at(node_idx)
-  end
-
-  def split_grid_among_workers(grid, state, {workers_x, workers_y}, metrics, metrics_save_step) do
-    {bigger_grid, bigger_state} = add_margins(grid, state)
-
-    workers =
-      for i <- 1..workers_x,
-          j <- 1..workers_y,
-          do:
-            create_worker(
-              i,
-              j,
-              workers_x,
-              workers_y,
-              bigger_grid,
-              bigger_state,
-              metrics,
-              metrics_save_step
-            )
-
-    :timer.sleep(1000)
-    workers = Map.new(workers) |> link_workers()
-
-    IO.inspect(workers)
-  end
-
-  defp add_margins(grid, state) do
+  defp extend_grid(%{grid: grid, objects_state: objects_state} = params) do
     {x, y, z} = Nx.shape(grid)
-    bigger_grid = Nx.broadcast(0, {x + 2, y + 2, z})
-    bigger_grid = Nx.put_slice(bigger_grid, [1, 1, 0], grid)
 
-    state_shape = Nx.shape(state) |> put_elem(0, x + 2) |> put_elem(1, y + 2)
-    rem_dims_idxs = List.duplicate(0, tuple_size(state_shape) - 2)
-
-    bigger_state =
+    extended_grid =
       0
-      |> Nx.broadcast(state_shape)
-      |> Nx.put_slice([1, 1 | rem_dims_idxs], state)
+      |> Nx.broadcast({x + 2, y + 2, z})
+      |> Nx.put_slice([1, 1, 0], grid)
 
-    {bigger_grid, bigger_state}
+    objects_state_shape =
+      objects_state
+      |> Nx.shape()
+      |> put_elem(0, x + 2)
+      |> put_elem(1, y + 2)
+
+    remaining_dimensions_indices = List.duplicate(0, tuple_size(objects_state_shape) - 2)
+
+    extended_objects_state =
+      0
+      |> Nx.broadcast(objects_state_shape)
+      |> Nx.put_slice([1, 1 | remaining_dimensions_indices], objects_state)
+
+    Map.merge(params, %{grid: extended_grid, objects_state: extended_objects_state})
   end
 
-  defp create_worker(x, y, workers_x, workers_y, grid, bigger_state, metrics, metrics_save_step) do
+  defp split_grid_among_workers(params) do
+    %{
+      grid: grid,
+      metrics: metrics,
+      metrics_save_step: metrics_save_step,
+      objects_state: objects_state,
+      workers_by_dim: {workers_x, workers_y} = workers_by_dim
+    } = params
+
+    for x <- 1..workers_x, y <- 1..workers_y do
+      location = {x, y}
+
+      {grid_fragment, state_fragment} = split_grid(grid, objects_state, location, workers_by_dim)
+
+      initial_state = [
+        grid: grid_fragment,
+        location: location,
+        objects_state: state_fragment,
+        metrics: metrics,
+        metrics_save_step: metrics_save_step
+      ]
+
+      pid =
+        location
+        |> get_node(workers_by_dim)
+        |> Node.spawn(fn -> spawn_worker(location, initial_state) end)
+
+      {location, pid}
+    end
+    |> Map.new()
+  end
+
+  defp split_grid(grid, state, {x, y}, {workers_x, workers_y}) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
+
     range_x = start_idx(x, x_size, workers_x)..end_idx(x, x_size, workers_x)
     range_y = start_idx(y, y_size, workers_y)..end_idx(y, y_size, workers_y)
 
-    local_grid = grid[[range_x, range_y]]
-    local_objects_state = bigger_state[[range_x, range_y]]
+    {grid[[range_x, range_y]], state[[range_x, range_y]]}
+  end
 
-    # Printer.print_objects(local_grid, {x, y})
-    node = get_next_node(x, y, workers_x, workers_y)
+  defp start_idx(1, _dimension_size, _worker_count), do: 0
 
-    pid =
-      Node.spawn(
-        node,
-        fn ->
-          {:ok, pid} =
-            GenServer.start(
-              WorkerActor,
-              [
-                grid: local_grid,
-                objects_state: local_objects_state,
-                location: {x, y},
-                metrics: metrics,
-                metrics_save_step: metrics_save_step
-              ],
-              name: {:global, {x, y}}
-            )
+  defp start_idx(worker_num, dimension_size, worker_count) do
+    div(dimension_size, worker_count) * (worker_num - 1) - 1
+  end
 
-          ref = Process.monitor(pid)
+  defp end_idx(worker_num, dimension_size, worker_num), do: dimension_size - 1
 
-          # Wait until the process monitored by `ref` is down.
-          receive do
-            {:DOWN, ^ref, _, _, _} ->
-              IO.puts("Process #{inspect(pid)} is down")
-          end
-        end
-      )
+  defp end_idx(worker_num, dimension_size, worker_count) do
+    div(dimension_size, worker_count) * worker_num
+  end
 
-    {{x, y}, pid}
+  defp get_node({x, y}, {workers_x, workers_y}) do
+    num_nodes = length(Node.list()) + 1
+    worker_index = workers_y * (x - 1) + y - 1
+
+    all_workers = workers_y * workers_x
+    node_index = div(worker_index * num_nodes, all_workers)
+
+    [Node.self() | Node.list()] |> Enum.at(node_index)
+  end
+
+  defp spawn_worker(location, initial_state) do
+    {:ok, pid} = GenServer.start(WorkerActor, initial_state, name: {:global, location})
+
+    ref = Process.monitor(pid)
+
+    # Wait until the process monitored by `ref` is down.
+    receive do
+      {:DOWN, ^ref, _, _, _} ->
+        IO.puts("Process #{inspect(pid)} is down")
+    end
   end
 
   defp link_workers(workers) do
-    workers
-    |> Enum.each(fn {loc, _pid} ->
+    Enum.each(workers, fn {loc, _pid} ->
       GenServer.cast({:global, loc}, {:neighbors, create_neighbors(loc, workers)})
     end)
 
@@ -125,32 +144,27 @@ defmodule Simulator.Simulation do
   end
 
   defp create_neighbors(location, workers) do
-    directions_to_locs =
+    directions_to_locations =
       @directions
       |> Enum.map(fn direction -> {direction, {:global, shift(location, direction)}} end)
-      |> Enum.reject(fn {_direction, {:global, loc}} -> workers[loc] == nil end)
+      |> Enum.reject(fn {_direction, {:global, location}} -> workers[location] == nil end)
 
-    locs_to_directions =
-      directions_to_locs
-      |> Enum.map(fn {direction, loc} -> {loc, direction} end)
+    locations_to_directions =
+      directions_to_locations
+      |> Enum.map(fn {direction, location} -> {location, direction} end)
 
-    Map.new(directions_to_locs ++ locs_to_directions)
+    Map.new(directions_to_locations ++ locations_to_directions)
   end
 
-  defp start_idx(1, dim_size, worker_count), do: 0
-
-  defp start_idx(worker_nr, dim_size, worker_count) do
-    div(dim_size, worker_count) * (worker_nr - 1) - 1
+  defp start_workers(workers) do
+    Enum.each(workers, fn {location, worker_pid} ->
+      IO.inspect({location, worker_pid})
+      GenServer.cast({:global, location}, :start)
+    end)
   end
 
-  defp end_idx(worker_nr, dim_size, worker_nr), do: dim_size - 1
-
-  defp end_idx(worker_nr, dim_size, worker_count) do
-    div(dim_size, worker_count) * worker_nr
-  end
-
-  def shift(location, direction) do
+  defp shift(location, direction) do
     {x, y} = Helpers.shift(location, direction)
-    {Nx.to_scalar(x), Nx.to_scalar(y)}
+    {Nx.to_number(x), Nx.to_number(y)}
   end
 end

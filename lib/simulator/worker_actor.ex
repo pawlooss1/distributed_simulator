@@ -3,79 +3,54 @@ defmodule Simulator.WorkerActor do
   GenServer responsible for simulating one shard.
 
   There are three phases of every iteration:
-  - `:remote_plans` - plans are processed. Some of them are accepted,
-    some discarded. Result of the processing is distributed among
-    neighboring shards;
-  - `:remote_consequences` - consequences derived from the accepted
-    plans are applied to the grid. Additionally, signal update is
-    calculated and distributed to the neighboring shards;
-  - `:remote_signal` - signal is applied to the grid. Next iteration
-    is started. If iteration's number does not exceed the
-    maximum number of iterations set in the cofiguration, plans are
+  - `:remote_plans` - plans are processed. Some of them are accepted, some discarded. Result of the
+    processing is distributed among neighboring shards;
+  - `:remote_consequences` - consequences derived from the accepted plans are applied to the grid.
+    Additionally, signal update is calculated and distributed to the neighboring shards;
+  - `:remote_signal` - signal is applied to the grid. Next iteration is started. If iteration's
+    number does not exceed the maximum number of iterations set in the cofiguration, plans are
     created and distributed to the neighboring shards;
 
-  First iteration starts with creating plans, so it is in the middle
-  of `:remote_signal` phase.
+  First iteration starts with creating plans, so it is in the middle of `:remote_signal` phase.
   """
 
   use GenServer
   use Simulator.BaseConstants
 
-  alias Simulator.WorkerActor.{Consequences, Plans, Signal}
   alias Simulator.Printer
+  alias Simulator.WorkerActor.{Consequences, Plans, Signal}
 
   @doc """
   Starts the WorkerActor.
-
-  TODO use some supervisor.
   """
   @spec start(keyword(Nx.t())) :: GenServer.on_start()
-  def start(
-        grid: grid,
-        objects_state: objects_state,
-        location: location,
-        metrics: metrics,
-        metrics_save_step: metrics_save_step
-      ) do
-    GenServer.start(__MODULE__,
-      grid: grid,
-      objects_state: objects_state,
-      location: location,
-      metrics: metrics,
-      metrics_save_step: metrics_save_step
-    )
+  def start(args) do
+    GenServer.start(__MODULE__, args)
   end
 
   @impl true
-  def init(
-        grid: grid,
-        objects_state: objects_state,
-        location: location,
-        metrics: metrics,
-        metrics_save_step: metrics_save_step
-      ) do
-    state = %{
-      grid: grid,
-      iteration: 0,
-      location: location,
-      objects_state: objects_state,
-      metrics: metrics,
-      metrics_save_step: metrics_save_step,
-      start_time: DateTime.utc_now(),
-      stashed: []
-    }
+  def init(args) do
+    %{location: location} =
+      state =
+      args
+      |> Map.new()
+      |> Map.merge(%{iteration: 0, start_time: DateTime.utc_now(), stashed: []})
 
     Printer.create_visualization_directory(location)
     Printer.create_metrics_directory(location)
+
     {:ok, state}
   end
 
   @impl true
   def handle_cast({:neighbors, neighbors}, state) do
+    # neighbors is a bidirectional map
+    neighbors_count = neighbors |> map_size() |> div(2)
+
     state =
       Map.merge(state, %{
         neighbors: neighbors,
-        neighbors_count: neighbors |> map_size() |> div(2),
+        neighbors_count: neighbors_count,
         processed_neighbors: 0
       })
 
@@ -174,7 +149,6 @@ defmodule Simulator.WorkerActor do
           apply_consequence
         )
 
-      # TODO in the future could get object state as well ?
       generate_signal = &@module_prefix.Cell.generate_signal/1
 
       signal_update =
@@ -227,7 +201,6 @@ defmodule Simulator.WorkerActor do
     signal_update = Nx.put_slice(signal_update, location, remote_signal_update)
 
     if neighbors_count == processed_neighbors + 1 do
-      # TODO should signal factor depend on object state?
       signal_factor = &@module_prefix.Cell.signal_factor/1
       updated_grid = Signal.apply_signal_update(grid, signal_update, signal_factor)
 
@@ -294,58 +267,28 @@ defmodule Simulator.WorkerActor do
     {:noreply, state}
   end
 
-  def unstash_messages(%{location: location, stashed: stashed} = state) do
-    Enum.each(stashed, fn message -> GenServer.cast({:global, location}, message) end)
-    %{state | stashed: []}
-  end
-
   # sends each plan to worker managing cells affected by this plan
-  defp distribute_plans(%{neighbors: neighbors, location: loc}, plans) do
+  defp distribute_plans(state, plans) do
     tensors = [{plans, &slice_start/2, &slice_length/2}]
 
-    send_to_neighbors(neighbors, :remote_plans, tensors, loc)
+    send_to_neighbors(state.neighbors, :remote_plans, tensors, state.location)
   end
 
   # sends each consequence to worker managing cells affected by this plan consequence
-  defp distribute_consequences(
-         %{neighbors: neighbors, location: loc},
-         updated_grid,
-         objects_state,
-         accepted_plans
-       ) do
+  defp distribute_consequences(state, updated_grid, objects_state, accepted_plans) do
     tensors = [
       {updated_grid, &slice_start/2, &slice_length/2},
       {objects_state, &slice_start/2, &slice_length/2},
       {accepted_plans, &slice_start_plans/2, &slice_length_plans/2}
     ]
 
-    send_to_neighbors(neighbors, :remote_consequences, tensors, loc)
+    send_to_neighbors(state.neighbors, :remote_consequences, tensors, state.location)
   end
 
   # sends each signal to worker managing cells affected by this signal
-  defp distribute_signal(%{neighbors: neighbors, location: loc}, signal_update) do
+  defp distribute_signal(state, signal_update) do
     tensors = [{signal_update, &slice_start/2, &slice_length/2}]
-    send_to_neighbors(neighbors, :remote_signal, tensors, loc)
-  end
-
-  defp send_to_neighbors(neighbors, message_atom, tensors, loc) do
-    neighbors
-    |> Map.keys()
-    |> Enum.filter(fn key -> key in @directions end)
-    |> Enum.each(fn direction ->
-      message =
-        tensors
-        |> Enum.map(fn {tensor, start_fun, length_fun} ->
-          start = start_fun.(tensor, direction)
-          length = length_fun.(tensor, direction)
-
-          Nx.slice(tensor, start, length)
-        end)
-        |> then(fn tensors -> [message_atom, {:global, loc}] ++ tensors end)
-        |> List.to_tuple()
-
-      GenServer.cast(neighbors[direction], message)
-    end)
+    send_to_neighbors(state.neighbors, :remote_signal, tensors, state.location)
   end
 
   defp slice_start(tensor, direction) do
@@ -437,6 +380,33 @@ defmodule Simulator.WorkerActor do
       end
 
     length ++ cell_shape
+  end
+
+  defp send_to_neighbors(neighbors, message_atom, tensors, location) do
+    neighbors
+    |> Map.keys()
+    |> Enum.filter(fn key -> key in @directions end)
+    |> Enum.each(&do_send_to_neighbors(&1, neighbors, message_atom, tensors, location))
+  end
+
+  defp do_send_to_neighbors(direction, neighbors, message_atom, tensors, location) do
+    message =
+      tensors
+      |> Enum.map(fn {tensor, start_fun, length_fun} ->
+        start = start_fun.(tensor, direction)
+        length = length_fun.(tensor, direction)
+
+        Nx.slice(tensor, start, length)
+      end)
+      |> then(fn tensors -> [message_atom, {:global, location}] ++ tensors end)
+      |> List.to_tuple()
+
+    GenServer.cast(neighbors[direction], message)
+  end
+
+  defp unstash_messages(%{location: location, stashed: stashed} = state) do
+    Enum.each(stashed, fn message -> GenServer.cast({:global, location}, message) end)
+    %{state | stashed: []}
   end
 
   # it uses information that @rejected = 0 and @accepted = 1

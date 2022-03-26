@@ -1,6 +1,6 @@
 defmodule Simulator.Helpers do
   @moduledoc """
-  Module containing useful functions (`defn`s).
+  Module containing useful functions (numerical definitions).
   """
 
   use Simulator.BaseConstants
@@ -10,7 +10,7 @@ defmodule Simulator.Helpers do
   alias Simulator.Types
 
   @doc """
-  Returns coordinates of the cell being in `direction` from the given {`x`, `y`}.
+  Returns coordinates of the cell being in `direction` from the given `{x, y}`.
   """
   @spec shift({Types.index(), Types.index()}, Nx.t()) :: {Types.index(), Types.index()}
   defn shift({x, y}, direction) do
