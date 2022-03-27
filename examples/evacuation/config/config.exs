@@ -1,7 +1,10 @@
 import Config
 
 config :distributed_simulator,
-  module_prefix: Evacuation,
   max_iterations: 25,
-  signal_suppression_factor: 0.4,
-  signal_attenuation_factor: 0.4
+  module_cell: Evacuation.Cell,
+  module_metrics: Evacuation.Metrics,
+  module_plan_creator: Evacuation.PlanCreator,
+  module_plan_resolver: Evacuation.PlanResolver,
+  signal_attenuation_factor: 0.4,
+  signal_suppression_factor: 0.4

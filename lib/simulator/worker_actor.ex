@@ -17,6 +17,8 @@ defmodule Simulator.WorkerActor do
   use GenServer
   use Simulator.BaseConstants
 
+  import Simulator.Callbacks
+
   alias Simulator.Printer
   alias Simulator.WorkerActor.{Consequences, Plans, Signal}
 
@@ -78,16 +80,13 @@ defmodule Simulator.WorkerActor do
     plans = Nx.put_slice(plans, location, tensor)
 
     if neighbors_count == processed_neighbors + 1 do
-      is_update_valid? = &@module_prefix.PlanResolver.is_update_valid?/2
-      apply_action = &@module_prefix.PlanResolver.apply_action/3
-
       {updated_grid, accepted_plans, updated_objects_state} =
         Plans.process_plans(
           grid,
           plans,
           objects_state,
-          is_update_valid?,
-          apply_action
+          &is_update_valid?/2,
+          &apply_action/3
         )
 
       distribute_consequences(state, updated_grid, updated_objects_state, accepted_plans)
@@ -138,21 +137,19 @@ defmodule Simulator.WorkerActor do
     accepted_plans = put_at(accepted_plans, location_plans, new_accepted_plans)
 
     if neighbors_count == processed_neighbors + 1 do
-      apply_consequence = &@module_prefix.PlanResolver.apply_consequence/3
-
       {updated_grid, objects_state} =
         Consequences.apply_consequences(
           grid,
           objects_state,
           plans,
           accepted_plans,
-          apply_consequence
+          &apply_consequence/3
         )
 
-      generate_signal = &@module_prefix.Cell.generate_signal/1
-
       signal_update =
-        EXLA.jit(&Signal.calculate_signal_updates(&1, generate_signal), [updated_grid])
+        EXLA.jit(fn grid -> Signal.calculate_signal_updates(grid, &generate_signal/1) end, [
+          updated_grid
+        ])
 
       distribute_signal(state, signal_update)
 
@@ -201,13 +198,10 @@ defmodule Simulator.WorkerActor do
     signal_update = Nx.put_slice(signal_update, location, remote_signal_update)
 
     if neighbors_count == processed_neighbors + 1 do
-      signal_factor = &@module_prefix.Cell.signal_factor/1
-      updated_grid = Signal.apply_signal_update(grid, signal_update, signal_factor)
-
-      calculate_metrics = &@module_prefix.Metrics.calculate_metrics/6
+      updated_grid = Signal.apply_signal_update(grid, signal_update, &signal_factor/1)
 
       new_metrics =
-        calculate_metrics.(metrics, old_grid, old_objects_state, grid, objects_state, iteration)
+        calculate_metrics(metrics, old_grid, old_objects_state, grid, objects_state, iteration)
 
       state =
         Map.merge(state, %{
@@ -254,8 +248,7 @@ defmodule Simulator.WorkerActor do
       Printer.write_to_file(state)
     end
 
-    create_plan = &@module_prefix.PlanCreator.create_plan/5
-    plans = Plans.create_plans(iteration, grid, objects_state, create_plan)
+    plans = Plans.create_plans(iteration, grid, objects_state, &create_plan/5)
 
     distribute_plans(state, plans)
 

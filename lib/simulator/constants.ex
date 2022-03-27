@@ -26,8 +26,6 @@ defmodule Simulator.Constants do
       defmacro __using__(_opts) do
         quote location: :keep do
           # constants set in simulation's config file
-          @module_prefix Application.compile_env!(:distributed_simulator, :module_prefix)
-
           @max_iterations Application.compile_env!(:distributed_simulator, :max_iterations)
 
           @signal_suppression_factor Application.compile_env!(
