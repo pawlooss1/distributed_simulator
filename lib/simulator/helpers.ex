@@ -42,7 +42,7 @@ defmodule Simulator.Helpers do
       Nx.less(y, y_size)
     ]
     |> Nx.stack()
-    |> Nx.all?()
+    |> Nx.all()
   end
 
   @doc """
@@ -52,7 +52,7 @@ defmodule Simulator.Helpers do
   defn both_equal(a, a_ref, b, b_ref) do
     [Nx.equal(a, a_ref), Nx.equal(b, b_ref)]
     |> Nx.stack()
-    |> Nx.all?()
+    |> Nx.all()
   end
 
   @doc """
@@ -68,7 +68,7 @@ defmodule Simulator.Helpers do
   """
   @spec plans_match(Nx.t(), Nx.t()) :: Nx.t()
   defn plans_match(plan_a, plan_b) do
-    Nx.all?(Nx.equal(plan_a, plan_b))
+    Nx.all(Nx.equal(plan_a, plan_b))
   end
 
   @doc """

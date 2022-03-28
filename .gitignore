@@ -25,6 +25,9 @@ distributed_simulator-*.tar
 
 /.idea
 
+# atom plugin's working directory
+/.elixir_ls
+
 grid_iterations/
 
 movie.mp4

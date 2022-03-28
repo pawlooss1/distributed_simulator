@@ -73,7 +73,7 @@ defmodule Evacuation.PlanCreator do
   defnp can_burn({x, y}, grid) do
     [is_valid({x, y}, grid), Nx.not_equal(grid[x][y][0], @obstacle)]
     |> Nx.stack()
-    |> Nx.all?()
+    |> Nx.all()
   end
 
   defnp create_plan_other(_i, _j, _grid) do
