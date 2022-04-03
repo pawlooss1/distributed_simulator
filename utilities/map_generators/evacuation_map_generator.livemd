@@ -76,13 +76,13 @@ end
 
 ## Inputs
 
-<!-- livebook:{"livebook_object":"cell_input","name":"output directory","type":"text","value":"examples/evacuation/lib/maps"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"output directory","type":"text","value":"../examples/evacuation/lib/maps"} -->
 
-<!-- livebook:{"livebook_object":"cell_input","name":"file name","type":"text","value":"map_100x100.txt"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"file name","type":"text","value":"map_15x15.txt"} -->
 
-<!-- livebook:{"livebook_object":"cell_input","name":"width","type":"number","value":"100"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"width","type":"number","value":"15"} -->
 
-<!-- livebook:{"livebook_object":"cell_input","name":"height","type":"number","value":"100"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"height","type":"number","value":"15"} -->
 
 <!-- livebook:{"livebook_object":"cell_input","name":"exits","type":"number","value":"3"} -->
 

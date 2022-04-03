@@ -108,11 +108,11 @@ defmodule Simulator.WorkerActor.Signal do
   defn apply_signal_update(grid, signal_update, signal_factor) do
     signal_factors = map_signal_factor(grid, signal_factor)
 
-    signal = Nx.slice_axis(grid, 1, 8, 2)
+    signal = Nx.slice_along_axis(grid, 1, 8, [axis: 2])
 
     updated_signal =
       signal_update
-      |> Nx.slice_axis(1, 8, 2)
+      |> Nx.slice_along_axis(1, 8, [axis: 2])
       |> Nx.multiply(@signal_suppression_factor)
       |> Nx.add(signal)
       |> Nx.multiply(@signal_attenuation_factor)

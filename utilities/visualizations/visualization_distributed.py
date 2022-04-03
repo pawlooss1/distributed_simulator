@@ -1,18 +1,20 @@
+""" Script displays and saves to an mp4 file simulation reconstructed from saved grids from multiple workers.
+
+Needed arguments:
+grids_dir: directory with folders from each worker, where all grids' snapshots are stored.
+Each worker produces a folder with a name 'row_col' where row and column number represents its position.
+In each folder there are grids' snapshots:
+        - each file is expected to contain numbers separated by space:
+        - first 2 numbers are x and y dimension, respectively
+        - next are x * y * 9, where each consecutive 9 numbers describe state of single cell (object and directions)
+config_path: path to a csv file specifying animation configuration - currently only color specification available.
+Needed columns are: label, number and color.
+
+example config file:
+    label,number,color
+    rabbit,1,yellow
+    lettuce,2,green
 """
-    Script displays and saves to an mp4 file simulation reconstructed from saved grids from multiple workers.
-    Needed arguments:
-    grids_dir: directory with folders from each worker, where all grids' snapshots are stored.
-    Each worker produces a folder with a name 'row_col' where row and column number represents its position.
-    In each folder there are grids' snapshots:
-         - each file is expected to contain numbers separated by space:
-         - first 2 numbers are x and y dimension, respectively
-         - next are x * y * 9, where each consecutive 9 numbers describe state of single cell (object and directions)
-    config_path: path to a csv file specifying animation configuration - currently only color specification available.
-    Needed columns are: label, number and color.
-    example config file:
-        label,number,color
-        rabbit,1,yellow
-        lettuce,2,green"""
 
 import os
 import numpy as np
@@ -21,19 +23,6 @@ import matplotlib.animation as animation
 from matplotlib import colors
 import csv
 import sys
-
-
-if len(sys.argv) == 3:
-    grids_dir = sys.argv[1]
-    config_path = sys.argv[2]
-else:
-    projects_dir = "/Users/agnieszkadutka/repos/inz/distributed_simulator"
-    simulation = 'rabbits'
-    grids_dir = f"{projects_dir}/examples/{simulation}/lib/grid_iterations"
-    config_path = f"{projects_dir}/examples/{simulation}/config/animation_config.csv"
-    print(f"usage: python animation_distributed.py grids_dir config_path "
-          f"\nusing default paths:\n\tgrids_dir: {grids_dir}\n\tconfig_path: {config_path} ")
-
 
 def read_workers_grids(grids_dir, verbose=False):
     """ reads grids from all the workers and converts them to frames.
@@ -167,6 +156,10 @@ def join_workers_grids(workers):
         x += 1
     return joined_grids
 
+
+projects_dir = sys.argv[1]
+grids_dir = f"{projects_dir}/lib/grid_iterations"
+config_path = f"{projects_dir}/config/animation_config.csv"
 
 workers = read_workers_grids(grids_dir)
 grids = join_workers_grids(workers)

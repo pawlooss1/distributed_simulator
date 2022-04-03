@@ -46,13 +46,13 @@ end
 
 ## Inputs
 
-<!-- livebook:{"livebook_object":"cell_input","name":"output directory","type":"text","value":"lib/maps"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"output directory","type":"text","value":"../examples/rabbits/lib/maps"} -->
 
-<!-- livebook:{"livebook_object":"cell_input","name":"file name","type":"text","value":"map_200x200.txt"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"file name","type":"text","value":"map_15x15.txt"} -->
 
-<!-- livebook:{"livebook_object":"cell_input","name":"width","type":"number","value":"200"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"width","type":"number","value":"15"} -->
 
-<!-- livebook:{"livebook_object":"cell_input","name":"height","type":"number","value":"200"} -->
+<!-- livebook:{"livebook_object":"cell_input","name":"height","type":"number","value":"15"} -->
 
 <!-- livebook:{"livebook_object":"cell_input","name":"rabbit chance","type":"text","value":"0.01"} -->
 
