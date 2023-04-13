@@ -14,7 +14,7 @@ defmodule Rabbits.PlanCreator do
       Nx.equal(grid[i][j][0], @lettuce) ->
         create_plan_lettuce(i, j, grid, iteration)
 
-      :otherwise ->
+      true ->
         create_plan_other(i, j, grid)
     end
   end
@@ -27,7 +27,7 @@ defmodule Rabbits.PlanCreator do
       Nx.greater(objects_state[i][j], @rabbit_reproduction_energy) ->
         rabbit_procreate(grid, i, j)
 
-      :otherwise ->
+     true ->
         rabbit_move(grid, i, j)
     end
   end

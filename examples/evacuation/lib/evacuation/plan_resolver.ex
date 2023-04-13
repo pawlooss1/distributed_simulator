@@ -39,7 +39,7 @@ defmodule Evacuation.PlanResolver do
     {new_object, new_state} =
     cond do
       plans_objects_match(plan, @person_move, object, @person) -> {@empty, old_state}
-      :otherwise ->
+      true ->
         {object, old_state}
     end
     {new_object, Nx.broadcast(new_state, {1, 1})}

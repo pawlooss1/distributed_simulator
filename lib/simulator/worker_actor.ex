@@ -146,10 +146,10 @@ defmodule Simulator.WorkerActor do
           &apply_consequence/3
         )
 
-      signal_update =
-        EXLA.jit(fn grid -> Signal.calculate_signal_updates(grid, &generate_signal/1) end, [
-          updated_grid
-        ])
+      signal_update = Signal.calculate_signal_updates(updated_grid, &generate_signal/1)
+        # EXLA.jit(fn grid -> Signal.calculate_signal_updates(grid, &generate_signal/1) end, [
+        #   updated_grid
+        # ])
 
       distribute_signal(state, signal_update)
 
@@ -240,13 +240,10 @@ defmodule Simulator.WorkerActor do
     %{
       grid: grid,
       iteration: iteration,
-      objects_state: objects_state,
-      metrics_save_step: metrics_save_step
+      objects_state: objects_state
     } = state
 
-    if rem(iteration, metrics_save_step) == 0 do
-      Printer.write_to_file(state)
-    end
+    maybe_write_metrics(state)
 
     plans = Plans.create_plans(iteration, grid, objects_state, &create_plan/5)
 
@@ -258,6 +255,14 @@ defmodule Simulator.WorkerActor do
       |> unstash_messages()
 
     {:noreply, state}
+  end
+
+  defp maybe_write_metrics(%{iteration: iteration, metrics_save_step: metrics_save_step} = state)
+       when rem(iteration, metrics_save_step) == 0 do
+    Printer.write_to_file(state)
+  end
+
+  defp maybe_write_metrics(_) do
   end
 
   # sends each plan to worker managing cells affected by this plan

@@ -14,7 +14,7 @@ defmodule Evacuation.PlanCreator do
         Nx.equal(grid[i][j][0], @fire) ->
           create_plan_fire(i, j, grid, iteration)
 
-        :otherwise ->
+        true ->
           create_plan_other(i, j, grid)
       end
   end

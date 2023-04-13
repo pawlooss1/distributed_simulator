@@ -19,7 +19,6 @@ defmodule Rabbits.MixProject do
 
   defp deps do
     [
-      {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "nx", override: true},
       {:distributed_simulator, path: "../.."}
     ]
   end

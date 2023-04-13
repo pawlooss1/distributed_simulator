@@ -58,10 +58,9 @@ defmodule Simulator.WorkerActor.Plans do
     {x_size, y_size, _z_size} = Nx.shape(grid)
     order_length = x_size * y_size
 
-    order =
-      {order_length}
-      |> Nx.iota()
-      |> Nx.shuffle()
+    # wiem ze brzydko, ale to i tak do wywalki pojdzie
+    order = Nx.iota({order_length})
+    {order, _new_key} = Nx.Random.shuffle(Nx.Random.key(42), order)
 
     {_i, _order, _plans, _old_states, grid, objects_state, _y_size, accepted_plans} =
       while {i = 0, order, plans, old_states = objects_state, grid, objects_state, y_size,

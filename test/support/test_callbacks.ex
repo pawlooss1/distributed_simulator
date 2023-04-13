@@ -1,6 +1,6 @@
 defmodule Simulator.TestCallbacks do
   @moduledoc """
-  There are helper functions that mocks simulation callbacks. They 
+  There are helper functions that mocks simulation callbacks. They
   are meant to be very simple.
   """
 
@@ -17,7 +17,7 @@ defmodule Simulator.TestCallbacks do
       Nx.equal(grid[i][j][0], @object_2) ->
         create_plan_object_2(i, j, grid)
 
-      :otherwise ->
+      true ->
         create_plan_other(i, j, grid)
     end
   end
@@ -90,7 +90,7 @@ defmodule Simulator.TestCallbacks do
       cond do
         plans_objects_match(plan, @move, object, @object_1) -> {@empty, 0}
         plans_objects_match(plan, @destroy, object, @empty) -> {@empty, old_state}
-        :otherwise -> {object, old_state}
+        true -> {object, old_state}
       end
 
     {new_object, Nx.broadcast(new_state, {1, 1})}

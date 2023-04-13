@@ -19,8 +19,6 @@ defmodule Evacuation.MixProject do
 
   defp deps do
     [
-      {:exla, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "exla"},
-      {:nx, "~> 0.1.0-dev", github: "elixir-nx/nx", sparse: "nx", override: true},
       {:distributed_simulator, path: "../.."}
     ]
   end

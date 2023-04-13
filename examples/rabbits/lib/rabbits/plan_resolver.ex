@@ -59,7 +59,7 @@ defmodule Rabbits.PlanResolver do
         plans_objects_match(plan, @rabbit_move, object, @rabbit) ->
           {@empty, old_state}
 
-        :otherwise ->
+        true ->
           {object, old_state}
       end
 
