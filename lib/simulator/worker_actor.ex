@@ -18,6 +18,7 @@ defmodule Simulator.WorkerActor do
   use Simulator.BaseConstants
 
   import Simulator.Callbacks
+  import Nx.Defn
 
   alias Simulator.Printer
   alias Simulator.WorkerActor.{Consequences, Plans, Signal}
@@ -147,9 +148,9 @@ defmodule Simulator.WorkerActor do
         )
 
       signal_update = Signal.calculate_signal_updates(updated_grid, &generate_signal/1)
-        # EXLA.jit(fn grid -> Signal.calculate_signal_updates(grid, &generate_signal/1) end, [
-        #   updated_grid
-        # ])
+      # EXLA.jit(fn grid -> Signal.calculate_signal_updates(grid, &generate_signal/1) end, [
+      #   updated_grid
+      # ])
 
       distribute_signal(state, signal_update)
 
@@ -234,6 +235,39 @@ defmodule Simulator.WorkerActor do
     diff = DateTime.diff(dt2, state.start_time, :millisecond)
     IO.inspect("all done for #{x} #{y} in #{diff}")
     {:stop, :normal, state}
+  end
+
+  defp start_new_iteration(
+         %{
+           grid: grid,
+           iteration: iteration,
+           objects_state: objects_state
+         } = state
+       ) do
+    IO.inspect("Iteration no. #{iteration}")
+    Printer.write_to_file(state)
+
+    {new_grid, new_objects_state} =
+      Iteration.compute(
+        iteration,
+        grid,
+        objects_state,
+        &create_plan/5,
+        &is_update_valid?/2,
+        &apply_action/3,
+        &apply_consequence/3,
+        &generate_signal/1,
+        &signal_factor/1
+      )
+
+    new_state = %{
+      state
+      | grid: new_grid,
+        iteration: iteration + 1,
+        objects_state: new_objects_state
+    }
+
+    start_new_iteration(new_state)
   end
 
   defp start_new_iteration(state) do
