@@ -60,7 +60,7 @@ defmodule Evacuation.PlanCreator do
         end
 
       if availability_size > 0 do
-        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
+        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 32})
         {availability[index], @fire_spread}
       else
         {@dir_stay, @plan_keep}

@@ -52,7 +52,7 @@ defmodule Rabbits.PlanCreator do
       end
 
     if availability_size > 0 do
-      index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
+      index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 32})
       {availability[index], @rabbit_procreate}
     else
       {@dir_stay, @rabbit_rest}
@@ -101,7 +101,7 @@ defmodule Rabbits.PlanCreator do
         end
 
       if availability_size > 0 do
-        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
+        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 32})
         {availability[index], @lettuce_grow}
       else
         {@dir_stay, @plan_keep}

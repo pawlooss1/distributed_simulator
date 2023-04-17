@@ -18,7 +18,6 @@ defmodule Simulator.WorkerActor do
   use Simulator.BaseConstants
 
   import Simulator.Callbacks
-  import Nx.Defn
 
   alias Simulator.Printer
   alias Simulator.WorkerActor.{Consequences, Plans, Signal}
@@ -248,16 +247,22 @@ defmodule Simulator.WorkerActor do
     Printer.write_to_file(state)
 
     {new_grid, new_objects_state} =
-      Iteration.compute(
+      EXLA.jit(fn i, g, os ->
+        Iteration.compute(
+          i,
+          g,
+          os,
+          &create_plan/5,
+          &is_update_valid?/2,
+          &apply_action/3,
+          &apply_consequence/3,
+          &generate_signal/1,
+          &signal_factor/1
+        )
+      end).(
         iteration,
         grid,
-        objects_state,
-        &create_plan/5,
-        &is_update_valid?/2,
-        &apply_action/3,
-        &apply_consequence/3,
-        &generate_signal/1,
-        &signal_factor/1
+        objects_state
       )
 
     new_state = %{
