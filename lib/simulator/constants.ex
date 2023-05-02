@@ -79,6 +79,9 @@ defmodule Simulator.Constants do
           # for signals
           @infinity 1_000_000_000
 
+          # grid creation
+          @extension_size 3
+
           unquote(__MODULE__).define_constants()
         end
       end
