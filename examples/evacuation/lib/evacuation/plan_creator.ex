@@ -7,21 +7,22 @@ defmodule Evacuation.PlanCreator do
 
   @impl true
   defn create_plan(i, j, grid, _objects_state, iteration) do
-      cond do
-        Nx.equal(grid[i][j][0], @person) ->
-          create_plan_person(i, j, grid)
+    cond do
+      Nx.equal(grid[i][j][0], @person) ->
+        create_plan_person(i, j, grid)
 
-        Nx.equal(grid[i][j][0], @fire) ->
-          create_plan_fire(i, j, grid, iteration)
+      Nx.equal(grid[i][j][0], @fire) ->
+        create_plan_fire(i, j, grid, iteration)
 
-        true ->
-          create_plan_other(i, j, grid)
-      end
+      true ->
+        create_plan_other(i, j, grid)
+    end
   end
 
   defnp create_plan_person(i, j, grid) do
     {_i, _j, _direction, signals, _grid} =
-      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(-@infinity), {9}), grid},
+      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(-@infinity), {9}),
+             grid},
             Nx.less_equal(direction, @dir_top_left) do
         {x, y} = shift({i, j}, direction)
 

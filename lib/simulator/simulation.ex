@@ -55,7 +55,10 @@ defmodule Simulator.Simulation do
     extended_objects_state =
       0
       |> Nx.broadcast(objects_state_shape)
-      |> Nx.put_slice([@extension_size, @extension_size | remaining_dimensions_indices], objects_state)
+      |> Nx.put_slice(
+        [@extension_size, @extension_size | remaining_dimensions_indices],
+        objects_state
+      )
 
     Map.merge(params, %{grid: extended_grid, objects_state: extended_objects_state})
   end
@@ -105,10 +108,13 @@ defmodule Simulator.Simulation do
 
   defp start_idx(worker_num, dimension_size, worker_count) do
     inner_dimension_size = dimension_size - 2 * @extension_size
-    inner_size = case rem(inner_dimension_size, worker_count) do
-      0 -> div(inner_dimension_size, worker_count)
-      _ -> div(inner_dimension_size, worker_count) + 1
-    end
+
+    inner_size =
+      case rem(inner_dimension_size, worker_count) do
+        0 -> div(inner_dimension_size, worker_count)
+        _ -> div(inner_dimension_size, worker_count) + 1
+      end
+
     inner_size * (worker_num - 1)
   end
 
@@ -116,10 +122,13 @@ defmodule Simulator.Simulation do
 
   defp end_idx(worker_num, dimension_size, worker_count) do
     inner_dimension_size = dimension_size - 2 * @extension_size
-    inner_size = case rem(inner_dimension_size, worker_count) do
-      0 -> div(inner_dimension_size, worker_count)
-      _ -> div(inner_dimension_size, worker_count) + 1
-    end
+
+    inner_size =
+      case rem(inner_dimension_size, worker_count) do
+        0 -> div(inner_dimension_size, worker_count)
+        _ -> div(inner_dimension_size, worker_count) + 1
+      end
+
     inner_size * worker_num + 2 * @extension_size - 1
   end
 

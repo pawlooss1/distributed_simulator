@@ -36,7 +36,12 @@ defmodule Simulator.WorkerActor do
       state =
       args
       |> Map.new()
-      |> Map.merge(%{iteration: 0, start_time: DateTime.utc_now(), stashed: []})
+      |> Map.merge(%{
+        iteration: 0,
+        start_time: DateTime.utc_now(),
+        stashed: [],
+        rng: Nx.Random.key(42)
+      })
 
     Printer.create_visualization_directory(location)
     Printer.create_metrics_directory(location)
@@ -64,52 +69,52 @@ defmodule Simulator.WorkerActor do
   # For now abandon 'Alternative' from discarded plans in remote plans (no use of it in the
   # current examples). Currently, there is also no use of :remote_signal and :remote_cell_contents
   # states. Returns tuple: {{action position, Action}, {consequence position, Consequence}}
-  def handle_cast({:remote_plans, pid, tensor}, %{phase: :remote_plans} = state) do
-    %{
-      grid: grid,
-      neighbors: neighbors,
-      neighbors_count: neighbors_count,
-      objects_state: objects_state,
-      plans: plans,
-      processed_neighbors: processed_neighbors
-    } = state
+  # def handle_cast({:remote_plans, pid, tensor}, %{phase: :remote_plans} = state) do
+  #   %{
+  #     grid: grid,
+  #     neighbors: neighbors,
+  #     neighbors_count: neighbors_count,
+  #     objects_state: objects_state,
+  #     plans: plans,
+  #     processed_neighbors: processed_neighbors
+  #   } = state
 
-    direction = neighbors[pid]
+  #   direction = neighbors[pid]
 
-    location = put_slice_start(plans, direction)
-    plans = Nx.put_slice(plans, location, tensor)
+  #   location = put_slice_start(plans, direction)
+  #   plans = Nx.put_slice(plans, location, tensor)
 
-    if neighbors_count == processed_neighbors + 1 do
-      {updated_grid, accepted_plans, updated_objects_state} =
-        Plans.process_plans(
-          grid,
-          plans,
-          objects_state,
-          &is_update_valid?/2,
-          &apply_action/3
-        )
+  #   if neighbors_count == processed_neighbors + 1 do
+  #     {updated_grid, accepted_plans, updated_objects_state} =
+  #       Plans.process_plans(
+  #         grid,
+  #         plans,
+  #         objects_state,
+  #         &is_update_valid?/2,
+  #         &apply_action/3
+  #       )
 
-      distribute_consequences(state, updated_grid, updated_objects_state, accepted_plans)
+  #     distribute_consequences(state, updated_grid, updated_objects_state, accepted_plans)
 
-      state =
-        state
-        |> Map.merge(%{
-          accepted_plans: accepted_plans,
-          grid: updated_grid,
-          old_grid: grid,
-          objects_state: updated_objects_state,
-          old_objects_state: objects_state,
-          phase: :remote_consequences,
-          plans: plans,
-          processed_neighbors: 0
-        })
-        |> unstash_messages()
+  #     state =
+  #       state
+  #       |> Map.merge(%{
+  #         accepted_plans: accepted_plans,
+  #         grid: updated_grid,
+  #         old_grid: grid,
+  #         objects_state: updated_objects_state,
+  #         old_objects_state: objects_state,
+  #         phase: :remote_consequences,
+  #         plans: plans,
+  #         processed_neighbors: 0
+  #       })
+  #       |> unstash_messages()
 
-      {:noreply, state}
-    else
-      {:noreply, %{state | plans: plans, processed_neighbors: processed_neighbors + 1}}
-    end
-  end
+  #     {:noreply, state}
+  #   else
+  #     {:noreply, %{state | plans: plans, processed_neighbors: processed_neighbors + 1}}
+  #   end
+  # end
 
   def handle_cast(
         {:remote_consequences, pid, updated_grid, updated_objects_state, new_accepted_plans},
@@ -240,18 +245,20 @@ defmodule Simulator.WorkerActor do
          %{
            grid: grid,
            iteration: iteration,
-           objects_state: objects_state
+           objects_state: objects_state,
+           rng: rng
          } = state
        ) do
     IO.inspect("Iteration no. #{iteration}")
     Printer.write_to_file(state)
 
-    {new_grid, new_objects_state} =
-      EXLA.jit(fn i, g, os ->
+    {new_grid, new_objects_state, new_rng} =
+      EXLA.jit(fn i, g, os, rng ->
         Iteration.compute(
           i,
           g,
           os,
+          rng,
           &create_plan/5,
           &is_update_valid?/2,
           &apply_action/3,
@@ -262,7 +269,8 @@ defmodule Simulator.WorkerActor do
       end).(
         iteration,
         grid,
-        objects_state
+        objects_state,
+        rng
       )
 
     new_state = %{
