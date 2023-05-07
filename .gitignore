@@ -31,6 +31,7 @@ distributed_simulator-*.tar
 grid_iterations/
 
 movie.mp4
+movie.gif
 .ipynb_checkpoints/
 
 .vscode/
