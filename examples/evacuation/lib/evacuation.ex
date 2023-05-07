@@ -23,7 +23,7 @@ defmodule Evacuation do
       metrics: metrics,
       metrics_save_step: 1,
       objects_state: objects_state,
-      workers_by_dim: {1, 1}
+      workers_by_dim: {2, 1}
     }
 
     Simulation.start(parameters)

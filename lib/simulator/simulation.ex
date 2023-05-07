@@ -41,14 +41,14 @@ defmodule Simulator.Simulation do
 
     extended_grid =
       0
-      |> Nx.broadcast({x + @extension_size * 2, y + @extension_size * 2, z})
-      |> Nx.put_slice([@extension_size, @extension_size, 0], grid)
+      |> Nx.broadcast({x + @margin_size * 2, y + @margin_size * 2, z})
+      |> Nx.put_slice([@margin_size, @margin_size, 0], grid)
 
     objects_state_shape =
       objects_state
       |> Nx.shape()
-      |> put_elem(0, x + @extension_size * 2)
-      |> put_elem(1, y + @extension_size * 2)
+      |> put_elem(0, x + @margin_size * 2)
+      |> put_elem(1, y + @margin_size * 2)
 
     remaining_dimensions_indices = List.duplicate(0, tuple_size(objects_state_shape) - 2)
 
@@ -56,7 +56,7 @@ defmodule Simulator.Simulation do
       0
       |> Nx.broadcast(objects_state_shape)
       |> Nx.put_slice(
-        [@extension_size, @extension_size | remaining_dimensions_indices],
+        [@margin_size, @margin_size | remaining_dimensions_indices],
         objects_state
       )
 
@@ -107,7 +107,7 @@ defmodule Simulator.Simulation do
   defp start_idx(1, _dimension_size, _worker_count), do: 0
 
   defp start_idx(worker_num, dimension_size, worker_count) do
-    inner_dimension_size = dimension_size - 2 * @extension_size
+    inner_dimension_size = dimension_size - 2 * @margin_size
 
     inner_size =
       case rem(inner_dimension_size, worker_count) do
@@ -121,7 +121,7 @@ defmodule Simulator.Simulation do
   defp end_idx(worker_num, dimension_size, worker_num), do: dimension_size - 1
 
   defp end_idx(worker_num, dimension_size, worker_count) do
-    inner_dimension_size = dimension_size - 2 * @extension_size
+    inner_dimension_size = dimension_size - 2 * @margin_size
 
     inner_size =
       case rem(inner_dimension_size, worker_count) do
@@ -129,7 +129,7 @@ defmodule Simulator.Simulation do
         _ -> div(inner_dimension_size, worker_count) + 1
       end
 
-    inner_size * worker_num + 2 * @extension_size - 1
+    inner_size * worker_num + 2 * @margin_size - 1
   end
 
   defp get_node({x, y}, {workers_x, workers_y}) do
