@@ -16,7 +16,7 @@ defmodule Iteration do
           fun(),
           fun(),
           fun()
-        ) :: Nx.t()
+        ) :: {Nx.t(), Nx.t(), Nx.t()}
   defn compute(
          iteration,
          grid,
