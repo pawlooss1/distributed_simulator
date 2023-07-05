@@ -19,6 +19,8 @@ defmodule Simulator.WorkerActor do
 
   import Simulator.Callbacks
 
+  require Logger
+
   alias Simulator.Printer
   alias Simulator.WorkerActor.{Consequences, Plans, Signal}
 
@@ -96,6 +98,7 @@ defmodule Simulator.WorkerActor do
         objects_state: Nx.put_slice(objects_state, objects_state_location, objects_state_slice),
         processed_neighbors: processed_neighbors + 1
     }
+
     if neighbors_count == processed_neighbors + 1 do
       start_new_iteration(new_state)
     else
@@ -274,7 +277,7 @@ defmodule Simulator.WorkerActor do
     {x, y} = state.location
     dt2 = DateTime.utc_now()
     diff = DateTime.diff(dt2, state.start_time, :millisecond)
-    IO.inspect("all done for #{x} #{y} in #{diff}")
+    Logger.info("all done for #{inspect(x)} #{inspect(y)} in #{inspect(diff)}")
     {:stop, :normal, state}
   end
 
@@ -286,7 +289,7 @@ defmodule Simulator.WorkerActor do
            rng: rng
          } = state
        ) do
-    IO.inspect("Iteration no. #{iteration}")
+    Logger.info("Iteration no. #{inspect(iteration)}")
     Printer.write_to_file(state)
 
     {new_grid, new_objects_state, new_rng} =

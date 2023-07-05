@@ -4,6 +4,7 @@ defmodule Simulator.Printer do
   the files. Additionally contatins functions helpful in debugging.
   """
 
+  require Logger
   @visualization_path "lib/grid_iterations"
   @metrics_path "metrics"
 
@@ -17,7 +18,7 @@ defmodule Simulator.Printer do
     |> File.write!(grid_as_string)
 
     if rem(iteration, state.metrics_save_step) == 0 do
-      IO.puts("saving metrics")
+      Logger.info("saving metrics")
 
       data =
         state.metrics
@@ -28,7 +29,7 @@ defmodule Simulator.Printer do
       File.write!(get_worker_metrics_path(location), "#{iteration} #{data}\n", [:append])
     end
 
-    IO.puts("Iteration #{iteration} of worker #{inspect(location)} saved to file")
+    Logger.info("Iteration #{iteration} of worker #{inspect(location)} saved to file")
   end
 
   @doc """
@@ -91,7 +92,7 @@ defmodule Simulator.Printer do
   end
 
   @doc """
-  Prints 3D tensor in readable way. Useful during debugging. 
+  Prints 3D tensor in readable way. Useful during debugging.
   """
   def print_3d_tensor(tensor, description \\ nil) do
     {_x_size, y_size, z_size} = Nx.shape(tensor)
@@ -111,7 +112,7 @@ defmodule Simulator.Printer do
   end
 
   @doc """
-  Prints objects state in readable way. Useful during debugging. 
+  Prints objects state in readable way. Useful during debugging.
   """
   def print_objects_state(objects_state, description \\ nil) do
     {_x_size, y_size} = Nx.shape(objects_state)
@@ -127,7 +128,7 @@ defmodule Simulator.Printer do
   end
 
   @doc """
-  Prints accepted plans in readable way. Useful during debugging. 
+  Prints accepted plans in readable way. Useful during debugging.
   """
   def print_accepted_plans(accepted_plans, description \\ nil) do
     {_x_size, y_size} = Nx.shape(accepted_plans)

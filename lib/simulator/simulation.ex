@@ -5,6 +5,7 @@ defmodule Simulator.Simulation do
 
   use Simulator.BaseConstants
 
+  require Logger
   alias Simulator.{Helpers, WorkerActor}
 
   @typedoc """
@@ -150,7 +151,7 @@ defmodule Simulator.Simulation do
     # Wait until the process monitored by `ref` is down.
     receive do
       {:DOWN, ^ref, _, _, _} ->
-        IO.puts("Process #{inspect(pid)} is down")
+        Logger.info("Process #{inspect(pid)} is down")
     end
   end
 
@@ -177,7 +178,7 @@ defmodule Simulator.Simulation do
 
   defp start_workers(workers) do
     Enum.each(workers, fn {location, worker_pid} ->
-      IO.inspect({location, worker_pid})
+      Logger.info("Starting worker #{inspect({location, worker_pid})}")
       GenServer.cast({:global, location}, :start)
     end)
   end
