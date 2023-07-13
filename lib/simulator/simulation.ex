@@ -145,6 +145,7 @@ defmodule Simulator.Simulation do
 
   defp spawn_worker(location, initial_state) do
     {:ok, pid} = GenServer.start(WorkerActor, initial_state, name: {:global, location})
+    Logger.info("Spawned worker #{inspect(pid)} on node #{inspect(:erlang.node(pid))}")
 
     ref = Process.monitor(pid)
 
