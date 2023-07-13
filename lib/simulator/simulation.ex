@@ -73,6 +73,8 @@ defmodule Simulator.Simulation do
       workers_by_dim: {workers_x, workers_y} = workers_by_dim
     } = params
 
+    main_pid = self()
+
     for x <- 1..workers_x, y <- 1..workers_y do
       location = {x, y}
 
@@ -89,11 +91,22 @@ defmodule Simulator.Simulation do
       pid =
         location
         |> get_node(workers_by_dim)
-        |> Node.spawn(fn -> spawn_worker(location, initial_state) end)
+        |> Node.spawn(fn -> spawn_worker(location, initial_state, main_pid) end)
 
       {location, pid}
     end
+    |> Enum.map(&wait_for_worker/1)
     |> Map.new()
+  end
+
+  defp wait_for_worker(worker = {_location, pid}) do
+    receive do
+      {:spawned, ^pid} ->
+        worker
+      after 5000 ->
+        exit("Could not spawn worker.")
+    end
+
   end
 
   defp split_grid(grid, state, {x, y}, {workers_x, workers_y}) do
@@ -143,17 +156,18 @@ defmodule Simulator.Simulation do
     [Node.self() | Node.list()] |> Enum.at(node_index)
   end
 
-  defp spawn_worker(location, initial_state) do
+  defp spawn_worker(location, initial_state, main_pid) do
     {:ok, pid} = GenServer.start(WorkerActor, initial_state, name: {:global, location})
-    Logger.info("Spawned worker #{inspect(pid)} on node #{inspect(:erlang.node(pid))}")
-
     ref = Process.monitor(pid)
+    send(main_pid, {:spawned, self()})
+
+    Logger.info("Spawned worker #{inspect(pid)} on node #{inspect(:erlang.node(pid))}")
 
     # Wait until the process monitored by `ref` is down.
     receive do
       {:DOWN, ^ref, _, _, _} ->
         :global.unregister_name(location)
-        Logger.info("Process #{inspect(pid)} is down")
+        Logger.info("Worker #{inspect(pid)} is down")
     end
   end
 
