@@ -435,6 +435,7 @@ defmodule Simulator.WorkerActor do
   end
 
   defp do_send_to_neighbors(direction, neighbors, message_atom, tensors, location) do
+    neighbor = neighbors[direction]
     message =
       tensors
       |> Enum.map(fn tensor ->
@@ -443,10 +444,11 @@ defmodule Simulator.WorkerActor do
 
         Nx.slice(tensor, start, length)
       end)
+      |> Enum.map(&maybe_backend_copy(&1, neighbor))
       |> then(fn tensors -> [message_atom, {:global, location}] ++ tensors end)
       |> List.to_tuple()
 
-    GenServer.cast(neighbors[direction], message)
+    GenServer.cast(neighbor, message)
   end
 
   defp slice_start(tensor, direction) do
@@ -485,6 +487,16 @@ defmodule Simulator.WorkerActor do
     length ++ cell_shape
   end
 
+  defp maybe_backend_copy(tensor, {:global, neighbor}) do
+    my_node = :erlang.node()
+    case :erlang.node(:global.whereis_name(neighbor)) do
+      ^my_node ->
+        tensor
+      _remote_node ->
+        Nx.backend_copy(tensor)
+    end
+  end
+
   defp put_slice_start(tensor, direction) do
     {x_size, y_size} = get_base_shape(tensor)
     cell_dimensions = get_cell_dimensions(tensor)
@@ -502,19 +514,6 @@ defmodule Simulator.WorkerActor do
       end
 
     location ++ cell_dimensions
-  end
-
-  defp unstash_messages(%{location: location, stashed: stashed} = state) do
-    Enum.each(stashed, fn message -> GenServer.cast({:global, location}, message) end)
-    %{state | stashed: []}
-  end
-
-  # it uses information that @rejected = 0 and @accepted = 1
-  defp put_at(tensor, start, to_put) do
-    @rejected
-    |> Nx.broadcast(tensor)
-    |> Nx.put_slice(start, to_put)
-    |> Nx.add(tensor)
   end
 
   defp get_base_shape(tensor) do
