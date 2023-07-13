@@ -152,6 +152,7 @@ defmodule Simulator.Simulation do
     # Wait until the process monitored by `ref` is down.
     receive do
       {:DOWN, ^ref, _, _, _} ->
+        :global.unregister_name(location)
         Logger.info("Process #{inspect(pid)} is down")
     end
   end
