@@ -18,8 +18,6 @@ defmodule Simulator.Printer do
     |> File.write!(grid_as_string)
 
     if rem(iteration, state.metrics_save_step) == 0 do
-      Logger.info("saving metrics")
-
       data =
         state.metrics
         |> Nx.to_flat_list()

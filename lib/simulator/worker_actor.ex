@@ -289,9 +289,6 @@ defmodule Simulator.WorkerActor do
            rng: rng
          } = state
        ) do
-    Logger.info("Iteration no. #{inspect(iteration)}")
-    Printer.write_to_file(state)
-
     {new_grid, new_objects_state, new_rng} =
       EXLA.jit(fn i, g, os, rng ->
         Iteration.compute(
@@ -321,6 +318,7 @@ defmodule Simulator.WorkerActor do
         rng: new_rng,
         processed_neighbors: 0
     }
+    Printer.write_to_file(state)
 
     distribute_margins(new_state)
 
@@ -358,14 +356,6 @@ defmodule Simulator.WorkerActor do
 
   #   {:noreply, state}
   # end
-
-  defp maybe_write_metrics(%{iteration: iteration, metrics_save_step: metrics_save_step} = state)
-       when rem(iteration, metrics_save_step) == 0 do
-    Printer.write_to_file(state)
-  end
-
-  defp maybe_write_metrics(_) do
-  end
 
   # sends each plan to worker managing cells affected by this plan
   # defp distribute_plans(state, plans) do
@@ -436,6 +426,7 @@ defmodule Simulator.WorkerActor do
 
   defp do_send_to_neighbors(direction, neighbors, message_atom, tensors, location) do
     neighbor = neighbors[direction]
+
     message =
       tensors
       |> Enum.map(fn tensor ->
@@ -489,9 +480,11 @@ defmodule Simulator.WorkerActor do
 
   defp maybe_backend_copy(tensor, {:global, neighbor}) do
     my_node = :erlang.node()
+
     case :erlang.node(:global.whereis_name(neighbor)) do
       ^my_node ->
         tensor
+
       _remote_node ->
         Nx.backend_copy(tensor)
     end

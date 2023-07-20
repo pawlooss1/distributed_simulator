@@ -21,7 +21,7 @@ defmodule Evacuation do
     parameters = %{
       grid: grid,
       metrics: metrics,
-      metrics_save_step: 1,
+      metrics_save_step: 5,
       objects_state: objects_state,
       workers_by_dim: {2, 1}
     }
