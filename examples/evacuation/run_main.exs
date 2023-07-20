@@ -5,4 +5,6 @@ System.argv()
 |> Enum.map(&String.to_atom/1)
 |> Enum.each(fn node_name -> :pong = Node.ping(node_name) end)
 
+:global.sync()
+
 :ok = Evacuation.start()

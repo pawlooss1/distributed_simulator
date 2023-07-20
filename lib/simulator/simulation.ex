@@ -33,8 +33,16 @@ defmodule Simulator.Simulation do
     params
     |> extend_grid()
     |> split_grid_among_workers()
+    |> wait_for_spawned_workers()
     |> link_workers()
+    # |> wait_for_ready_workers()
     |> start_workers()
+    |> wait_for_finished_workers()
+
+    # Stop all the nodes
+    Node.list()
+    |> Enum.each(&Node.spawn(&1, fn -> System.stop() end))
+    System.stop()
   end
 
   defp extend_grid(%{grid: grid, objects_state: objects_state} = params) do
@@ -95,18 +103,26 @@ defmodule Simulator.Simulation do
 
       {location, pid}
     end
-    |> Enum.map(&wait_for_worker/1)
     |> Map.new()
   end
 
-  defp wait_for_worker(worker = {_location, pid}) do
-    receive do
-      {:spawned, ^pid} ->
-        worker
-      after 5000 ->
-        exit("Could not spawn worker.")
-    end
+  defp link_workers(workers) do
+    Enum.each(workers, fn {loc, pid} ->
+      Logger.info("Sending neighbours to #{inspect({loc, pid})}")
+      actual_pid = :global.whereis_name(loc)
+      GenServer.cast(actual_pid, {:neighbors, create_neighbors(loc, workers)})
+    end)
 
+    workers
+  end
+
+  defp start_workers(workers) do
+    Enum.each(workers, fn {location, worker_pid} ->
+      Logger.info("Starting worker #{inspect({location, worker_pid})}")
+      GenServer.cast({:global, location}, :start)
+    end)
+
+    workers
   end
 
   defp split_grid(grid, state, {x, y}, {workers_x, workers_y}) do
@@ -116,6 +132,69 @@ defmodule Simulator.Simulation do
     range_y = start_idx(y, y_size, workers_y)..end_idx(y, y_size, workers_y)
 
     {grid[[range_x, range_y]], state[[range_x, range_y]]}
+  end
+
+  defp get_node({x, y}, {workers_x, workers_y}) do
+    num_nodes = length(Node.list()) + 1
+    worker_index = workers_y * (x - 1) + y - 1
+
+    all_workers = workers_y * workers_x
+    node_index = div(worker_index * num_nodes, all_workers)
+
+    [Node.self() | Node.list()] |> Enum.at(node_index)
+  end
+
+  defp spawn_worker(location, initial_state, main_pid) do
+    {:ok, pid} = GenServer.start(WorkerActor, initial_state, name: {:global, location})
+    ref = Process.monitor(pid)
+    send(main_pid, {:spawned, self()})
+
+    Logger.info("Spawned worker #{inspect(pid)} on node #{inspect(:erlang.node(pid))}")
+
+    # Wait until the process monitored by `ref` is down.
+    receive do
+      {:DOWN, ^ref, _, _, _} ->
+        :global.unregister_name(location)
+        Logger.info("Worker #{inspect(pid)} is down")
+        send(main_pid, {:done, self()})
+    end
+  end
+
+  defp wait_for_spawned_workers(workers) do
+    Enum.each(workers, &wait_for_worker(&1, :spawned, 5000))
+    workers
+  end
+
+  defp wait_for_finished_workers(workers) do
+    Enum.each(workers, &wait_for_worker(&1, :done, :infinity))
+    workers
+  end
+
+  defp wait_for_worker({_location, pid}, msg, timeout) do
+    receive do
+      {^msg, ^pid} ->
+        :ok
+      after timeout ->
+        exit("Timeout exceeded when waiting for #{inspect({msg, pid})}")
+    end
+  end
+
+  defp create_neighbors(location, workers) do
+    directions_to_locations =
+      @directions
+      |> Enum.map(fn direction -> {direction, {:global, shift(location, direction)}} end)
+      |> Enum.reject(fn {_direction, {:global, location}} -> workers[location] == nil end)
+
+    locations_to_directions =
+      directions_to_locations
+      |> Enum.map(fn {direction, location} -> {location, direction} end)
+
+    Map.new(directions_to_locations ++ locations_to_directions)
+  end
+
+  defp shift(location, direction) do
+    {x, y} = Helpers.shift(location, direction)
+    {Nx.to_number(x), Nx.to_number(y)}
   end
 
   defp start_idx(1, _dimension_size, _worker_count), do: 0
@@ -144,63 +223,5 @@ defmodule Simulator.Simulation do
       end
 
     inner_size * worker_num + 2 * @margin_size - 1
-  end
-
-  defp get_node({x, y}, {workers_x, workers_y}) do
-    num_nodes = length(Node.list()) + 1
-    worker_index = workers_y * (x - 1) + y - 1
-
-    all_workers = workers_y * workers_x
-    node_index = div(worker_index * num_nodes, all_workers)
-
-    [Node.self() | Node.list()] |> Enum.at(node_index)
-  end
-
-  defp spawn_worker(location, initial_state, main_pid) do
-    {:ok, pid} = GenServer.start(WorkerActor, initial_state, name: {:global, location})
-    ref = Process.monitor(pid)
-    send(main_pid, {:spawned, self()})
-
-    Logger.info("Spawned worker #{inspect(pid)} on node #{inspect(:erlang.node(pid))}")
-
-    # Wait until the process monitored by `ref` is down.
-    receive do
-      {:DOWN, ^ref, _, _, _} ->
-        :global.unregister_name(location)
-        Logger.info("Worker #{inspect(pid)} is down")
-    end
-  end
-
-  defp link_workers(workers) do
-    Enum.each(workers, fn {loc, _pid} ->
-      GenServer.cast({:global, loc}, {:neighbors, create_neighbors(loc, workers)})
-    end)
-
-    workers
-  end
-
-  defp create_neighbors(location, workers) do
-    directions_to_locations =
-      @directions
-      |> Enum.map(fn direction -> {direction, {:global, shift(location, direction)}} end)
-      |> Enum.reject(fn {_direction, {:global, location}} -> workers[location] == nil end)
-
-    locations_to_directions =
-      directions_to_locations
-      |> Enum.map(fn {direction, location} -> {location, direction} end)
-
-    Map.new(directions_to_locations ++ locations_to_directions)
-  end
-
-  defp start_workers(workers) do
-    Enum.each(workers, fn {location, worker_pid} ->
-      Logger.info("Starting worker #{inspect({location, worker_pid})}")
-      GenServer.cast({:global, location}, :start)
-    end)
-  end
-
-  defp shift(location, direction) do
-    {x, y} = Helpers.shift(location, direction)
-    {Nx.to_number(x), Nx.to_number(y)}
   end
 end
