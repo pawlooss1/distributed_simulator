@@ -35,7 +35,6 @@ defmodule Simulator.Simulation do
     |> split_grid_among_workers()
     |> wait_for_spawned_workers()
     |> link_workers()
-    # |> wait_for_ready_workers()
     |> start_workers()
     |> wait_for_finished_workers()
 
