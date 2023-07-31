@@ -33,7 +33,7 @@ defmodule Evacuation do
     File.read!("lib/maps/#{file_name}.txt")
     |> String.split("\n")
     |> Enum.map(&parse_line/1)
-    |> Nx.tensor()
+    |> Nx.tensor(type: {:s, 8})
   end
 
   defp parse_line(line) do
