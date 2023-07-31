@@ -22,7 +22,7 @@ defmodule Rabbits do
       metrics: metrics,
       metrics_save_step: 4,
       objects_state: objects_state,
-      workers_by_dim: {4, 4}
+      workers_by_dim: {1, 1}
     }
 
     Simulation.start(parameters)
