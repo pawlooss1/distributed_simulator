@@ -9,4 +9,4 @@ nodes
 
 :global.sync()
 
-:ok = Evacuation.start(map_path)
+:ok = Rabbits.start(map_path)
