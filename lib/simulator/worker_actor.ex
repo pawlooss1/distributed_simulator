@@ -127,6 +127,8 @@ defmodule Simulator.WorkerActor do
            rng: rng
          } = state
        ) do
+    Printer.write_to_file(state)
+    
     {new_grid, new_objects_state, new_rng} =
       EXLA.jit(fn i, g, os, rng ->
         Iteration.compute(
@@ -156,7 +158,6 @@ defmodule Simulator.WorkerActor do
         rng: new_rng,
         processed_neighbors: 0
     }
-    Printer.write_to_file(new_state)
 
     distribute_margins(new_state)
 
