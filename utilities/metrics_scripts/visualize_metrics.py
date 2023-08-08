@@ -23,4 +23,4 @@ def visualize(metrics):
 
 metrics = load_metrics(metrics_path)
 visualize(metrics)
-plt.show()
+plt.savefig('metrics.png')

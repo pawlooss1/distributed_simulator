@@ -38,6 +38,8 @@ grid_iterations/
 .metals/
 
 metrics/
+metrics.png
+metrics_joined.csv
 
 maps/
 
