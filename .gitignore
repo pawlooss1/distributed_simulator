@@ -30,8 +30,8 @@ distributed_simulator-*.tar
 
 grid_iterations/
 
-movie.mp4
-movie.gif
+*.mp4
+*.gif
 .ipynb_checkpoints/
 
 .vscode/
