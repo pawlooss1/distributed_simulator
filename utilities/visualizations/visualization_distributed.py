@@ -44,7 +44,7 @@ def read_grids(frames_dir, verbose=False):
     grids = [0 for _x in range(n_frames)]
 
     for filename in os.listdir(frames_dir):
-        grid_nr = int(filename.split("_")[1].split(".")[0]) - 1
+        grid_nr = int(filename.split("_")[1].split(".")[0])
         path = os.path.join(frames_dir, filename)
         with open(path, 'r') as f:
             grid_file = f.read()
@@ -176,7 +176,7 @@ for frame in frames:
     im = ax.imshow(frame, animated=True)
     ims.append([im])
 
-ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,
+ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,
                                 repeat=False)
 
 ani.save("movie.mp4")
