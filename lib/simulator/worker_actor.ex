@@ -124,11 +124,12 @@ defmodule Simulator.WorkerActor do
            grid: grid,
            iteration: iteration,
            objects_state: objects_state,
+           metrics: metrics,
            rng: rng
          } = state
        ) do
     Printer.write_to_file(state)
-    
+
     {new_grid, new_objects_state, new_rng} =
       EXLA.jit(fn i, g, os, rng ->
         Iteration.compute(
@@ -150,11 +151,15 @@ defmodule Simulator.WorkerActor do
         rng
       )
 
+    new_metrics =
+      calculate_metrics(metrics, grid, objects_state, new_grid, new_objects_state, iteration)
+
     new_state = %{
       state
       | grid: new_grid,
         iteration: iteration + 1,
         objects_state: new_objects_state,
+        metrics: new_metrics,
         rng: new_rng,
         processed_neighbors: 0
     }
