@@ -117,7 +117,7 @@ defmodule Simulator.WorkerActor.Signal do
       |> Nx.add(signal)
       |> Nx.multiply(@signal_attenuation_factor)
       |> Nx.multiply(signal_factors)
-      |> Nx.as_type({:s, 64})
+      |> Nx.as_type({:s, 8})
 
     Nx.put_slice(grid, [0, 0, 1], updated_signal)
   end
