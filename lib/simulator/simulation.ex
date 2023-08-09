@@ -41,32 +41,24 @@ defmodule Simulator.Simulation do
     # Stop all the nodes
     Node.list()
     |> Enum.each(&Node.spawn(&1, fn -> System.stop() end))
+
     System.stop()
   end
 
   defp extend_grid(%{grid: grid, objects_state: objects_state} = params) do
-    {x, y, z} = Nx.shape(grid)
-
     extended_grid =
-      0
-      |> Nx.broadcast({x + @margin_size * 2, y + @margin_size * 2, z})
-      |> Nx.put_slice([@margin_size, @margin_size, 0], grid)
-
-    objects_state_shape =
-      objects_state
-      |> Nx.shape()
-      |> put_elem(0, x + @margin_size * 2)
-      |> put_elem(1, y + @margin_size * 2)
-
-    remaining_dimensions_indices = List.duplicate(0, tuple_size(objects_state_shape) - 2)
+      Nx.pad(grid, 0, [
+        {@margin_size, @margin_size, 0},
+        {@margin_size, @margin_size, 0},
+        {0, 0, 0}
+      ])
 
     extended_objects_state =
-      0
-      |> Nx.broadcast(objects_state_shape)
-      |> Nx.put_slice(
-        [@margin_size, @margin_size | remaining_dimensions_indices],
-        objects_state
-      )
+      Nx.pad(objects_state, 0, [
+        {@margin_size, @margin_size, 0},
+        {@margin_size, @margin_size, 0}
+        | List.duplicate({0, 0, 0}, Nx.rank(objects_state) - 2)
+      ])
 
     Map.merge(params, %{grid: extended_grid, objects_state: extended_objects_state})
   end
@@ -173,7 +165,8 @@ defmodule Simulator.Simulation do
     receive do
       {^msg, ^pid} ->
         :ok
-      after timeout ->
+    after
+      timeout ->
         exit("Timeout exceeded when waiting for #{inspect({msg, pid})}")
     end
   end
