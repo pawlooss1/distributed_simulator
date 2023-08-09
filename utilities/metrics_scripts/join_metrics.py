@@ -46,9 +46,7 @@ def read_metrics(worker_file_path):
 
 
 def join_workers(workers):
-    df = workers[(1, 1)]
-    for worker in workers.values():
-        df = pd.concat([df, worker])
+    df = pd.concat(workers.values())
     aggs = {name: (name, agg) for (name, agg) in names_aggs}
     df = df.groupby("iter").agg(**aggs)
     return df

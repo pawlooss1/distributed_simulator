@@ -180,4 +180,3 @@ ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,
                                 repeat=False)
 
 ani.save("movie.mp4")
-plt.show()
