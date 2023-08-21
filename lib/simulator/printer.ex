@@ -24,7 +24,7 @@ defmodule Simulator.Printer do
         |> Enum.map(fn num -> to_string(num) end)
         |> Enum.join(" ")
 
-      File.write!(get_worker_metrics_path(location), "#{iteration} #{data}\n", [:append])
+      File.write!(get_worker_metrics_path(location), "#{iteration} #{data}\n", [:write])
     end
 
     Logger.info("Iteration #{iteration} of worker #{inspect(location)} saved to file")
