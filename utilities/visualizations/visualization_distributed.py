@@ -21,6 +21,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import colors
+from PIL import Image
 import csv
 import sys
 
@@ -172,8 +173,11 @@ print(f"created {n_frames} frames of size {(x,y)}")
 fig, ax = plt.subplots()
 
 ims = []
-for frame in frames:
+for i, frame in enumerate(frames):
+    # Image.fromarray(frame).save('frames/{i}.png')
+    # plt.imsave(f'frames/{i}.png', frame)
     im = ax.imshow(frame, animated=True)
+    plt.savefig(f'frames/{i}.png')
     ims.append([im])
 
 ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,
