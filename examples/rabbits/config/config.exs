@@ -1,6 +1,5 @@
 import Config
 
-config :nx, default_backend: EXLA.Backend
 config :distributed_simulator,
   max_iterations: 150,
   module_cell: Rabbits.Cell,
