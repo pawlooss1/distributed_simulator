@@ -16,7 +16,7 @@ defmodule Rabbits do
     {x, y, _z} = Nx.shape(grid)
     objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
     metrics = Nx.tensor([0, 0, 0, 0, 0, 0])
-    Printer.clean_grid_iterations()
+    Printer.clean()
 
     parameters = %{
       grid: grid,

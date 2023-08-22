@@ -24,7 +24,7 @@ defmodule Simulator.Printer do
         |> Enum.map(fn num -> to_string(num) end)
         |> Enum.join(" ")
 
-      File.write!(get_worker_metrics_path(location), "#{iteration} #{data}\n", [:write])
+      File.write!(get_worker_metrics_path(location), "#{iteration} #{data}\n", [:append])
     end
 
     Logger.info("Iteration #{iteration} of worker #{inspect(location)} saved to file")
@@ -54,11 +54,16 @@ defmodule Simulator.Printer do
     end
   end
 
+  def clean() do
+    clean_directory(@visualization_path)
+    clean_directory(@metrics_path)
+  end
+
   @doc """
-  Delete all the contents of the directory with files for visualization.
+  Delete all the contents of the specified directory.
   """
-  def clean_grid_iterations() do
-    (@visualization_path <> "/*")
+  def clean_directory(dir) do
+    (dir <> "/*")
     |> Path.wildcard()
     |> Enum.each(fn path -> File.rm_rf!(path) end)
   end
