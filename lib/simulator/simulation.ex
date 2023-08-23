@@ -45,6 +45,17 @@ defmodule Simulator.Simulation do
     System.stop()
   end
 
+  def fetch_workers_numbers() do
+    {fetch_from_env("WORKERS_X"), fetch_from_env("WORKERS_Y")}
+  end
+
+  defp fetch_from_env(var_name) do
+    case System.get_env(var_name) do
+      nil -> 1
+      str_num -> String.to_integer(str_num)
+    end
+  end
+
   defp extend_grid(%{grid: grid, objects_state: objects_state} = params) do
     extended_grid =
       Nx.pad(grid, 0, [
