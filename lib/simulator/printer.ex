@@ -5,7 +5,7 @@ defmodule Simulator.Printer do
   """
 
   require Logger
-  @visualization_path "lib/grid_iterations"
+  @visualization_path "grid_iterations"
   @metrics_path "metrics"
 
   @doc """
@@ -34,8 +34,8 @@ defmodule Simulator.Printer do
   Creates directory for visualization of the grid of the worker located in {`x`, `y`}.
   """
   def create_visualization_directory(location) do
-    unless File.exists?(@visualization_path) do
-      File.mkdir!(@visualization_path)
+    unless File.exists?(visualization_path()) do
+      File.mkdir!(visualization_path())
     end
 
     worker_visualization = get_worker_visualization_path(location)
@@ -49,14 +49,14 @@ defmodule Simulator.Printer do
   Creates directory for metrics of the worker located in {`x`, `y`}.
   """
   def create_metrics_directory(_location) do
-    unless File.exists?(@metrics_path) do
-      File.mkdir!(@metrics_path)
+    unless File.exists?(metrics_path()) do
+      File.mkdir!(metrics_path())
     end
   end
 
   def clean() do
-    clean_directory(@visualization_path)
-    clean_directory(@metrics_path)
+    clean_directory(visualization_path())
+    clean_directory(metrics_path())
   end
 
   @doc """
@@ -146,9 +146,9 @@ defmodule Simulator.Printer do
     IO.puts(if description == nil, do: string, else: "#{description}\n#{string}\n")
   end
 
-  defp get_worker_visualization_path({x, y}), do: @visualization_path <> "/#{x}_#{y}"
+  defp get_worker_visualization_path({x, y}), do: visualization_path() <> "/#{x}_#{y}"
 
-  defp get_worker_metrics_path({x, y}), do: @metrics_path <> "/#{x}_#{y}.txt"
+  defp get_worker_metrics_path({x, y}), do: metrics_path() <> "/#{x}_#{y}.txt"
 
   # Converts grid as tensor to (relatively) readable string.
   defp tensor_to_string(tensor) do
@@ -162,4 +162,10 @@ defmodule Simulator.Printer do
 
     ans
   end
+
+  defp visualization_path(), do: get_working_dir() <> @visualization_path
+
+  defp metrics_path(), do: get_working_dir() <> @metrics_path
+
+  defp get_working_dir(), do: System.get_env("WORKING_DIR", "./")
 end
