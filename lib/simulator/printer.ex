@@ -34,14 +34,18 @@ defmodule Simulator.Printer do
   Creates directory for visualization of the grid of the worker located in {`x`, `y`}.
   """
   def create_visualization_directory(location) do
-    unless File.exists?(visualization_path()) do
-      File.mkdir!(visualization_path())
-    end
+    create_dir_safe(visualization_path())
 
     worker_visualization = get_worker_visualization_path(location)
 
-    unless File.exists?(worker_visualization) do
-      File.mkdir!(worker_visualization)
+    create_dir_safe(worker_visualization)
+  end
+
+  def create_dir_safe(path) do
+    case File.mkdir(path) do
+      :ok -> :ok
+      {:error, :eexist} -> :ok
+      {:error, other} -> throw(other)
     end
   end
 
@@ -49,9 +53,7 @@ defmodule Simulator.Printer do
   Creates directory for metrics of the worker located in {`x`, `y`}.
   """
   def create_metrics_directory(_location) do
-    unless File.exists?(metrics_path()) do
-      File.mkdir!(metrics_path())
-    end
+    create_dir_safe(metrics_path())
   end
 
   def clean() do
