@@ -91,10 +91,10 @@ defmodule Simulator.Simulation do
       {grid_fragment, state_fragment} = split_grid(grid, objects_state, location, workers_by_dim)
 
       initial_state = [
-        grid: grid_fragment,
+        grid: Nx.backend_copy(grid_fragment),
         location: location,
-        objects_state: state_fragment,
-        metrics: metrics,
+        objects_state: Nx.backend_copy(state_fragment),
+        metrics: Nx.backend_copy(metrics),
         metrics_save_step: metrics_save_step
       ]
 
