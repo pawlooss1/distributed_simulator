@@ -146,7 +146,7 @@ defmodule Simulator.WorkerActor do
           &generate_signal/1,
           &signal_factor/1
         )
-      end).(
+      end, [debug: true]).(
         iteration,
         grid,
         objects_state,
