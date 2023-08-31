@@ -7,21 +7,22 @@ defmodule Evacuation.PlanCreator do
 
   @impl true
   defn create_plan(i, j, grid, _objects_state, iteration) do
-      cond do
-        Nx.equal(grid[i][j][0], @person) ->
-          create_plan_person(i, j, grid)
+    cond do
+      Nx.equal(grid[i][j][0], @person) ->
+        create_plan_person(i, j, grid)
 
-        Nx.equal(grid[i][j][0], @fire) ->
-          create_plan_fire(i, j, grid, iteration)
+      Nx.equal(grid[i][j][0], @fire) ->
+        create_plan_fire(i, j, grid, iteration)
 
-        true ->
-          create_plan_other(i, j, grid)
-      end
+      true ->
+        create_plan_other(i, j, grid)
+    end
   end
 
   defnp create_plan_person(i, j, grid) do
     {_i, _j, _direction, signals, _grid} =
-      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(-@infinity), {9}), grid},
+      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(@dir_stay), {9}),
+             grid},
             Nx.less_equal(direction, @dir_top_left) do
         {x, y} = shift({i, j}, direction)
 
@@ -29,17 +30,30 @@ defmodule Evacuation.PlanCreator do
           if Nx.equal(grid[x][y][0], @empty) or Nx.equal(grid[x][y][0], @exit) do
             Nx.put_slice(signals, [direction], Nx.broadcast(grid[i][j][direction], {1}))
           else
-            Nx.put_slice(signals, [direction], Nx.broadcast(-@infinity, {1}))
+            Nx.put_slice(signals, [direction], Nx.broadcast(@dir_stay, {1}))
           end
 
         {i, j, direction + 1, signals, grid}
       end
 
-    if signals |> Nx.reduce_max() |> Nx.greater(-@infinity) do
-      direction = Nx.argmax(signals)
-      {direction, @person_move}
-    else
-      {@dir_stay, @plan_keep}
+    max = Nx.reduce_max(signals)
+    min = Nx.reduce_min(signals)
+    diff = Nx.add(max, min)
+
+    cond do
+      diff |> Nx.greater(0) ->
+        # positive signal is stronger
+        {Nx.argmax(signals), @person_move}
+      diff |> Nx.less(0) ->
+        # negative signal is stronger
+        {opposite(Nx.argmin(signals)), @person_move}
+      max |> Nx.greater(0) ->
+        # pos and ned signals are non-zero but same strength
+        # we choose positive
+        {Nx.argmax(signals), @person_move}
+      true ->
+        # no non-neutral signal
+        {@dir_stay, @plan_keep}
     end
   end
 
@@ -60,7 +74,7 @@ defmodule Evacuation.PlanCreator do
         end
 
       if availability_size > 0 do
-        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 8})
+        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 32})
         {availability[index], @fire_spread}
       else
         {@dir_stay, @plan_keep}

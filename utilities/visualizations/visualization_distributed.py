@@ -21,6 +21,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import colors
+from PIL import Image
 import csv
 import sys
 
@@ -33,7 +34,7 @@ def read_workers_grids(grids_dir, verbose=False):
         (x, y) = [int(c) for c in worker_dir.split("_")]
         if verbose:
             print(f"processing worker {(x, y)}")
-        workers[(x, y)] = read_grids(worker_dir_path)
+        workers[(x, y)] = read_grids(worker_dir_path, verbose)
     return workers
 
 
@@ -44,11 +45,11 @@ def read_grids(frames_dir, verbose=False):
     grids = [0 for _x in range(n_frames)]
 
     for filename in os.listdir(frames_dir):
-        grid_nr = int(filename.split("_")[1].split(".")[0]) - 1
+        grid_nr = int(filename.split("_")[1].split(".")[0])
         path = os.path.join(frames_dir, filename)
         with open(path, 'r') as f:
-            file = f.read()
-        file_int = [int(c) for c in file.split(" ")]
+            grid_file = f.read()
+        file_int = [int(c) for c in grid_file.split(" ")]
         [x_size, y_size] = file_int[:2]
         grid = file_int[2:]
         grid = np.array(grid).reshape((x_size, y_size, 9))
@@ -93,7 +94,7 @@ def to_objects_and_signals(grids):
             objects: np.array of shape  (n_frames, x_size, y_size)
             signals: np.array of shape  (n_frames, x_size, y_size)
             (sum of signals in all direction for a given cell)
-     """
+    """
     objects = grids[:, :, :, 0]
     signals_3d = grids[:, :, :, 1:]
     signals_summed = np.sum(signals_3d, axis=3)
@@ -156,12 +157,12 @@ def join_workers_grids(workers):
         x += 1
     return joined_grids
 
-
+verbose = False
 projects_dir = sys.argv[1]
 grids_dir = f"{projects_dir}/lib/grid_iterations"
 config_path = f"{projects_dir}/config/animation_config.csv"
 
-workers = read_workers_grids(grids_dir)
+workers = read_workers_grids(grids_dir, verbose)
 grids = join_workers_grids(workers)
 frames = grids_to_frames(grids, config_path)
 
@@ -172,12 +173,14 @@ print(f"created {n_frames} frames of size {(x,y)}")
 fig, ax = plt.subplots()
 
 ims = []
-for frame in frames:
+for i, frame in enumerate(frames):
+    # Image.fromarray(frame).save('frames/{i}.png')
+    # plt.imsave(f'frames/{i}.png', frame)
     im = ax.imshow(frame, animated=True)
+    plt.savefig(f'frames/{i}.png')
     ims.append([im])
 
-ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,
+ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,
                                 repeat=False)
 
 ani.save("movie.mp4")
-plt.show()

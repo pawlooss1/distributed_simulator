@@ -4,7 +4,8 @@ defmodule Simulator.Printer do
   the files. Additionally contatins functions helpful in debugging.
   """
 
-  @visualization_path "lib/grid_iterations"
+  require Logger
+  @visualization_path "grid_iterations"
   @metrics_path "metrics"
 
   @doc """
@@ -17,8 +18,6 @@ defmodule Simulator.Printer do
     |> File.write!(grid_as_string)
 
     if rem(iteration, state.metrics_save_step) == 0 do
-      IO.puts("saving metrics")
-
       data =
         state.metrics
         |> Nx.to_flat_list()
@@ -28,21 +27,25 @@ defmodule Simulator.Printer do
       File.write!(get_worker_metrics_path(location), "#{iteration} #{data}\n", [:append])
     end
 
-    IO.puts("Iteration #{iteration} of worker #{inspect(location)} saved to file")
+    Logger.info("Iteration #{iteration} of worker #{inspect(location)} saved to file")
   end
 
   @doc """
   Creates directory for visualization of the grid of the worker located in {`x`, `y`}.
   """
   def create_visualization_directory(location) do
-    unless File.exists?(@visualization_path) do
-      File.mkdir!(@visualization_path)
-    end
+    create_dir_safe(visualization_path())
 
     worker_visualization = get_worker_visualization_path(location)
 
-    unless File.exists?(worker_visualization) do
-      File.mkdir!(worker_visualization)
+    create_dir_safe(worker_visualization)
+  end
+
+  def create_dir_safe(path) do
+    case File.mkdir(path) do
+      :ok -> :ok
+      {:error, :eexist} -> :ok
+      {:error, other} -> throw(other)
     end
   end
 
@@ -50,16 +53,19 @@ defmodule Simulator.Printer do
   Creates directory for metrics of the worker located in {`x`, `y`}.
   """
   def create_metrics_directory(_location) do
-    unless File.exists?(@metrics_path) do
-      File.mkdir!(@metrics_path)
-    end
+    create_dir_safe(metrics_path())
+  end
+
+  def clean() do
+    clean_directory(visualization_path())
+    clean_directory(metrics_path())
   end
 
   @doc """
-  Delete all the contents of the directory with files for visualization.
+  Delete all the contents of the specified directory.
   """
-  def clean_grid_iterations() do
-    (@visualization_path <> "/*")
+  def clean_directory(dir) do
+    (dir <> "/*")
     |> Path.wildcard()
     |> Enum.each(fn path -> File.rm_rf!(path) end)
   end
@@ -91,7 +97,7 @@ defmodule Simulator.Printer do
   end
 
   @doc """
-  Prints 3D tensor in readable way. Useful during debugging. 
+  Prints 3D tensor in readable way. Useful during debugging.
   """
   def print_3d_tensor(tensor, description \\ nil) do
     {_x_size, y_size, z_size} = Nx.shape(tensor)
@@ -111,7 +117,7 @@ defmodule Simulator.Printer do
   end
 
   @doc """
-  Prints objects state in readable way. Useful during debugging. 
+  Prints objects state in readable way. Useful during debugging.
   """
   def print_objects_state(objects_state, description \\ nil) do
     {_x_size, y_size} = Nx.shape(objects_state)
@@ -127,7 +133,7 @@ defmodule Simulator.Printer do
   end
 
   @doc """
-  Prints accepted plans in readable way. Useful during debugging. 
+  Prints accepted plans in readable way. Useful during debugging.
   """
   def print_accepted_plans(accepted_plans, description \\ nil) do
     {_x_size, y_size} = Nx.shape(accepted_plans)
@@ -142,9 +148,9 @@ defmodule Simulator.Printer do
     IO.puts(if description == nil, do: string, else: "#{description}\n#{string}\n")
   end
 
-  defp get_worker_visualization_path({x, y}), do: @visualization_path <> "/#{x}_#{y}"
+  defp get_worker_visualization_path({x, y}), do: visualization_path() <> "/#{x}_#{y}"
 
-  defp get_worker_metrics_path({x, y}), do: @metrics_path <> "/#{x}_#{y}.txt"
+  defp get_worker_metrics_path({x, y}), do: metrics_path() <> "/#{x}_#{y}.txt"
 
   # Converts grid as tensor to (relatively) readable string.
   defp tensor_to_string(tensor) do
@@ -158,4 +164,10 @@ defmodule Simulator.Printer do
 
     ans
   end
+
+  defp visualization_path(), do: get_working_dir() <> @visualization_path
+
+  defp metrics_path(), do: get_working_dir() <> @metrics_path
+
+  defp get_working_dir(), do: System.get_env("WORKING_DIR", "./")
 end

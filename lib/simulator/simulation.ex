@@ -5,6 +5,7 @@ defmodule Simulator.Simulation do
 
   use Simulator.BaseConstants
 
+  require Logger
   alias Simulator.{Helpers, WorkerActor}
 
   @typedoc """
@@ -32,30 +33,43 @@ defmodule Simulator.Simulation do
     params
     |> extend_grid()
     |> split_grid_among_workers()
+    |> wait_for_spawned_workers()
     |> link_workers()
     |> start_workers()
+    |> wait_for_finished_workers()
+
+    # Stop all the nodes
+    Node.list()
+    |> Enum.each(&Node.spawn(&1, fn -> System.stop() end))
+
+    System.stop()
+  end
+
+  def fetch_workers_numbers() do
+    {fetch_from_env("WORKERS_X"), fetch_from_env("WORKERS_Y")}
+  end
+
+  defp fetch_from_env(var_name) do
+    case System.get_env(var_name) do
+      nil -> 1
+      str_num -> String.to_integer(str_num)
+    end
   end
 
   defp extend_grid(%{grid: grid, objects_state: objects_state} = params) do
-    {x, y, z} = Nx.shape(grid)
-
     extended_grid =
-      0
-      |> Nx.broadcast({x + 2, y + 2, z})
-      |> Nx.put_slice([1, 1, 0], grid)
-
-    objects_state_shape =
-      objects_state
-      |> Nx.shape()
-      |> put_elem(0, x + 2)
-      |> put_elem(1, y + 2)
-
-    remaining_dimensions_indices = List.duplicate(0, tuple_size(objects_state_shape) - 2)
+      Nx.pad(grid, 0, [
+        {@margin_size, @margin_size, 0},
+        {@margin_size, @margin_size, 0},
+        {0, 0, 0}
+      ])
 
     extended_objects_state =
-      0
-      |> Nx.broadcast(objects_state_shape)
-      |> Nx.put_slice([1, 1 | remaining_dimensions_indices], objects_state)
+      Nx.pad(objects_state, 0, [
+        {@margin_size, @margin_size, 0},
+        {@margin_size, @margin_size, 0}
+        | List.duplicate({0, 0, 0}, Nx.rank(objects_state) - 2)
+      ])
 
     Map.merge(params, %{grid: extended_grid, objects_state: extended_objects_state})
   end
@@ -69,27 +83,48 @@ defmodule Simulator.Simulation do
       workers_by_dim: {workers_x, workers_y} = workers_by_dim
     } = params
 
+    main_pid = self()
+
     for x <- 1..workers_x, y <- 1..workers_y do
       location = {x, y}
 
       {grid_fragment, state_fragment} = split_grid(grid, objects_state, location, workers_by_dim)
 
       initial_state = [
-        grid: grid_fragment,
+        grid: Nx.backend_copy(grid_fragment),
         location: location,
-        objects_state: state_fragment,
-        metrics: metrics,
+        objects_state: Nx.backend_copy(state_fragment),
+        metrics: Nx.backend_copy(metrics),
         metrics_save_step: metrics_save_step
       ]
 
       pid =
         location
         |> get_node(workers_by_dim)
-        |> Node.spawn(fn -> spawn_worker(location, initial_state) end)
+        |> Node.spawn(fn -> spawn_worker(location, initial_state, main_pid) end)
 
       {location, pid}
     end
     |> Map.new()
+  end
+
+  defp link_workers(workers) do
+    Enum.each(workers, fn {loc, pid} ->
+      Logger.info("Sending neighbours to #{inspect({loc, pid})}")
+      actual_pid = :global.whereis_name(loc)
+      GenServer.cast(actual_pid, {:neighbors, create_neighbors(loc, workers)})
+    end)
+
+    workers
+  end
+
+  defp start_workers(workers) do
+    Enum.each(workers, fn {location, worker_pid} ->
+      Logger.info("Starting worker #{inspect({location, worker_pid})}")
+      GenServer.cast({:global, location}, :start)
+    end)
+
+    workers
   end
 
   defp split_grid(grid, state, {x, y}, {workers_x, workers_y}) do
@@ -99,18 +134,6 @@ defmodule Simulator.Simulation do
     range_y = start_idx(y, y_size, workers_y)..end_idx(y, y_size, workers_y)
 
     {grid[[range_x, range_y]], state[[range_x, range_y]]}
-  end
-
-  defp start_idx(1, _dimension_size, _worker_count), do: 0
-
-  defp start_idx(worker_num, dimension_size, worker_count) do
-    div(dimension_size, worker_count) * (worker_num - 1) - 1
-  end
-
-  defp end_idx(worker_num, dimension_size, worker_num), do: dimension_size - 1
-
-  defp end_idx(worker_num, dimension_size, worker_count) do
-    div(dimension_size, worker_count) * worker_num
   end
 
   defp get_node({x, y}, {workers_x, workers_y}) do
@@ -123,24 +146,40 @@ defmodule Simulator.Simulation do
     [Node.self() | Node.list()] |> Enum.at(node_index)
   end
 
-  defp spawn_worker(location, initial_state) do
+  defp spawn_worker(location, initial_state, main_pid) do
     {:ok, pid} = GenServer.start(WorkerActor, initial_state, name: {:global, location})
-
     ref = Process.monitor(pid)
+    send(main_pid, {:spawned, self()})
+
+    Logger.info("Spawned worker #{inspect(pid)} on node #{inspect(:erlang.node(pid))}")
 
     # Wait until the process monitored by `ref` is down.
     receive do
       {:DOWN, ^ref, _, _, _} ->
-        IO.puts("Process #{inspect(pid)} is down")
+        :global.unregister_name(location)
+        Logger.info("Worker #{inspect(pid)} is down")
+        send(main_pid, {:done, self()})
     end
   end
 
-  defp link_workers(workers) do
-    Enum.each(workers, fn {loc, _pid} ->
-      GenServer.cast({:global, loc}, {:neighbors, create_neighbors(loc, workers)})
-    end)
-
+  defp wait_for_spawned_workers(workers) do
+    Enum.each(workers, &wait_for_worker(&1, :spawned, 5000))
     workers
+  end
+
+  defp wait_for_finished_workers(workers) do
+    Enum.each(workers, &wait_for_worker(&1, :done, :infinity))
+    workers
+  end
+
+  defp wait_for_worker({_location, pid}, msg, timeout) do
+    receive do
+      {^msg, ^pid} ->
+        :ok
+    after
+      timeout ->
+        exit("Timeout exceeded when waiting for #{inspect({msg, pid})}")
+    end
   end
 
   defp create_neighbors(location, workers) do
@@ -156,15 +195,36 @@ defmodule Simulator.Simulation do
     Map.new(directions_to_locations ++ locations_to_directions)
   end
 
-  defp start_workers(workers) do
-    Enum.each(workers, fn {location, worker_pid} ->
-      IO.inspect({location, worker_pid})
-      GenServer.cast({:global, location}, :start)
-    end)
-  end
-
   defp shift(location, direction) do
     {x, y} = Helpers.shift(location, direction)
     {Nx.to_number(x), Nx.to_number(y)}
+  end
+
+  defp start_idx(1, _dimension_size, _worker_count), do: 0
+
+  defp start_idx(worker_num, dimension_size, worker_count) do
+    inner_dimension_size = dimension_size - 2 * @margin_size
+
+    inner_size =
+      case rem(inner_dimension_size, worker_count) do
+        0 -> div(inner_dimension_size, worker_count)
+        _ -> div(inner_dimension_size, worker_count) + 1
+      end
+
+    inner_size * (worker_num - 1)
+  end
+
+  defp end_idx(worker_num, dimension_size, worker_num), do: dimension_size - 1
+
+  defp end_idx(worker_num, dimension_size, worker_count) do
+    inner_dimension_size = dimension_size - 2 * @margin_size
+
+    inner_size =
+      case rem(inner_dimension_size, worker_count) do
+        0 -> div(inner_dimension_size, worker_count)
+        _ -> div(inner_dimension_size, worker_count) + 1
+      end
+
+    inner_size * worker_num + 2 * @margin_size - 1
   end
 end

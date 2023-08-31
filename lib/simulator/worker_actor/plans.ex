@@ -32,13 +32,13 @@ defmodule Simulator.WorkerActor.Plans do
 
     # create plans only for inner grid
     {_i, plans, _grid, _objects_state, _iteration} =
-      while {i = 1, plans = initial_plans(x_size, y_size), grid, objects_state, iteration},
-            Nx.less(i, x_size - 1) do
+      while {i = 0, plans = initial_plans(x_size, y_size), grid, objects_state, iteration},
+            Nx.less(i, x_size) do
         {_i, _j, plans, _grid, _objects_state, _iteration} =
-          while {i, j = 1, plans, grid, objects_state, iteration},
-                Nx.less(j, y_size - 1) do
-            plan_as_tuple = create_plan.(i, j, grid, objects_state, iteration)
-            plans = add_plan(plans, i, j, plan_to_tensor(plan_as_tuple))
+          while {i, j = 0, plans, grid, objects_state, iteration},
+                Nx.less(j, y_size) do
+            {direction, plan} = create_plan.(i, j, grid, objects_state, iteration)
+            plans = add_plan(plans, direction, i, j, plan)
             {i, j + 1, plans, grid, objects_state, iteration}
           end
 
@@ -53,45 +53,55 @@ defmodule Simulator.WorkerActor.Plans do
   by putting `action` in the proper cells. `Consequences` will be
   applied in the `:remote_consequences` phase.
   """
-  @spec process_plans(Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: {Nx.t(), Nx.t(), Nx.t()}
-  defn process_plans(grid, plans, objects_state, is_update_valid?, apply_action) do
+  @spec process_plans(Nx.t(), Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: {Nx.t(), Nx.t(), Nx.t()}
+  defn process_plans(grid, plans, objects_state, order, is_update_valid?, apply_action) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
-    order_length = x_size * y_size
 
-    # wiem ze brzydko, ale to i tak do wywalki pojdzie
-    order = Nx.iota({order_length})
-    {order, _new_key} = Nx.Random.shuffle(Nx.Random.key(42), order)
-
-    {_i, _order, _plans, _old_states, grid, objects_state, _y_size, accepted_plans} =
-      while {i = 0, order, plans, old_states = objects_state, grid, objects_state, y_size,
+    {_k, _order, _plans, _old_states, grid, objects_state, accepted_plans} =
+      while {k = 0, order, plans, old_states = objects_state, grid, objects_state,
              accepted_plans = Nx.broadcast(@rejected, {x_size, y_size})},
-            Nx.less(i, order_length) do
-        ordinal = order[i]
-        {x, y} = {Nx.quotient(ordinal, y_size), Nx.remainder(ordinal, y_size)}
+            # 8 directions
+            Nx.less(k, 8) do
+        {_k, _x, _order, _plans, _old_states, grid, objects_state, accepted_plans} =
+          while {k, x = 0, order, plans, old_states, grid, objects_state, accepted_plans},
+                Nx.less(x, x_size) do
+            {_k, _x, _y, _order, _plans, _old_states, grid, objects_state, accepted_plans} =
+              while {k, x, y = 0, order, plans, old_states, grid, objects_state, accepted_plans},
+                    Nx.less(y, y_size) do
+                # directions are starting from 1
+                direction = order[k] - 1
 
-        {grid, accepted_plans, objects_state} =
-          process_plan(
-            x,
-            y,
-            plans,
-            old_states,
-            grid,
-            accepted_plans,
-            objects_state,
-            is_update_valid?,
-            apply_action
-          )
+                {grid, accepted_plans, objects_state} =
+                  process_plan(
+                    direction,
+                    x,
+                    y,
+                    plans[direction][x][y],
+                    old_states,
+                    grid,
+                    accepted_plans,
+                    objects_state,
+                    is_update_valid?,
+                    apply_action
+                  )
 
-        {i + 1, order, plans, old_states, grid, objects_state, y_size, accepted_plans}
+                {k, x, y + 1, order, plans, old_states, grid, objects_state, accepted_plans}
+              end
+
+            {k, x + 1, order, plans, old_states, grid, objects_state, accepted_plans}
+          end
+
+        {k + 1, order, plans, old_states, grid, objects_state, accepted_plans}
       end
 
     {grid, accepted_plans, objects_state}
   end
 
   defnp process_plan(
+          direction,
           x,
           y,
-          plans,
+          plan,
           old_states,
           grid,
           accepted_plans,
@@ -99,51 +109,34 @@ defmodule Simulator.WorkerActor.Plans do
           is_update_valid?,
           apply_action
         ) do
-    {x_target, y_target} = shift({x, y}, plans[x][y][0])
+    {x_target, y_target} = shift({x, y}, direction)
 
-    # don't accept plans when target localization is on the edge - it belongs to other actor
-    if on_the_edge(grid, {x_target, y_target}) do
+    action = plan[0]
+    object = grid[x_target][y_target][0]
+
+    if is_update_valid?.(action, object) do
+      # accept plan
+      old_state = old_states[x][y]
+
+      {new_object, new_state} = apply_action.(object, plan, old_state)
+      grid = put_object(grid, x_target, y_target, new_object)
+      objects_state = Nx.put_slice(objects_state, [x_target, y_target], new_state)
+
+      accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(@accepted, {1, 1}))
+
       {grid, accepted_plans, objects_state}
     else
-      action = plans[x][y][1]
-      object = grid[x_target][y_target][0]
-
-      if is_update_valid?.(action, object) do
-        # accept plan
-        # TODO state plans must have the first 2 dim same as grid - mention in documentation
-        old_state = old_states[x][y]
-        plan = plans[x][y][1..2]
-
-        {new_object, new_state} = apply_action.(object, plan, old_state)
-        grid = put_object(grid, x_target, y_target, new_object)
-        objects_state = Nx.put_slice(objects_state, [x_target, y_target], new_state)
-
-        accepted_plans = Nx.put_slice(accepted_plans, [x, y], Nx.broadcast(@accepted, {1, 1}))
-
-        {grid, accepted_plans, objects_state}
-      else
-        {grid, accepted_plans, objects_state}
-      end
+      {grid, accepted_plans, objects_state}
     end
+
+    # end
   end
 
   defnp initial_plans(x_size, y_size) do
-    Nx.broadcast(Nx.tensor([@dir_stay, @keep, @keep]), {x_size, y_size, 3})
+    Nx.broadcast(Nx.tensor([@keep, @keep]), {8, x_size, y_size, 2})
   end
 
-  defnp plan_to_tensor({direction, plan}) do
-    direction = Nx.reshape(direction, {1})
-    Nx.concatenate([direction, plan])
-  end
-
-  defnp add_plan(plans, i, j, plan) do
-    Nx.put_slice(plans, [i, j, 0], Nx.broadcast(plan, {1, 1, 3}))
-  end
-
-  defnp on_the_edge(grid, {x, y}) do
-    {x_size, y_size, _z_size} = Nx.shape(grid)
-
-    Nx.less_equal(x, 0) or Nx.less_equal(y, 0) or
-      Nx.greater_equal(x, x_size - 1) or Nx.greater_equal(y, y_size - 1)
+  defnp add_plan(plans, direction, i, j, plan) do
+    Nx.put_slice(plans, [direction, i, j, 0], Nx.broadcast(plan, {1, 1, 1, 2}))
   end
 end

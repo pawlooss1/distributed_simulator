@@ -29,6 +29,25 @@ defmodule Simulator.Helpers do
   end
 
   @doc """
+  Returns opposite directions from the given argument.
+  """
+  @spec opposite(Nx.t()) :: Nx.t()
+  defn opposite(direction) do
+    cond do
+      Nx.equal(direction, @dir_stay) -> @dir_stay
+      Nx.equal(direction, @dir_top) -> @dir_bottom
+      Nx.equal(direction, @dir_top_right) -> @dir_bottom_left
+      Nx.equal(direction, @dir_right) -> @dir_left
+      Nx.equal(direction, @dir_bottom_right) -> @dir_top_left
+      Nx.equal(direction, @dir_bottom) -> @dir_top
+      Nx.equal(direction, @dir_bottom_left) -> @dir_top_right
+      Nx.equal(direction, @dir_left) -> @dir_right
+      Nx.equal(direction, @dir_top_left) -> @dir_bottom_right
+      true -> @dir_stay
+    end
+  end
+
+  @doc """
   Checks if position {x, y} is inside the grid.
   """
   @spec is_valid({Types.index(), Types.index()}, Nx.t()) :: Nx.t()

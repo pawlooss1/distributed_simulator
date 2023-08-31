@@ -10,30 +10,30 @@ defmodule Evacuation do
   @doc """
   Runs the simulation.
   """
-  @spec start() :: :ok
-  def start() do
-    grid = read_grid("map_1")
+  @spec start(String.t()) :: :ok
+  def start(map_path) do
+    grid = read_grid(map_path)
     {x, y, _z} = Nx.shape(grid)
     objects_state = Nx.broadcast(0, {x, y})
     metrics = Nx.tensor([0,0,0])
-    Printer.clean_grid_iterations()
+    Printer.clean()
 
     parameters = %{
       grid: grid,
       metrics: metrics,
-      metrics_save_step: 1,
+      metrics_save_step: 5,
       objects_state: objects_state,
-      workers_by_dim: {3, 2}
+      workers_by_dim: Simulation.fetch_workers_numbers()
     }
 
     Simulation.start(parameters)
   end
 
-  defp read_grid(file_name) do
-    File.read!("lib/maps/#{file_name}.txt")
+  defp read_grid(map_path) do
+    File.read!(map_path)
     |> String.split("\n")
     |> Enum.map(&parse_line/1)
-    |> Nx.tensor()
+    |> Nx.tensor(type: {:s, 8})
   end
 
   defp parse_line(line) do

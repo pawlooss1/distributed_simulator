@@ -1,4 +1,13 @@
-oooooo
-o---eo
-op-f-o
-oooooo
+ooooooooooooo
+o---e---f---o
+op----------o
+o-p---pp----o
+o-p---------o
+op-f---p----o
+o-----------o
+o---p-------o
+o---p-------o
+o---e-------o
+op-----f--p-o
+o----e------o
+ooooooooooooo
