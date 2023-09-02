@@ -64,19 +64,14 @@ defmodule Simulator.WorkerActor.Signal do
   # It is coming from given cell - {x_from, y_from}, from direction dir.
   # Coordinates of a calling cell don't matter (but can be reconstructed moving 1 step in opposite direction).
   defnp signal_update_from_direction(x_from, y_from, grid, dir, generate_signal) do
-    is_cardinal =
-      Nx.remainder(dir, 2)
-      |> Nx.equal(1)
+    is_cardinal = Nx.remainder(dir, 2)
 
     generated_signal = generate_signal.(grid[x_from][y_from][0])
 
     propagated_signal =
-      if is_cardinal do
-        grid[x_from][y_from][adj_left(dir)] + grid[x_from][y_from][dir] +
-          grid[x_from][y_from][adj_right(dir)]
-      else
-        grid[x_from][y_from][dir]
-      end
+      is_cardinal * grid[x_from][y_from][adj_left(dir)]
+      + grid[x_from][y_from][dir]
+      + is_cardinal * grid[x_from][y_from][adj_right(dir)]
 
     generated_signal + propagated_signal
   end
