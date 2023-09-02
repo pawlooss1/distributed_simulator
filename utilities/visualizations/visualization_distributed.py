@@ -159,7 +159,7 @@ def join_workers_grids(workers):
 
 verbose = False
 projects_dir = sys.argv[1]
-grids_dir = f"{projects_dir}/lib/grid_iterations"
+grids_dir = f"{projects_dir}/grid_iterations"
 config_path = f"{projects_dir}/config/animation_config.csv"
 
 workers = read_workers_grids(grids_dir, verbose)
