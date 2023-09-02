@@ -48,16 +48,12 @@ defmodule Simulator.WorkerActor.Signal do
         # coords of a cell that we consider signal from
         {x2, y2} = shift({x, y}, dir)
 
-        if is_valid({x2, y2}, grid) do
-          update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
+        update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
 
-          signals_update =
-            Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
+        signals_update =
+          Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
 
-          {x, y, dir + 1, grid, signals_update}
-        else
-          {x, y, dir + 1, grid, signals_update}
-        end
+        {x, y, dir + 1, grid, signals_update}
       end
 
     signals_update
