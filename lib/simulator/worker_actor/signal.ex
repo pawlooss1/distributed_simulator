@@ -48,16 +48,12 @@ defmodule Simulator.WorkerActor.Signal do
         # coords of a cell that we consider signal from
         {x2, y2} = shift({x, y}, dir)
 
-        if is_valid({x2, y2}, grid) do
-          update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
+        update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
 
-          signals_update =
-            Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
+        signals_update =
+          Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
 
-          {x, y, dir + 1, grid, signals_update}
-        else
-          {x, y, dir + 1, grid, signals_update}
-        end
+        {x, y, dir + 1, grid, signals_update}
       end
 
     signals_update
@@ -68,19 +64,14 @@ defmodule Simulator.WorkerActor.Signal do
   # It is coming from given cell - {x_from, y_from}, from direction dir.
   # Coordinates of a calling cell don't matter (but can be reconstructed moving 1 step in opposite direction).
   defnp signal_update_from_direction(x_from, y_from, grid, dir, generate_signal) do
-    is_cardinal =
-      Nx.remainder(dir, 2)
-      |> Nx.equal(1)
+    is_cardinal = Nx.remainder(dir, 2)
 
     generated_signal = generate_signal.(grid[x_from][y_from][0])
 
     propagated_signal =
-      if is_cardinal do
-        grid[x_from][y_from][adj_left(dir)] + grid[x_from][y_from][dir] +
-          grid[x_from][y_from][adj_right(dir)]
-      else
-        grid[x_from][y_from][dir]
-      end
+      is_cardinal * grid[x_from][y_from][adj_left(dir)]
+      + grid[x_from][y_from][dir]
+      + is_cardinal * grid[x_from][y_from][adj_right(dir)]
 
     generated_signal + propagated_signal
   end

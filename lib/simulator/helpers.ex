@@ -14,18 +14,19 @@ defmodule Simulator.Helpers do
   """
   @spec shift({Types.index(), Types.index()}, Nx.t()) :: {Types.index(), Types.index()}
   defn shift({x, y}, direction) do
-    cond do
-      Nx.equal(direction, @dir_stay) -> {x, y}
-      Nx.equal(direction, @dir_top) -> {x - 1, y}
-      Nx.equal(direction, @dir_top_right) -> {x - 1, y + 1}
-      Nx.equal(direction, @dir_right) -> {x, y + 1}
-      Nx.equal(direction, @dir_bottom_right) -> {x + 1, y + 1}
-      Nx.equal(direction, @dir_bottom) -> {x + 1, y}
-      Nx.equal(direction, @dir_bottom_left) -> {x + 1, y - 1}
-      Nx.equal(direction, @dir_left) -> {x, y - 1}
-      Nx.equal(direction, @dir_top_left) -> {x - 1, y - 1}
-      true -> {0, 0}
-    end
+    shifts = Nx.tensor([
+      [0, 0],
+      [-1, 0],
+      [-1, 1],
+      [0, 1],
+      [1, 1],
+      [1, 0],
+      [1, -1],
+      [0, -1],
+      [-1, -1]
+    ])
+    shift = shifts[direction]
+    {x + shift[0], y + shift[1]}
   end
 
   @doc """
