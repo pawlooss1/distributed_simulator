@@ -31,8 +31,8 @@ defmodule DistributedSimulator.MixProject do
 
   defp deps do
     [
-      {:exla, "~> 0.5.2"},
-      {:nx, "~> 0.5.2", override: true},
+      {:exla, "== 0.5.3"},
+      {:nx, "== 0.5.3"},
       {:ex_doc, "~> 0.24", only: :dev}
     ]
   end
