@@ -6,7 +6,7 @@ defmodule Simulator.PlanCreator do
   Using module have to implement function `create_plan/5` which will
   be responsible for creating plans for every dynamic object in the
   simulation. Function should return a tuple `{direction, plan}`
-  where `plan` is a one dimensional tensor with two elements: 
+  where `plan` is a one dimensional tensor with two elements:
   `[action, consequence]`.
 
   See `Evacuation.PlanCreator` in the `examples` directory for
@@ -20,7 +20,8 @@ defmodule Simulator.PlanCreator do
               y_index :: Types.index(),
               grid :: Nx.t(),
               objects_state :: Nx.t(),
-              iterations :: Types.index()
+              iterations :: Types.index(),
+              rng :: Nx.t()
             ) ::
               {
                 direction :: Nx.t() | integer(),

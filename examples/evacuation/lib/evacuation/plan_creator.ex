@@ -6,13 +6,13 @@ defmodule Evacuation.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, grid, _objects_state, iteration) do
+  defn create_plan(i, j, grid, _objects_state, iteration, rng) do
     cond do
       Nx.equal(grid[i][j][0], @person) ->
         create_plan_person(i, j, grid)
 
       Nx.equal(grid[i][j][0], @fire) ->
-        create_plan_fire(i, j, grid, iteration)
+        create_plan_fire(i, j, grid, iteration, rng)
 
       true ->
         create_plan_other(i, j, grid)
@@ -57,7 +57,7 @@ defmodule Evacuation.PlanCreator do
     end
   end
 
-  defnp create_plan_fire(i, j, grid, iteration) do
+  defnp create_plan_fire(i, j, grid, iteration, rng) do
     if Nx.remainder(iteration, @fire_spreading_frequency) |> Nx.equal(Nx.tensor(0)) do
       {_i, _j, _direction, availability, availability_size, _grid} =
         while {i, j, direction = 1, availability = Nx.broadcast(Nx.tensor(0), {8}), curr = 0,
@@ -74,7 +74,8 @@ defmodule Evacuation.PlanCreator do
         end
 
       if availability_size > 0 do
-        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 32})
+        rng = Nx.Random.fold_in(rng, i * 7 + j * 5)
+        {index, _new_rng} = Nx.Random.randint(rng, 0, availability_size)
         {availability[index], @fire_spread}
       else
         {@dir_stay, @plan_keep}

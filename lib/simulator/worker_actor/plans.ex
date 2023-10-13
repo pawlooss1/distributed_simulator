@@ -26,23 +26,23 @@ defmodule Simulator.WorkerActor.Plans do
   @doc """
   Creates plans for every cell in the grid.
   """
-  @spec create_plans(Types.index(), Nx.t(), Nx.t(), fun()) :: Nx.t()
-  defn create_plans(iteration, grid, objects_state, create_plan) do
+  @spec create_plans(Types.index(), Nx.t(), Nx.t(), Nx.t(), fun()) :: Nx.t()
+  defn create_plans(iteration, grid, objects_state, rng, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
     # create plans only for inner grid
-    {_i, plans, _grid, _objects_state, _iteration} =
-      while {i = 0, plans = initial_plans(x_size, y_size), grid, objects_state, iteration},
+    {_i, plans, _grid, _objects_state, _iteration, _rng} =
+      while {i = 0, plans = initial_plans(x_size, y_size), grid, objects_state, iteration, rng},
             Nx.less(i, x_size) do
-        {_i, _j, plans, _grid, _objects_state, _iteration} =
-          while {i, j = 0, plans, grid, objects_state, iteration},
+        {_i, _j, plans, _grid, _objects_state, _iteration, _rng} =
+          while {i, j = 0, plans, grid, objects_state, iteration, rng},
                 Nx.less(j, y_size) do
-            {direction, plan} = create_plan.(i, j, grid, objects_state, iteration)
+            {direction, plan} = create_plan.(i, j, grid, objects_state, iteration, rng)
             plans = add_plan(plans, direction, i, j, plan)
-            {i, j + 1, plans, grid, objects_state, iteration}
+            {i, j + 1, plans, grid, objects_state, iteration, rng}
           end
 
-        {i + 1, plans, grid, objects_state, iteration}
+        {i + 1, plans, grid, objects_state, iteration, rng}
       end
 
     plans

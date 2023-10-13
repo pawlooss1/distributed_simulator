@@ -29,7 +29,7 @@ defmodule Iteration do
          generate_signal,
          signal_factor
        ) do
-    plans = Plans.create_plans(iteration, grid, objects_state, create_plan)
+    plans = Plans.create_plans(iteration, grid, objects_state, rng, create_plan)
 
     {order, rng} = Nx.Random.shuffle(rng, Nx.tensor(@directions))
 

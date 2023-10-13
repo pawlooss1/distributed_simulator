@@ -56,7 +56,7 @@ defmodule Simulator.Callbacks do
     end
   end
 
-  defmacro create_plan(x_index, y_index, grid, objects_state, iterations) do
+  defmacro create_plan(x_index, y_index, grid, objects_state, iterations, rng) do
     if is_nil(@module_plan_creator) do
       throw("Function create_plan/5 is not implemented!")
     else
@@ -68,7 +68,8 @@ defmodule Simulator.Callbacks do
           unquote(y_index),
           unquote(grid),
           unquote(objects_state),
-          unquote(iterations)
+          unquote(iterations),
+          unquote(rng)
         )
       end
     end

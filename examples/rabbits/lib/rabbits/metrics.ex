@@ -3,7 +3,7 @@ defmodule Rabbits.Metrics do
   use Simulator.Metrics
 
   @impl true
-  def calculate_metrics(metrics, old_grid, old_objects_state, grid, objects_state, iterations) do
+  def calculate_metrics(metrics, old_grid, _old_objects_state, _grid, _objects_state, iterations) do
     # metrics store 6 values: rabbits alive now, sum of rabbits alive in all previous steps, average alive rabbits in any step,
     # and corresponding 3 values for lettuce
     iterations = max(iterations, 1)

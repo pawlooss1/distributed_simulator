@@ -6,26 +6,26 @@ defmodule Rabbits.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, grid, objects_state, iteration) do
+  defn create_plan(i, j, grid, objects_state, iteration, rng) do
     cond do
       Nx.equal(grid[i][j][0], @rabbit) ->
-        create_plan_rabbit(i, j, grid, objects_state)
+        create_plan_rabbit(i, j, grid, objects_state, rng)
 
       Nx.equal(grid[i][j][0], @lettuce) ->
-        create_plan_lettuce(i, j, grid, iteration)
+        create_plan_lettuce(i, j, grid, iteration, rng)
 
       true ->
         create_plan_other(i, j, grid)
     end
   end
 
-  defnp create_plan_rabbit(i, j, grid, objects_state) do
+  defnp create_plan_rabbit(i, j, grid, objects_state, rng) do
     cond do
       Nx.less(objects_state[i][j], 1) ->
         rabbit_die()
 
       Nx.greater(objects_state[i][j], @rabbit_reproduction_energy) ->
-        rabbit_procreate(grid, i, j)
+        rabbit_procreate(grid, i, j, rng)
 
      true ->
         rabbit_move(grid, i, j)
@@ -36,7 +36,7 @@ defmodule Rabbits.PlanCreator do
     {@dir_stay, @rabbit_die}
   end
 
-  defnp rabbit_procreate(grid, i, j) do
+  defnp rabbit_procreate(grid, i, j, rng) do
     {_i, _j, _direction, availability, availability_size, _grid} =
       while {i, j, direction = @dir_top, availability = Nx.broadcast(Nx.tensor(0), {8}), curr = 0,
              grid},
@@ -52,7 +52,8 @@ defmodule Rabbits.PlanCreator do
       end
 
     if availability_size > 0 do
-      index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 32})
+      rng = Nx.Random.fold_in(rng, i * 7 + j * 5)
+      {index, _new_rng} = Nx.Random.randint(rng, 0, availability_size)
       {availability[index], @rabbit_procreate}
     else
       {@dir_stay, @rabbit_rest}
@@ -84,7 +85,7 @@ defmodule Rabbits.PlanCreator do
     end
   end
 
-  defnp create_plan_lettuce(i, j, grid, iteration) do
+  defnp create_plan_lettuce(i, j, grid, iteration, rng) do
     if Nx.remainder(iteration, @lettuce_growth_factor) |> Nx.equal(Nx.tensor(0)) do
       {_i, _j, _direction, availability, availability_size, _grid} =
         while {i, j, direction = @dir_top, availability = Nx.broadcast(Nx.tensor(0), {8}),
@@ -101,7 +102,8 @@ defmodule Rabbits.PlanCreator do
         end
 
       if availability_size > 0 do
-        index = Nx.random_uniform({1}, 0, availability_size, type: {:s, 32})
+        rng = Nx.Random.fold_in(rng, i * 7 + j * 5)
+        {index, _new_rng} = Nx.Random.randint(rng, 0, availability_size)
         {availability[index], @lettuce_grow}
       else
         {@dir_stay, @plan_keep}

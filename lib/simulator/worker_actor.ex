@@ -139,7 +139,7 @@ defmodule Simulator.WorkerActor do
           g,
           os,
           rng,
-          &create_plan/5,
+          &create_plan/6,
           &is_update_valid?/2,
           &apply_action/3,
           &apply_consequence/3,

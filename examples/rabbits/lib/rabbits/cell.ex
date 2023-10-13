@@ -14,7 +14,7 @@ defmodule Rabbits.Cell do
   end
 
   @impl true
-  defn signal_factor(object) do
+  defn signal_factor(_object) do
     1
   end
 end
