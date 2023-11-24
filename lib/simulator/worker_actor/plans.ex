@@ -140,9 +140,23 @@ defmodule Simulator.WorkerActor.Plans do
     Nx.put_slice(plans, [direction, i, j, 0], Nx.broadcast(plan, {1, 1, 1, 2}))
   end
 
+  # WIP, na razie nie "usuwa" planu z komórki początkowej
+  defn process_plans_2(plans, order) do
+    {col_plans, shape} = grid_to_col(plans)
+    col_plans = apply_plan_filter(col_plans, order[0])
+    col_plans = apply_plan_filter(col_plans, order[1])
+    col_plans = apply_plan_filter(col_plans, order[2])
+    col_plans = apply_plan_filter(col_plans, order[3])
+    col_plans = apply_plan_filter(col_plans, order[4])
+    col_plans = apply_plan_filter(col_plans, order[5])
+    col_plans = apply_plan_filter(col_plans, order[6])
+    col_plans = apply_plan_filter(col_plans, order[7])
+    col_to_grid(col_plans, shape)
+  end
+
   # wymyslic nazwe
   defn grid_to_col(grid) do
-    {x, y} = Nx.shape(grid)
+    {x, y} = shape = Nx.shape(grid)
     result = Nx.broadcast(Nx.tensor(0), {x * y, 9})
     grid = Nx.pad(grid, 0, [{1, 1, 0}, {1, 1, 0}])
 
@@ -152,9 +166,11 @@ defmodule Simulator.WorkerActor.Plans do
           while {i, j = 0, result, grid}, Nx.less(j, y) do
             slice = Nx.slice(grid, [i, j], [3, 3])
             row = if Nx.equal(slice[1][1], 0) do
+              # this cell is free, we should look at the plans
               Nx.reshape(slice, {1, 9})
             else
-              Nx.broadcast(Nx.tensor(0), {1, 9})
+              # this cell is occupied, we should discard plans next to it
+              leave_only_center(Nx.reshape(slice, {1, 9}))
             end
             result = Nx.put_slice(result, [i * x + j, 0], row)
             {i, j + 1, result, grid}
@@ -162,6 +178,61 @@ defmodule Simulator.WorkerActor.Plans do
 
         {i + 1, result, grid}
       end
-    result
+    {result, shape}
+  end
+
+  defn col_to_grid(col_grid, shape) do
+    Nx.reshape(col_grid[[.., 4]], shape)
+  end
+
+  defn apply_plan_filter(col_grid, filter_direction) do
+    filter = get_filter(filter_direction)
+    accepted_plans = Nx.dot(col_grid, filter)
+    accepted_plans =  Nx.multiply(accepted_plans, Nx.equal(filter_direction, accepted_plans))
+    update = Nx.broadcast(Nx.tensor(0), Nx.shape(col_grid))
+    update = Nx.put_slice(update, [0, 4], Nx.reshape(accepted_plans, {9, 1}))
+    update = Nx.put_slice(update, [0, get_update_column_index(filter_direction)], Nx.reshape(Nx.negate(accepted_plans), {9, 1}))
+    discard_surrounding_plans(col_grid + update)
+  end
+
+  defn discard_surrounding_plans(col_grid) do
+    filter_out = Nx.equal(0, col_grid[[.., 4..4]])
+    filter_in = 1 - filter_out
+    filter = Nx.concatenate([
+      filter_out,
+      filter_out,
+      filter_out,
+      filter_out,
+      filter_in,
+      filter_out,
+      filter_out,
+      filter_out,
+      filter_out,
+    ], axis: 1)
+    col_grid * filter
+  end
+
+  defn get_filter(dir) do
+    filters = Nx.tensor([
+      [0, 0, 0, 0, 1, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 1, 0],
+      [0, 0, 0, 0, 0, 0, 1, 0, 0],
+      [0, 0, 0, 1, 0, 0, 0, 0, 0],
+      [1, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 1, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 0, 1, 0, 0, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 1],
+    ])
+    filters[dir]
+  end
+
+  defn get_update_column_index(dir) do
+    indices = Nx.tensor([4, 7, 6, 3, 0, 1, 2, 5, 8])
+    indices[dir]
+  end
+
+  defn leave_only_center(row) do
+    Nx.multiply(row, Nx.tensor([0, 0, 0, 0, 1, 0, 0, 0, 0]))
   end
 end
