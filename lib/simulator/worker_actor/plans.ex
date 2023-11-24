@@ -139,4 +139,29 @@ defmodule Simulator.WorkerActor.Plans do
   defnp add_plan(plans, direction, i, j, plan) do
     Nx.put_slice(plans, [direction, i, j, 0], Nx.broadcast(plan, {1, 1, 1, 2}))
   end
+
+  # wymyslic nazwe
+  defn grid_to_col(grid) do
+    {x, y} = Nx.shape(grid)
+    result = Nx.broadcast(Nx.tensor(0), {x * y, 9})
+    grid = Nx.pad(grid, 0, [{1, 1, 0}, {1, 1, 0}])
+
+    {_i, result, _grid} =
+      while {i = 0, result, grid}, Nx.less(i, x) do
+        {_i, _j, result, _grid} =
+          while {i, j = 0, result, grid}, Nx.less(j, y) do
+            slice = Nx.slice(grid, [i, j], [3, 3])
+            row = if Nx.equal(slice[1][1], 0) do
+              Nx.reshape(slice, {1, 9})
+            else
+              Nx.broadcast(Nx.tensor(0), {1, 9})
+            end
+            result = Nx.put_slice(result, [i * x + j, 0], row)
+            {i, j + 1, result, grid}
+          end
+
+        {i + 1, result, grid}
+      end
+    result
+  end
 end
