@@ -187,16 +187,23 @@ defmodule Simulator.WorkerActor.Plans do
 
   defn apply_plan_filter(col_grid, filter_direction) do
     filter = get_filter(filter_direction)
+    # przesuń wszystkie plany
     accepted_plans = Nx.dot(col_grid, filter)
+    # zostaw tylko plany o właściwym kierunku
     accepted_plans =  Nx.multiply(accepted_plans, Nx.equal(filter_direction, accepted_plans))
     update = Nx.broadcast(Nx.tensor(0), Nx.shape(col_grid))
+    # zgodne plany przechodzą do środkowej kolumny - z niej odtwarzamy siatkę
     update = Nx.put_slice(update, [0, 4], Nx.reshape(accepted_plans, {9, 1}))
-    update = Nx.put_slice(update, [0, get_update_column_index(filter_direction)], Nx.reshape(Nx.negate(accepted_plans), {9, 1}))
+    # TODO: odejmujemy plany które zostały przeniesione
+    # korekta w kolumnie, a nie wierszu
+    # możliwe, że nie -> zamiast tego struktura accepted_plans
     discard_surrounding_plans(col_grid + update)
   end
 
   defn discard_surrounding_plans(col_grid) do
+    # jak środek równy 0, to otoczenie (plany) zostaje
     filter_out = Nx.equal(0, col_grid[[.., 4..4]])
+    # w.p.p. usuwamy plany
     filter_in = 1 - filter_out
     filter = Nx.concatenate([
       filter_out,
