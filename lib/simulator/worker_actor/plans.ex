@@ -190,17 +190,25 @@ defmodule Simulator.WorkerActor.Plans do
     # przesuń wszystkie plany
     accepted_plans = Nx.dot(col_grid, filter)
     # zostaw tylko plany o właściwym kierunku
-    accepted_plans =  Nx.multiply(accepted_plans, Nx.equal(filter_direction, accepted_plans))
+    accepted_plans =  Nx.multiply(accepted_plans, Nx.equal(filter_direction, Nx.abs(accepted_plans)))
     update = Nx.broadcast(Nx.tensor(0), Nx.shape(col_grid))
     # zgodne plany przechodzą do środkowej kolumny - z niej odtwarzamy siatkę
     update = Nx.put_slice(update, [0, 4], Nx.reshape(accepted_plans, {9, 1}))
     # TODO: odejmujemy plany które zostały przeniesione
     # korekta w kolumnie, a nie wierszu
     # możliwe, że nie -> zamiast tego struktura accepted_plans
+    # Update: korekta trudna do realizacji, prawnopodobnie accepted_plans,
+    # ale jeszcze muszę przemyśleć jak rozwiązać apply_action
+    # w kontekście objects_state
+    # pierwszy pomysł - lookup table zamiast tych case'ów
+    # poza tym trzeba pomyśleć o is_update_valid? - w królikach agent
+    # może wejść (a nawet będzie miał w planie) na pole z sałatą
     discard_surrounding_plans(col_grid + update)
   end
 
   defn discard_surrounding_plans(col_grid) do
+    # zostawiamy "uzupełnienia"
+    complements = Nx.multiply(col_grid, Nx.less(col_grid, 0))
     # jak środek równy 0, to otoczenie (plany) zostaje
     filter_out = Nx.equal(0, col_grid[[.., 4..4]])
     # w.p.p. usuwamy plany
@@ -216,7 +224,7 @@ defmodule Simulator.WorkerActor.Plans do
       filter_out,
       filter_out,
     ], axis: 1)
-    col_grid * filter
+    col_grid * filter + complements
   end
 
   defn get_filter(dir) do
@@ -241,5 +249,21 @@ defmodule Simulator.WorkerActor.Plans do
 
   defn leave_only_center(row) do
     Nx.multiply(row, Nx.tensor([0, 0, 0, 0, 1, 0, 0, 0, 0]))
+    # choose_row_with_complement(row[[0, 4]]) - raczej do wywalki
+  end
+
+  defn choose_row_with_complement(dir) do
+    rows = Nx.tensor([
+      [0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 0, 0, 0, 1, 0, 0,-1, 0],
+      [0, 0, 0, 0, 2, 0,-2, 0, 0],
+      [0, 0, 0,-3, 3, 0, 0, 0, 0],
+      [-4,0, 0, 0, 4, 0, 0, 0, 0],
+      [0,-5, 0, 0, 5, 0, 0, 0, 0],
+      [0, 0,-6, 0, 6, 0, 0, 0, 0],
+      [0, 0, 0, 0, 7,-7, 0, 0, 0],
+      [0, 0, 0, 0, 8, 0, 0, 0,-8]
+    ])
+    rows[dir]
   end
 end
