@@ -82,6 +82,25 @@ defmodule Simulator.Constants do
           # grid creation
           @margin_size 3
 
+          # filters
+          @leave_plan_filter 65520
+          @leave_direction_filter 61440
+          @leave_undirected_plan_filter 4080
+          @leave_object_filter 15
+          @cut_direction_filter 4095
+          # TODO leave plan wuithout direction
+          @neigh_to_row_filter Nx.tensor([
+                                 @leave_plan_filter,
+                                 @leave_plan_filter,
+                                 @leave_plan_filter,
+                                 @leave_plan_filter,
+                                 @leave_object_filter,
+                                 @leave_plan_filter,
+                                 @leave_plan_filter,
+                                 @leave_plan_filter,
+                                 @leave_plan_filter
+                               ])
+
           unquote(__MODULE__).define_constants()
         end
       end

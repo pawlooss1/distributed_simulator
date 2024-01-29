@@ -143,14 +143,7 @@ defmodule Simulator.WorkerActor.Plans do
   # WIP, na razie nie "usuwa" planu z komórki początkowej
   defn process_plans_2(plans, order) do
     {col_plans, shape} = grid_to_col(plans)
-    col_plans = apply_plan_filter(col_plans, order[0])
-    col_plans = apply_plan_filter(col_plans, order[1])
-    col_plans = apply_plan_filter(col_plans, order[2])
-    col_plans = apply_plan_filter(col_plans, order[3])
-    col_plans = apply_plan_filter(col_plans, order[4])
-    col_plans = apply_plan_filter(col_plans, order[5])
-    col_plans = apply_plan_filter(col_plans, order[6])
-    col_plans = apply_plan_filter(col_plans, order[7])
+    col_plans = apply_plan_filter(col_plans, 0)
     col_to_grid(col_plans, shape)
   end
 
@@ -165,13 +158,24 @@ defmodule Simulator.WorkerActor.Plans do
         {_i, _j, result, _grid} =
           while {i, j = 0, result, grid}, Nx.less(j, y) do
             slice = Nx.slice(grid, [i, j], [3, 3])
-            row = if Nx.equal(slice[1][1], 0) do
-              # this cell is free, we should look at the plans
-              Nx.reshape(slice, {1, 9})
-            else
-              # this cell is occupied, we should discard plans next to it
-              leave_only_center(Nx.reshape(slice, {1, 9}))
-            end
+
+            # row = Nx.bitwise_and(Nx.reshape(slice, {1, 9}), @neigh_to_row_filter) - nie dziala z r(Plans) do odwtworzeina na koiec
+            row =
+              Nx.bitwise_and(
+                Nx.reshape(slice, {1, 9}),
+                Nx.tensor([
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_object_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter
+                ])
+              )
+
             result = Nx.put_slice(result, [i * x + j, 0], row)
             {i, j + 1, result, grid}
           end
@@ -186,84 +190,64 @@ defmodule Simulator.WorkerActor.Plans do
   end
 
   defn apply_plan_filter(col_grid, filter_direction) do
-    filter = get_filter(filter_direction)
-    # przesuń wszystkie plany
-    accepted_plans = Nx.dot(col_grid, filter)
-    # zostaw tylko plany o właściwym kierunku
-    accepted_plans =  Nx.multiply(accepted_plans, Nx.equal(filter_direction, Nx.abs(accepted_plans)))
-    update = Nx.broadcast(Nx.tensor(0), Nx.shape(col_grid))
-    # zgodne plany przechodzą do środkowej kolumny - z niej odtwarzamy siatkę
-    update = Nx.put_slice(update, [0, 4], Nx.reshape(accepted_plans, {9, 1}))
-    # TODO: odejmujemy plany które zostały przeniesione
-    # korekta w kolumnie, a nie wierszu
-    # możliwe, że nie -> zamiast tego struktura accepted_plans
-    # Update: korekta trudna do realizacji, prawnopodobnie accepted_plans,
-    # ale jeszcze muszę przemyśleć jak rozwiązać apply_action
-    # w kontekście objects_state
-    # pierwszy pomysł - lookup table zamiast tych case'ów
-    # poza tym trzeba pomyśleć o is_update_valid? - w królikach agent
-    # może wejść (a nawet będzie miał w planie) na pole z sałatą
-    discard_surrounding_plans(col_grid + update)
+    # TODO: rozwiązywanie konfliktów
+    filtered_by_direction = filter_right_directions(col_grid)
+    accepted_plans = Nx.sum(filtered_by_direction, axes: [1])
+    update = accepted_plans_to_result(accepted_plans)
+    Nx.put_slice(col_grid, [0, 4], Nx.reshape(update, {9, 1}))
   end
 
-  defn discard_surrounding_plans(col_grid) do
-    # zostawiamy "uzupełnienia"
-    complements = Nx.multiply(col_grid, Nx.less(col_grid, 0))
-    # jak środek równy 0, to otoczenie (plany) zostaje
-    filter_out = Nx.equal(0, col_grid[[.., 4..4]])
-    # w.p.p. usuwamy plany
-    filter_in = 1 - filter_out
-    filter = Nx.concatenate([
-      filter_out,
-      filter_out,
-      filter_out,
-      filter_out,
-      filter_in,
-      filter_out,
-      filter_out,
-      filter_out,
-      filter_out,
-    ], axis: 1)
-    col_grid * filter + complements
+  defn accepted_plans_to_result(plans) do
+    {size} = Nx.shape(plans)
+    {_, plans} = while {i = 0, plans}, Nx.less(i, size) do
+      # todo: przeniesc wyciaganie obiektow filtrami, apply_action ma miec trzy argumenty
+      plans = Nx.put_slice(plans, [i], Nx.reshape(apply_action(plans[i]), {1}))
+      {i + 1, plans}
+    end
+    plans
   end
 
-  defn get_filter(dir) do
-    filters = Nx.tensor([
-      [0, 0, 0, 0, 1, 0, 0, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 1, 0],
-      [0, 0, 0, 0, 0, 0, 1, 0, 0],
-      [0, 0, 0, 1, 0, 0, 0, 0, 0],
-      [1, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 1, 0, 0, 0, 0, 0, 0, 0],
-      [0, 0, 1, 0, 0, 0, 0, 0, 0],
-      [0, 0, 0, 0, 0, 1, 0, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0, 1],
-    ])
-    filters[dir]
+  defn apply_action(plan_with_object) do
+    # TODO przeniesc do ewakuacji i zrobic callback (jak calosc bedzie dzialac)
+    object = Nx.bitwise_and(plan_with_object, @leave_object_filter)
+    direction_plan = Nx.bitwise_and(plan_with_object, @leave_plan_filter)
+    plan = Nx.bitwise_and(plan_with_object, @leave_undirected_plan_filter)
+    cond do
+      # person_move
+      Nx.equal(plan, 0b0001_0010_0000) ->
+        cond do
+          # osoba wchodzi na pole
+          Nx.equal(object, 0b0000) -> direction_plan + 0b0001
+          # osoba wchodzi do wyjscia
+          Nx.equal(object, 0b0011) -> direction_plan + 0b0011
+          # osoba wchodzi w ogien
+          Nx.equal(object, 0b0100) -> direction_plan + 0b0100
+          # osoba nie moze wejsc na inna osobe ani na przeszkode
+          true -> object
+        end
+
+      # fire_spread
+      Nx.equal(plan, 0b0011_0000_0000) ->
+        cond do
+          # ogien nie zajmuje przeszkod
+          Nx.equal(object, 0b0010) -> 0b0010
+          # ogien sie rozprzestrzenia
+          true -> direction_plan + 0b0100
+        end
+
+      # brak planu
+      true ->
+        object
+    end
   end
 
-  defn get_update_column_index(dir) do
-    indices = Nx.tensor([4, 7, 6, 3, 0, 1, 2, 5, 8])
-    indices[dir]
+  defn filter_right_directions(col_grid) do
+    only_directions = Nx.bitwise_and(col_grid, @leave_direction_filter)
+    col_grid * Nx.equal(only_directions, get_filter_proper_directions())
   end
 
-  defn leave_only_center(row) do
-    Nx.multiply(row, Nx.tensor([0, 0, 0, 0, 1, 0, 0, 0, 0]))
-    # choose_row_with_complement(row[[0, 4]]) - raczej do wywalki
-  end
-
-  defn choose_row_with_complement(dir) do
-    rows = Nx.tensor([
-      [0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 0, 0, 0, 1, 0, 0,-1, 0],
-      [0, 0, 0, 0, 2, 0,-2, 0, 0],
-      [0, 0, 0,-3, 3, 0, 0, 0, 0],
-      [-4,0, 0, 0, 4, 0, 0, 0, 0],
-      [0,-5, 0, 0, 5, 0, 0, 0, 0],
-      [0, 0,-6, 0, 6, 0, 0, 0, 0],
-      [0, 0, 0, 0, 7,-7, 0, 0, 0],
-      [0, 0, 0, 0, 8, 0, 0, 0,-8]
-    ])
-    rows[dir]
+  defn get_filter_proper_directions() do
+    # 4, 5, 6, 3, 0, 7, 2, 1, 8
+    Nx.tensor([16384, 20480, 24576, 12288, 0, 28672, 8192, 4096, 32768])
   end
 end
