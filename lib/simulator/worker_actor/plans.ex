@@ -29,6 +29,7 @@ defmodule Simulator.WorkerActor.Plans do
   @spec create_plans(Types.index(), Nx.t(), Nx.t(), Nx.t(), fun()) :: Nx.t()
   defn create_plans(iteration, grid, objects_state, rng, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
+    # TODO create_plans ktore bedzie spiete z process_plans_2
 
     # create plans only for inner grid
     {_i, plans, _grid, _objects_state, _iteration, _rng} =
@@ -140,62 +141,31 @@ defmodule Simulator.WorkerActor.Plans do
     Nx.put_slice(plans, [direction, i, j, 0], Nx.broadcast(plan, {1, 1, 1, 2}))
   end
 
-  # WIP, na razie nie "usuwa" planu z komórki początkowej
+  # TODO spiąć z całością
   defn process_plans_2(plans, order) do
     {col_plans, shape} = grid_to_col(plans)
-    col_plans = apply_plan_filter(col_plans, 0)
+    col_plans = apply_plan_filter(col_plans, order)
     col_to_grid(col_plans, shape)
   end
 
-  # wymyslic nazwe
-  defn grid_to_col(grid) do
-    {x, y} = shape = Nx.shape(grid)
-    result = Nx.broadcast(Nx.tensor(0), {x * y, 9})
-    grid = Nx.pad(grid, 0, [{1, 1, 0}, {1, 1, 0}])
+  defn apply_plan_filter(col_grid, order) do
+    filtered_by_direction = filter_right_directions(col_grid)
+    accepted_plans = choose_accepted_plans(filtered_by_direction, order)
+    accepted_plans_to_result(accepted_plans)
+  end
 
-    {_i, result, _grid} =
-      while {i = 0, result, grid}, Nx.less(i, x) do
-        {_i, _j, result, _grid} =
-          while {i, j = 0, result, grid}, Nx.less(j, y) do
-            slice = Nx.slice(grid, [i, j], [3, 3])
+  defn choose_accepted_plans(col_plans, order) do
+    {n_rows, _} = Nx.shape(col_plans)
 
-            # row = Nx.bitwise_and(Nx.reshape(slice, {1, 9}), @neigh_to_row_filter) - nie dziala z r(Plans) do odwtworzeina na koiec
-            row =
-              Nx.bitwise_and(
-                Nx.reshape(slice, {1, 9}),
-                Nx.tensor([
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_object_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter
-                ])
-              )
-
-            result = Nx.put_slice(result, [i * x + j, 0], row)
-            {i, j + 1, result, grid}
-          end
-
-        {i + 1, result, grid}
+    {_, col_plans, _} =
+      while {row = 0, col_plans, order}, Nx.less(row, n_rows) do
+        new_value = choose_plan_from_row(col_plans[row], order)
+        col_plans = Nx.put_slice(col_plans, [row, 4], Nx.reshape(new_value, {1, 1}))
+        # TODO przetestowac czy losowanie dla kazdego wiersza zmienia wydajnosc
+        {row + 1, col_plans, order}
       end
 
-    {result, shape}
-  end
-
-  defn col_to_grid(col_grid, shape) do
-    Nx.reshape(col_grid[[.., 4]], shape)
-  end
-
-  defn apply_plan_filter(col_grid, filter_direction) do
-    # TODO: rozwiązywanie konfliktów
-    filtered_by_direction = filter_right_directions(col_grid)
-    accepted_plans = Nx.sum(filtered_by_direction, axes: [1])
-    update = accepted_plans_to_result(accepted_plans)
-    Nx.put_slice(col_grid, [0, 4], Nx.reshape(update, {9, 1}))
+    col_plans[[.., 4]]
   end
 
   defn accepted_plans_to_result(plans) do
@@ -246,21 +216,8 @@ defmodule Simulator.WorkerActor.Plans do
     end
   end
 
-  defn choose_accepted_plans(col_plans, key) do
-    # TODO dokonczycc i przetestowac
-    {n_rows, _} = Nx.shape(col_plans)
-    indices = Nx.tensor([0, 1, 2, 3, 5, 6, 7, 8])
-
-    {_, col_plans, _} =
-      while {row = 0, col_plans, order = Nx.Random.shuffle(key, indices)}, Nx.less(row, n_rows) do
-        # choose_plan_from_row zwraca juz sume, to trzeba do nowej struktury
-        col_plans = Nx.put_slice(col_plans, [row, 0], choose_plan_from_row(row, order))
-        {row + 1, col_plans, Nx.Random.shuffle(key, order)}
-      end
-  end
-
   defn choose_plan_from_row(row, order) do
-    # object = row[4]
+    # object <=> row[4]
     {_, _, _, result} =
       while {i = 0, row, order, result = 0}, Nx.less(i, 8) and Nx.equal(result, 0) do
         plan = row[order[i]]
@@ -285,6 +242,49 @@ defmodule Simulator.WorkerActor.Plans do
   defn filter_right_directions(col_grid) do
     only_directions = Nx.bitwise_and(col_grid, @leave_direction_filter)
     col_grid * Nx.equal(only_directions, get_filter_proper_directions())
+  end
+
+  # wymyslic nazwe
+  defn grid_to_col(grid) do
+    {x, y} = shape = Nx.shape(grid)
+    result = Nx.broadcast(Nx.tensor(0), {x * y, 9})
+    grid = Nx.pad(grid, 0, [{1, 1, 0}, {1, 1, 0}])
+
+    {_i, result, _grid} =
+      while {i = 0, result, grid}, Nx.less(i, x) do
+        {_i, _j, result, _grid} =
+          while {i, j = 0, result, grid}, Nx.less(j, y) do
+            slice = Nx.slice(grid, [i, j], [3, 3])
+
+            # row = Nx.bitwise_and(Nx.reshape(slice, {1, 9}), @neigh_to_row_filter) - nie dziala z r(Plans) do odwtworzeina na koiec
+            row =
+              Nx.bitwise_and(
+                Nx.reshape(slice, {1, 9}),
+                Nx.tensor([
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_object_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter,
+                  @leave_plan_filter
+                ])
+              )
+
+            result = Nx.put_slice(result, [i * x + j, 0], row)
+            {i, j + 1, result, grid}
+          end
+
+        {i + 1, result, grid}
+      end
+
+    {result, shape}
+  end
+
+  defn col_to_grid(result, shape) do
+    Nx.reshape(result, shape)
   end
 
   defn get_filter_proper_directions() do
