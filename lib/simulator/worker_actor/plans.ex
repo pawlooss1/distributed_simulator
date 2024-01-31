@@ -182,6 +182,7 @@ defmodule Simulator.WorkerActor.Plans do
 
         {i + 1, result, grid}
       end
+
     {result, shape}
   end
 
@@ -199,11 +200,14 @@ defmodule Simulator.WorkerActor.Plans do
 
   defn accepted_plans_to_result(plans) do
     {size} = Nx.shape(plans)
-    {_, plans} = while {i = 0, plans}, Nx.less(i, size) do
-      # todo: przeniesc wyciaganie obiektow filtrami, apply_action ma miec trzy argumenty
-      plans = Nx.put_slice(plans, [i], Nx.reshape(apply_action(plans[i]), {1}))
-      {i + 1, plans}
-    end
+
+    {_, plans} =
+      while {i = 0, plans}, Nx.less(i, size) do
+        # todo: przeniesc wyciaganie obiektow filtrami, apply_action ma miec trzy argumenty
+        plans = Nx.put_slice(plans, [i], Nx.reshape(apply_action(plans[i]), {1}))
+        {i + 1, plans}
+      end
+
     plans
   end
 
@@ -212,6 +216,7 @@ defmodule Simulator.WorkerActor.Plans do
     object = Nx.bitwise_and(plan_with_object, @leave_object_filter)
     direction_plan = Nx.bitwise_and(plan_with_object, @leave_plan_filter)
     plan = Nx.bitwise_and(plan_with_object, @leave_undirected_plan_filter)
+
     cond do
       # person_move
       Nx.equal(plan, 0b0001_0010_0000) ->
@@ -238,6 +243,42 @@ defmodule Simulator.WorkerActor.Plans do
       # brak planu
       true ->
         object
+    end
+  end
+
+  defn choose_accepted_plans(col_plans, key) do
+    # TODO dokonczycc i przetestowac
+    {n_rows, _} = Nx.shape(col_plans)
+    indices = Nx.tensor([0, 1, 2, 3, 5, 6, 7, 8])
+
+    {_, col_plans, _} =
+      while {row = 0, col_plans, order = Nx.Random.shuffle(key, indices)}, Nx.less(row, n_rows) do
+        # choose_plan_from_row zwraca juz sume, to trzeba do nowej struktury
+        col_plans = Nx.put_slice(col_plans, [row, 0], choose_plan_from_row(row, order))
+        {row + 1, col_plans, Nx.Random.shuffle(key, order)}
+      end
+  end
+
+  defn choose_plan_from_row(row, order) do
+    # object = row[4]
+    {_, _, _, result} =
+      while {i = 0, row, order, result = 0}, Nx.less(i, 8) and Nx.equal(result, 0) do
+        plan = row[order[i]]
+
+        result =
+          if not Nx.equal(plan, 0) do
+            plan + row[4]
+          else
+            0
+          end
+
+        {i + 1, row, order, result}
+      end
+
+    if Nx.equal(result, 0) do
+      row[4]
+    else
+      result
     end
   end
 
