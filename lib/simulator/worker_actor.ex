@@ -130,7 +130,7 @@ defmodule Simulator.WorkerActor do
        ) do
     Printer.write_to_file(state)
 
-    {:s, 8} = Nx.type(grid)
+    {:s, 64} = Nx.type(grid)
 
     {new_grid, new_objects_state, new_rng} =
       EXLA.jit(fn i, g, os, rng ->

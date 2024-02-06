@@ -29,12 +29,12 @@ defmodule Iteration do
          generate_signal,
          signal_factor
        ) do
-    plans = Plans.create_plans(iteration, grid, objects_state, rng, create_plan)
+    plans = Plans.create_plans_2(iteration, grid, objects_state, rng, create_plan)
 
-    {order, rng} = Nx.Random.shuffle(rng, Nx.tensor(@directions))
+    {order, rng} = Nx.Random.shuffle(rng, Nx.tensor([0, 1, 2, 3, 5, 6, 7, 8]))
 
     {updated_grid, accepted_plans, updated_objects_state} =
-      Plans.process_plans(
+      Plans.process_plans_2(
         grid,
         plans,
         objects_state,
@@ -44,7 +44,7 @@ defmodule Iteration do
       )
 
     {updated_grid, updated_objects_state} =
-      Consequences.apply_consequences(
+      Consequences.apply_consequences_2(
         updated_grid,
         updated_objects_state,
         plans,

@@ -33,7 +33,7 @@ defmodule Rabbits do
     File.read!(map_path)
     |> String.split("\n")
     |> Enum.map(&parse_line/1)
-    |> Nx.tensor(type: {:s, 8})
+    |> Nx.tensor(type: {:s, 64})
   end
 
   defp parse_line(line) do

@@ -6,7 +6,18 @@ defmodule Evacuation.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, grid, _objects_state, iteration, rng) do
+  defn create_plan(i, j, grid, objects_state, iteration, rng) do
+    # TODO refactor
+    {direction, plan} = create_plan_0(i, j, grid, objects_state, iteration, rng)
+    action = plan[0]
+    consequence = plan[1]
+    object = grid[[i, j, 0]]
+
+    (direction <<< @direction_position) ||| (action <<< @action_position) |||
+      (consequence <<< @consequence_position) ||| object
+  end
+
+  defn create_plan_0(i, j, grid, _objects_state, iteration, rng) do
     cond do
       Nx.equal(grid[i][j][0], @person) ->
         create_plan_person(i, j, grid)
@@ -21,8 +32,7 @@ defmodule Evacuation.PlanCreator do
 
   defnp create_plan_person(i, j, grid) do
     {_i, _j, _direction, signals, _grid} =
-      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(@dir_stay), {9}),
-             grid},
+      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(@dir_stay), {9}), grid},
             Nx.less_equal(direction, @dir_top_left) do
         {x, y} = shift({i, j}, direction)
 
@@ -44,13 +54,16 @@ defmodule Evacuation.PlanCreator do
       diff |> Nx.greater(0) ->
         # positive signal is stronger
         {Nx.argmax(signals), @person_move}
+
       diff |> Nx.less(0) ->
         # negative signal is stronger
         {opposite(Nx.argmin(signals)), @person_move}
+
       max |> Nx.greater(0) ->
         # pos and ned signals are non-zero but same strength
         # we choose positive
         {Nx.argmax(signals), @person_move}
+
       true ->
         # no non-neutral signal
         {@dir_stay, @plan_keep}

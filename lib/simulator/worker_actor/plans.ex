@@ -29,7 +29,6 @@ defmodule Simulator.WorkerActor.Plans do
   @spec create_plans(Types.index(), Nx.t(), Nx.t(), Nx.t(), fun()) :: Nx.t()
   defn create_plans(iteration, grid, objects_state, rng, create_plan) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
-    # TODO create_plans ktore bedzie spiete z process_plans_2
 
     # create plans only for inner grid
     {_i, plans, _grid, _objects_state, _iteration, _rng} =
@@ -47,6 +46,48 @@ defmodule Simulator.WorkerActor.Plans do
       end
 
     plans
+  end
+
+  @doc """
+  Creates plans for every cell in the grid.
+  """
+  @spec create_plans_2(Types.index(), Nx.t(), Nx.t(), Nx.t(), fun()) :: Nx.t()
+  defn create_plans_2(iteration, grid, objects_state, rng, create_plan) do
+    {x_size, y_size, _z_size} = Nx.shape(grid)
+
+    # create plans only for inner grid
+    {_i, plans, _grid, _objects_state, _iteration, _rng} =
+      while {i = 0, plans = initial_plans_2(grid), grid, objects_state, iteration, rng},
+            Nx.less(i, x_size) do
+        {_i, _j, plans, _grid, _objects_state, _iteration, _rng} =
+          while {i, j = 0, plans, grid, objects_state, iteration, rng},
+                Nx.less(j, y_size) do
+            plan = create_plan.(i, j, grid, objects_state, iteration, rng)
+            # plans = Nx.put_slice(plans, [i, j], Nx.broadcast(plan |> Nx.as_type({:s, 32}), {1, 1}))
+            plans = Nx.put_slice(plans, [i, j], Nx.broadcast(plan, {1, 1}))
+            {i, j + 1, plans, grid, objects_state, iteration, rng}
+          end
+
+        {i + 1, plans, grid, objects_state, iteration, rng}
+      end
+
+    plans
+  end
+
+    @doc """
+  The function decides which plans are accepted and update the grid
+  by putting `action` in the proper cells. `Consequences` will be
+  applied in the `:remote_consequences` phase.
+  """
+  @spec process_plans(Nx.t(), Nx.t(), Nx.t(), Nx.t(), fun(), fun()) :: {Nx.t(), Nx.t(), Nx.t()}
+  defn process_plans_2(grid, plans, objects_state, order, _is_update_valid?, _apply_action) do
+    # todo podawac apply_action
+    processed_grid = new_process_plans(plans, order)
+    grid = Nx.put_slice(grid, [0, 0, 0], Nx.new_axis(processed_grid, -1))
+    # todo accepted_plans do wywalki
+    accepted_plans = plans
+    # todo objects_state: wyciagnac z processed_grid albo na stale zespolic z grid
+    {grid, accepted_plans, objects_state}
   end
 
   @doc """
@@ -137,12 +178,16 @@ defmodule Simulator.WorkerActor.Plans do
     Nx.broadcast(Nx.tensor([@keep, @keep]), {8, x_size, y_size, 2})
   end
 
+  defnp initial_plans_2(grid) do
+    grid[[.., .., 0]]
+  end
+
   defnp add_plan(plans, direction, i, j, plan) do
     Nx.put_slice(plans, [direction, i, j, 0], Nx.broadcast(plan, {1, 1, 1, 2}))
   end
 
   # TODO spiąć z całością
-  defn process_plans_2(plans, order) do
+  defn new_process_plans(plans, order) do
     {col_plans, shape} = grid_to_col(plans)
     col_plans = apply_plan_filter(col_plans, order)
     col_to_grid(col_plans, shape)
@@ -183,6 +228,7 @@ defmodule Simulator.WorkerActor.Plans do
 
   defn apply_action(plan_with_object) do
     # TODO przeniesc do ewakuacji i zrobic callback (jak calosc bedzie dzialac)
+    # TODO uwzglednic objects_state
     object = Nx.bitwise_and(plan_with_object, @leave_object_filter)
     direction_plan = Nx.bitwise_and(plan_with_object, @leave_plan_filter)
     plan = Nx.bitwise_and(plan_with_object, @leave_undirected_plan_filter)
@@ -218,8 +264,10 @@ defmodule Simulator.WorkerActor.Plans do
 
   defn choose_plan_from_row(row, order) do
     # object <=> row[4]
+    # result = Nx.tensor(0, type: {:s, 32})
+    result = 0
     {_, _, _, result} =
-      while {i = 0, row, order, result = 0}, Nx.less(i, 8) and Nx.equal(result, 0) do
+      while {i = 0, row, order, result}, Nx.less(i, 8) and Nx.equal(result, 0) do
         plan = row[order[i]]
 
         result =
@@ -247,6 +295,7 @@ defmodule Simulator.WorkerActor.Plans do
   # wymyslic nazwe
   defn grid_to_col(grid) do
     {x, y} = shape = Nx.shape(grid)
+    # result = Nx.broadcast(Nx.tensor(0, type: {:s, 32}), {x * y, 9})
     result = Nx.broadcast(Nx.tensor(0), {x * y, 9})
     grid = Nx.pad(grid, 0, [{1, 1, 0}, {1, 1, 0}])
 
@@ -256,22 +305,7 @@ defmodule Simulator.WorkerActor.Plans do
           while {i, j = 0, result, grid}, Nx.less(j, y) do
             slice = Nx.slice(grid, [i, j], [3, 3])
 
-            # row = Nx.bitwise_and(Nx.reshape(slice, {1, 9}), @neigh_to_row_filter) - nie dziala z r(Plans) do odwtworzeina na koiec
-            row =
-              Nx.bitwise_and(
-                Nx.reshape(slice, {1, 9}),
-                Nx.tensor([
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_object_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter,
-                  @leave_plan_filter
-                ])
-              )
+            row = Nx.bitwise_and(Nx.reshape(slice, {1, 9}), @neigh_to_row_filter)
 
             result = Nx.put_slice(result, [i * x + j, 0], row)
             {i, j + 1, result, grid}

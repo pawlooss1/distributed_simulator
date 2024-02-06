@@ -63,6 +63,8 @@ defmodule Simulator.Constants do
             @dir_top_left
           ]
 
+          @direction_indices Nx.tensor([0, 1, 2, 3, 5, 6, 7, 8])
+
           # plans
           @rejected 0
           @accepted 1
@@ -82,13 +84,19 @@ defmodule Simulator.Constants do
           # grid creation
           @margin_size 3
 
+          # positions
+          @direction_position 12
+          @action_position 8
+          @consequence_position 4
+
           # filters
-          @leave_plan_filter 65520
-          @leave_direction_filter 61440
-          @leave_undirected_plan_filter 4080
-          @leave_object_filter 15
-          @cut_direction_filter 4095
-          # TODO leave plan wuithout direction
+          @leave_plan_filter 0b1111_1111_1111_0000
+          @leave_direction_filter 0b1111_0000_0000_0000
+          @leave_undirected_plan_filter 0b0000_1111_1111_0000
+          @leave_object_filter 0b0000_0000_0000_1111
+          @leave_consequence_filter 0b0000_0000_1111_0000
+          @cut_direction_filter 0b0000_1111_1111_1111
+
           @neigh_to_row_filter Nx.tensor([
                                  @leave_plan_filter,
                                  @leave_plan_filter,
