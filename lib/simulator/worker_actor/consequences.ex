@@ -62,7 +62,7 @@ defmodule Simulator.WorkerActor.Consequences do
             grid =
               if Nx.not_equal(consequence, @keep) do
                 direction = (plan_with_object &&& @leave_direction_filter) >>> @direction_position
-                {x_target, y_target} = shift({i, j}, direction)
+                {x_target, y_target} = shift({i, j}, opposite(direction))
                 target_object = grid[x_target][y_target][0]
 
                 new_object = apply_consequence(target_object, consequence)
