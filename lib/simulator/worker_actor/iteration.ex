@@ -53,8 +53,7 @@ defmodule Iteration do
     #   )
 
     signal_update = Signal.calculate_signal_updates(grid, generate_signal)
-    # final_grid = Signal.apply_signal_update(updated_grid, signal_update, signal_factor)
-    # {final_grid, updated_objects_state, rng}
-    signal_update
+    final_grid = Signal.apply_signal_update(grid, signal_update, signal_factor)
+    {final_grid, objects_state, rng}
   end
 end
