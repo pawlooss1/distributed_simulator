@@ -132,8 +132,7 @@ defmodule Simulator.WorkerActor do
 
     {:s, 64} = Nx.type(grid)
 
-    {new_grid, new_objects_state, new_rng} = {grid, objects_state, rng}
-    plans =
+    {new_grid, new_objects_state, new_rng} =
       EXLA.jit(fn i, g, os, rng ->
         Iteration.compute(
           i,

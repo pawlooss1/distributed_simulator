@@ -43,18 +43,17 @@ defmodule Iteration do
         apply_action
       )
 
-    # {updated_grid, updated_objects_state} =
-    #   Consequences.apply_consequences_2(
-    #     updated_grid,
-    #     updated_objects_state,
-    #     plans,
-    #     accepted_plans,
-    #     apply_consequence
-    #   )
+    {updated_grid, updated_objects_state} =
+      Consequences.apply_consequences_2(
+        updated_grid,
+        updated_objects_state,
+        plans,
+        accepted_plans,
+        apply_consequence
+      )
 
     # signal_update = Signal.calculate_signal_updates(updated_grid, generate_signal)
     # final_grid = Signal.apply_signal_update(updated_grid, signal_update, signal_factor)
-    # {final_grid, updated_objects_state, rng}
-    updated_grid
+    {updated_grid, updated_objects_state, rng}
   end
 end
