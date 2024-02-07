@@ -63,6 +63,7 @@ defmodule Simulator.WorkerActor.Plans do
           while {i, j = 0, plans, grid, objects_state, iteration, rng},
                 Nx.less(j, y_size) do
             plan = create_plan.(i, j, grid, objects_state, iteration, rng)
+
             # plans = Nx.put_slice(plans, [i, j], Nx.broadcast(plan |> Nx.as_type({:s, 32}), {1, 1}))
             plans = Nx.put_slice(plans, [i, j], Nx.broadcast(plan, {1, 1}))
             {i, j + 1, plans, grid, objects_state, iteration, rng}
@@ -74,7 +75,7 @@ defmodule Simulator.WorkerActor.Plans do
     plans
   end
 
-    @doc """
+  @doc """
   The function decides which plans are accepted and update the grid
   by putting `action` in the proper cells. `Consequences` will be
   applied in the `:remote_consequences` phase.
@@ -266,6 +267,7 @@ defmodule Simulator.WorkerActor.Plans do
     # object <=> row[4]
     # result = Nx.tensor(0, type: {:s, 32})
     result = 0
+
     {_, _, _, result} =
       while {i = 0, row, order, result}, Nx.less(i, 8) and Nx.equal(result, 0) do
         plan = row[order[i]]
