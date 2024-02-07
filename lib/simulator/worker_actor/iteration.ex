@@ -31,17 +31,17 @@ defmodule Iteration do
        ) do
     plans = Plans.create_plans_2(iteration, grid, objects_state, rng, create_plan)
 
-    # {order, rng} = Nx.Random.shuffle(rng, Nx.tensor([0, 1, 2, 3, 5, 6, 7, 8]))
+    {order, rng} = Nx.Random.shuffle(rng, Nx.tensor([0, 1, 2, 3, 5, 6, 7, 8]))
 
-    # {updated_grid, accepted_plans, updated_objects_state} =
-    #   Plans.process_plans_2(
-    #     grid,
-    #     plans,
-    #     objects_state,
-    #     order,
-    #     is_update_valid?,
-    #     apply_action
-    #   )
+    {updated_grid, accepted_plans, updated_objects_state} =
+      Plans.process_plans_2(
+        grid,
+        plans,
+        objects_state,
+        order,
+        is_update_valid?,
+        apply_action
+      )
 
     # {updated_grid, updated_objects_state} =
     #   Consequences.apply_consequences_2(
@@ -55,6 +55,6 @@ defmodule Iteration do
     # signal_update = Signal.calculate_signal_updates(updated_grid, generate_signal)
     # final_grid = Signal.apply_signal_update(updated_grid, signal_update, signal_factor)
     # {final_grid, updated_objects_state, rng}
-    plans
+    updated_grid
   end
 end
