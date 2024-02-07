@@ -30,39 +30,30 @@ defmodule Evacuation.PlanCreator do
     end
   end
 
-  defnp create_plan_person(i, j, grid) do
+  defn create_plan_person(i, j, grid) do
     {_i, _j, _direction, signals, _grid} =
       while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(@dir_stay), {9}), grid},
             Nx.less_equal(direction, @dir_top_left) do
         {x, y} = shift({i, j}, direction)
 
         signals =
-          if Nx.equal(grid[x][y][0], @empty) or Nx.equal(grid[x][y][0], @exit) do
-            Nx.put_slice(signals, [direction], Nx.broadcast(grid[i][j][direction], {1}))
-          else
+          if Nx.equal(grid[[x, y, 0]], @obstacle) do
             Nx.put_slice(signals, [direction], Nx.broadcast(@dir_stay, {1}))
+          else
+            Nx.put_slice(signals, [direction], Nx.broadcast(grid[i][j][direction], {1}))
           end
 
         {i, j, direction + 1, signals, grid}
       end
 
-    max = Nx.reduce_max(signals)
-    min = Nx.reduce_min(signals)
-    diff = Nx.add(max, min)
-
     cond do
-      diff |> Nx.greater(0) ->
-        # positive signal is stronger
+      Nx.reduce_max(signals) |> Nx.greater(0) ->
+        # there is a positive signal
         {Nx.argmax(signals), @person_move}
 
-      diff |> Nx.less(0) ->
-        # negative signal is stronger
+      Nx.reduce_min(signals) |> Nx.less(0) ->
+        # there is no positive signal, but negative is
         {opposite(Nx.argmin(signals)), @person_move}
-
-      max |> Nx.greater(0) ->
-        # pos and ned signals are non-zero but same strength
-        # we choose positive
-        {Nx.argmax(signals), @person_move}
 
       true ->
         # no non-neutral signal
