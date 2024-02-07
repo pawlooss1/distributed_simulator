@@ -307,7 +307,7 @@ defmodule Simulator.WorkerActor.Plans do
 
             row = Nx.bitwise_and(Nx.reshape(slice, {1, 9}), @neigh_to_row_filter)
 
-            result = Nx.put_slice(result, [i * x + j, 0], row)
+            result = Nx.put_slice(result, [i * y + j, 0], row)
             {i, j + 1, result, grid}
           end
 
