@@ -50,8 +50,7 @@ defmodule Simulator.WorkerActor.Signal do
 
         update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
 
-        signals_update =
-          Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
+        signals_update = Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
 
         {x, y, dir + 1, grid, signals_update}
       end
@@ -69,9 +68,8 @@ defmodule Simulator.WorkerActor.Signal do
     generated_signal = generate_signal.(grid[x_from][y_from][0])
 
     propagated_signal =
-      is_cardinal * grid[x_from][y_from][adj_left(dir)]
-      + grid[x_from][y_from][dir]
-      + is_cardinal * grid[x_from][y_from][adj_right(dir)]
+      is_cardinal * grid[x_from][y_from][adj_left(dir)] + grid[x_from][y_from][dir] +
+        is_cardinal * grid[x_from][y_from][adj_right(dir)]
 
     generated_signal + propagated_signal
   end
@@ -99,16 +97,17 @@ defmodule Simulator.WorkerActor.Signal do
   defn apply_signal_update(grid, signal_update, signal_factor) do
     signal_factors = map_signal_factor(grid, signal_factor)
 
-    signal = Nx.slice_along_axis(grid, 1, 8, [axis: 2])
+    signal = Nx.slice_along_axis(grid, 1, 8, axis: 2)
 
     updated_signal =
       signal_update
-      |> Nx.slice_along_axis(1, 8, [axis: 2])
+      |> Nx.slice_along_axis(1, 8, axis: 2)
       |> Nx.multiply(@signal_suppression_factor)
       |> Nx.add(signal)
       |> Nx.multiply(@signal_attenuation_factor)
       |> Nx.multiply(signal_factors)
-      # |> Nx.as_type({:s, 32})
+      |> Nx.round()
+      |> Nx.as_type({:s, 64})
 
     Nx.put_slice(grid, [0, 0, 1], updated_signal)
   end
