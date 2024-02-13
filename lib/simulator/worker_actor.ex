@@ -133,6 +133,7 @@ defmodule Simulator.WorkerActor do
     {:s, 64} = Nx.type(grid)
 
     {new_grid, new_objects_state, new_rng} = {grid, objects_state, rng}
+    {objects_state, _} = Nx.Random.randint(rng, -100, 100, shape: Nx.shape(grid))
     signal_update =
       EXLA.jit(fn i, g, os, rng ->
         Iteration.compute(

@@ -52,8 +52,8 @@ defmodule Iteration do
     #     apply_consequence
     #   )
 
-    signal_update = Signal.calculate_signal_updates(grid, generate_signal)
-    final_grid = Signal.apply_signal_update(grid, signal_update, signal_factor)
+    # signal_update = Signal.calculate_signal_updates(grid, generate_signal)
+    final_grid = Signal.apply_signal_update(grid, objects_state, signal_factor)
     {final_grid, objects_state, rng}
   end
 end
