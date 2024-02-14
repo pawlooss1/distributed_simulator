@@ -119,22 +119,21 @@ defmodule Simulator.WorkerActor.Signal do
   defnp map_signal_factor(grid, signal_factor) do
     {x_size, y_size, _z_size} = Nx.shape(grid)
 
-    # {_i, _grid, signal_factors} =
-    #   while {i = 0, grid, signal_factors = Nx.broadcast(0, {x_size, y_size, 1})},
-    #         Nx.less(i, x_size) do
-    #     {_i, _j, grid, signal_factors} =
-    #       while {i, j = 0, grid, signal_factors}, Nx.less(j, y_size) do
-    #         cell_signal_factor = Nx.broadcast(signal_factor.(grid[i][j][0]), {1, 1, 1})
-    #         signal_factors = Nx.put_slice(signal_factors, [i, j, 0], cell_signal_factor)
+    {_i, _grid, signal_factors} =
+      while {i = 0, grid, signal_factors = Nx.broadcast(0, {x_size, y_size, 1})},
+            Nx.less(i, x_size) do
+        {_i, _j, grid, signal_factors} =
+          while {i, j = 0, grid, signal_factors}, Nx.less(j, y_size) do
+            cell_signal_factor = Nx.broadcast(2, {1, 1, 1})
+            signal_factors = Nx.put_slice(signal_factors, [i, j, 0], cell_signal_factor)
 
-    #         {i, j + 1, grid, signal_factors}
-    #       end
+            {i, j + 1, grid, signal_factors}
+          end
 
-    #     {i + 1, grid, signal_factors}
-    #   end
+        {i + 1, grid, signal_factors}
+      end
 
-    # signal_factors
-    Nx.broadcast(2, {x_size, y_size, 1})
+    signal_factors
   end
 
   # gets next direction, counterclockwise ( @top -> @top_left, @right -> @bottom_right)
