@@ -25,6 +25,7 @@ defmodule Simulator.Constants do
 
       defmacro __using__(_opts) do
         quote location: :keep do
+          @grid_type {:s, 64}
           # constants set in simulation's config file
           @max_iterations Application.compile_env!(:distributed_simulator, :max_iterations)
 

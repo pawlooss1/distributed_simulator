@@ -5,19 +5,17 @@ defmodule Evacuation.Cell do
   import Nx.Defn
 
   @impl true
-  defn generate_signal(object) do
-    cond do
-      Nx.equal(object, @exit) -> @exit_signal
-      Nx.equal(object, @fire) -> @fire_signal
-      true -> 0
-    end
+  defn signal_generators() do
+    Nx.tensor([
+      [@exit, @exit_signal],
+      [@fire, @fire_signal]
+    ])
   end
 
   @impl true
-  defn signal_factor(object) do
-    cond do
-      Nx.equal(object, @obstacle) -> 0
-      true -> 1
-    end
+  defn signal_factors() do
+    Nx.tensor([
+      [@obstacle, 0]
+    ])
   end
 end
