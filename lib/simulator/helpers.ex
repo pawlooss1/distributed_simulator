@@ -98,4 +98,19 @@ defmodule Simulator.Helpers do
   defn put_object(grid, x, y, object) do
     Nx.put_slice(grid, [x, y, 0], Nx.broadcast(object, {1, 1, 1}))
   end
+
+  defn attach_neighbourhood_to_new_dim(grid) do
+    padded_grid = Nx.pad(grid, 0, [{1, 1, 0}, {1, 1, 0}])
+    Nx.stack([
+      grid,
+      padded_grid[[1..-2//1, 2..-1//1]],
+      padded_grid[[0..-3//1, 2..-1//1]],
+      padded_grid[[0..-3//1, 1..-2//1]],
+      padded_grid[[0..-3//1, 0..-3//1]],
+      padded_grid[[1..-2//1, 0..-3//1]],
+      padded_grid[[2..-1//1, 0..-3//1]],
+      padded_grid[[2..-1//1, 1..-2//1]],
+      padded_grid[[2..-1//1, 2..-1//1]],
+    ], axis: 2)
+  end
 end
