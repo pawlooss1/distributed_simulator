@@ -37,6 +37,7 @@ grid_iterations/
 .vscode/
 .metals/
 
+frames/
 metrics/
 metrics.png
 metrics_joined.csv
