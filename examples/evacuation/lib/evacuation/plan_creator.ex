@@ -19,6 +19,40 @@ defmodule Evacuation.PlanCreator do
     end
   end
 
+  defn create_plan(grid, objects_state, iteration, rng) do
+    plan_directions = calc_plan_directions(grid)
+    # TODO finish plans for people and fire
+  end
+
+  defn create_plan_person(grid, directions) do
+    directions = (grid == 1) * directions
+
+  end
+
+  # TODO probalby move to the framework
+  defn calc_plan_directions(grid) do
+    # TODO move to a const
+    filter =
+      Nx.complex(
+        Nx.tensor([1, 0.7071067690849304, 0, -0.7071067690849304, -1, -0.7071067690849304, 0, 0.7071067690849304]),
+        Nx.tensor([0, 0.7071067690849304, 1, 0.7071067690849304, 0, -0.7071067690849304, -1, -0.7071067690849304])
+      )
+
+    resultants = Nx.dot(grid[[.., .., 1..8]], filter)
+    resultants
+    |> Nx.phase()
+    |> radian_to_direction()
+    |> Nx.multiply(resultants != Nx.complex(0, 0)) # 0 + i0 has angle = 0 too hence the correction
+    |> Nx.as_type(Nx.type(grid))
+  end
+
+  defn radian_to_direction(angles) do
+    Nx.round(angles * 4 / Nx.Constants.pi)
+    |> Nx.add(8) # correction because Nx.phase results are from (-pi, pi]
+    |> Nx.remainder(8)
+    |> Nx.add(1) # angle = 0 -> dir = 1, etc.
+  end
+
   defnp create_plan_person(i, j, grid) do
     {_i, _j, _direction, signals, _grid} =
       while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(@dir_stay), {9}),
