@@ -16,17 +16,12 @@ defmodule Simulator.PlanCreator do
   alias Simulator.Types
 
   @callback create_plan(
-              x_index :: Types.index(),
-              y_index :: Types.index(),
               grid :: Nx.t(),
               objects_state :: Nx.t(),
-              iterations :: Types.index(),
+              iteration :: Types.index(),
               rng :: Nx.t()
             ) ::
-              {
-                direction :: Nx.t() | integer(),
-                plan :: Nx.t()
-              }
+            grid :: Nx.t()
 
   defmacro __using__(_opts) do
     quote location: :keep do

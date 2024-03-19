@@ -6,19 +6,6 @@ defmodule Evacuation.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, grid, _objects_state, iteration, rng) do
-    cond do
-      Nx.equal(grid[i][j][0], @person) ->
-        create_plan_person(i, j, grid)
-
-      Nx.equal(grid[i][j][0], @fire) ->
-        create_plan_fire(i, j, grid, iteration, rng)
-
-      true ->
-        create_plan_other(i, j, grid)
-    end
-  end
-
   defn create_plan(grid, _objects_state, iteration, rng) do
     grid_without_signals = grid[[.., .., 0]]
     plan_directions = calc_plan_directions(grid)
