@@ -43,24 +43,24 @@ defmodule Simulator.Constants do
                                 )
           # directions
           @dir_stay 0
-          @dir_top 1
+          @dir_right 1
           @dir_top_right 2
-          @dir_right 3
-          @dir_bottom_right 4
-          @dir_bottom 5
+          @dir_top 3
+          @dir_top_left 4
+          @dir_left 5
           @dir_bottom_left 6
-          @dir_left 7
-          @dir_top_left 8
+          @dir_bottom 7
+          @dir_bottom_right 8
 
           @directions [
-            @dir_top,
-            @dir_top_right,
             @dir_right,
-            @dir_bottom_right,
-            @dir_bottom,
-            @dir_bottom_left,
+            @dir_top_right,
+            @dir_top,
+            @dir_top_left,
             @dir_left,
-            @dir_top_left
+            @dir_bottom_left,
+            @dir_bottom,
+            @dir_bottom_right
           ]
 
           # plans
@@ -81,6 +81,11 @@ defmodule Simulator.Constants do
 
           # grid creation
           @margin_size 3
+
+          # positions
+          @consequence_position 8
+          @action_position 16
+          @direction_position 24
 
           unquote(__MODULE__).define_constants()
         end

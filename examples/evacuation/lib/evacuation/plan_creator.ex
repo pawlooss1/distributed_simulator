@@ -19,14 +19,37 @@ defmodule Evacuation.PlanCreator do
     end
   end
 
-  defn create_plan(grid, objects_state, iteration, rng) do
+  defn create_plan(grid, _objects_state, iteration, rng) do
+    grid_without_signals = grid[[.., .., 0]]
     plan_directions = calc_plan_directions(grid)
-    # TODO finish plans for people and fire
+    person_plans = create_plan_person(grid_without_signals, plan_directions)
+    fire_plans = create_plan_fire(grid_without_signals, iteration, rng)
+    plans = grid[[.., .., 0]] + person_plans + fire_plans
+    Nx.put_slice(grid, [0, 0, 0], Nx.new_axis(plans, 2))
   end
 
   defn create_plan_person(grid, directions) do
-    directions = (grid == 1) * directions
+    create_plans_for_object_type(grid, directions, @person, @person_move)
+  end
 
+  defn create_plan_fire(grid, iteration, rng) do
+    if Nx.remainder(iteration, @fire_spreading_frequency) |> Nx.equal(Nx.tensor(0)) do
+      {r, _} = Nx.Random.uniform(rng, shape: {1, 8})
+      available_fields = grid != @obstacle
+      available_neighbourhood = attach_neighbourhood_to_new_dim(available_fields)
+      directions = Nx.argmax(available_neighbourhood[[.., .., 1..-1//1]] * r, axis: 2) + 1
+
+      create_plans_for_object_type(grid, directions, @fire, @fire_spread)
+    else
+      Nx.broadcast(0, Nx.shape(grid))
+    end
+  end
+
+  defn create_plans_for_object_type(grid, directions, object, plan) do
+    directions = (grid == object) * directions
+    filter = directions != 0
+    plans = filter * plan
+    plans + (directions <<< @direction_position)
   end
 
   # TODO probalby move to the framework
@@ -39,24 +62,27 @@ defmodule Evacuation.PlanCreator do
       )
 
     resultants = Nx.dot(grid[[.., .., 1..8]], filter)
+
     resultants
     |> Nx.phase()
     |> radian_to_direction()
-    |> Nx.multiply(resultants != Nx.complex(0, 0)) # 0 + i0 has angle = 0 too hence the correction
+    # 0 + i0 has angle = 0 too hence the correction
+    |> Nx.multiply(resultants != Nx.complex(0, 0))
     |> Nx.as_type(Nx.type(grid))
   end
 
   defn radian_to_direction(angles) do
-    Nx.round(angles * 4 / Nx.Constants.pi)
-    |> Nx.add(8) # correction because Nx.phase results are from (-pi, pi]
+    Nx.round(angles * 4 / Nx.Constants.pi())
+    # correction because Nx.phase results are from (-pi, pi]
+    |> Nx.add(8)
     |> Nx.remainder(8)
-    |> Nx.add(1) # angle = 0 -> dir = 1, etc.
+    # angle = 0 -> dir = 1, etc.
+    |> Nx.add(1)
   end
 
   defnp create_plan_person(i, j, grid) do
     {_i, _j, _direction, signals, _grid} =
-      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(@dir_stay), {9}),
-             grid},
+      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(@dir_stay), {9}), grid},
             Nx.less_equal(direction, @dir_top_left) do
         {x, y} = shift({i, j}, direction)
 
@@ -78,13 +104,16 @@ defmodule Evacuation.PlanCreator do
       diff |> Nx.greater(0) ->
         # positive signal is stronger
         {Nx.argmax(signals), @person_move}
+
       diff |> Nx.less(0) ->
         # negative signal is stronger
         {opposite(Nx.argmin(signals)), @person_move}
+
       max |> Nx.greater(0) ->
         # pos and ned signals are non-zero but same strength
         # we choose positive
         {Nx.argmax(signals), @person_move}
+
       true ->
         # no non-neutral signal
         {@dir_stay, @plan_keep}
