@@ -56,16 +56,14 @@ defmodule Simulator.Callbacks do
     end
   end
 
-  defmacro create_plan(x_index, y_index, grid, objects_state, iterations, rng) do
+  defmacro create_plan(grid, objects_state, iterations, rng) do
     if is_nil(@module_plan_creator) do
-      throw("Function create_plan/5 is not implemented!")
+      throw("Function create_plan/4 is not implemented!")
     else
       quote do
         plan_creator = Application.get_env(:distributed_simulator, :module_plan_creator)
 
         plan_creator.create_plan(
-          unquote(x_index),
-          unquote(y_index),
           unquote(grid),
           unquote(objects_state),
           unquote(iterations),
