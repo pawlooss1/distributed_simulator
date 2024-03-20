@@ -36,17 +36,17 @@ defmodule Iteration do
     {updated_grid, updated_objects_state} =
       Plans.process_plans(grid, objects_state, rng, action_mappings, map_state)
 
-    {updated_grid, updated_objects_state} =
-      Consequences.apply_consequences(
-        updated_grid,
-        updated_objects_state,
-        plans,
-        plans,
-        apply_consequence
-      )
+    # {updated_grid, updated_objects_state} =
+    #   Consequences.apply_consequences(
+    #     updated_grid,
+    #     updated_objects_state,
+    #     plans,
+    #     plans,
+    #     apply_consequence
+    #   )
 
-    signal_update = Signal.calculate_signal_updates(updated_grid, generate_signal)
-    final_grid = Signal.apply_signal_update(updated_grid, signal_update, signal_factor)
-    {final_grid, updated_objects_state, rng}
+    # signal_update = Signal.calculate_signal_updates(updated_grid, generate_signal)
+    # final_grid = Signal.apply_signal_update(updated_grid, signal_update, signal_factor)
+    # {final_grid, updated_objects_state, rng}
   end
 end
