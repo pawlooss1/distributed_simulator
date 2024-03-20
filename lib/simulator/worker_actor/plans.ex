@@ -31,6 +31,79 @@ defmodule Simulator.WorkerActor.Plans do
     create_plan.(grid, objects_state, iteration, rng)
   end
 
+  defn process_plans(grid, objects_state, rng, action_mappings, map_state) do
+    grid_without_signals = grid[[.., .., 0]]
+    accepted_plans = choose_plans(grid_without_signals, rng)
+    plans_with_objects = combine_plans_with_objects(grid_without_signals, accepted_plans)
+    apply_actions(plans_with_objects, objects_state, action_mappings, map_state)
+  end
+
+  defn apply_actions(grid, objects_state, action_mappings, map_state) do
+    filters = action_mappings.()
+    {n, _} = Nx.shape(filters)
+
+    {_, _, _, _, _, objects_update, state_update, updated_cells} =
+      while {
+              i = 0,
+              filters,
+              objects_state,
+              grid,
+              g = grid &&& @action_object_filter,
+              objects_update = Nx.broadcast(0, Nx.shape(grid)),
+              state_update = Nx.broadcast(0, Nx.shape(objects_state)),
+              updated_cells = Nx.broadcast(0, Nx.shape(grid))
+            },
+            i < n do
+        filter = filters[i][0]
+        object_update = filters[i][1]
+        fun_label = filters[i][2]
+
+        filtered_g = g == filter
+        u_po = filtered_g * (object_update + (grid &&& @plan_filter))
+        s_po = filtered_g * map_state.(objects_state, fun_label)
+
+        {i + 1, filters, objects_state, grid, g, objects_update + u_po, state_update + s_po,
+         updated_cells + filtered_g}
+      end
+
+    unmodified_cells = not updated_cells
+    updated_grid = unmodified_cells * grid + objects_update
+    updated_state = unmodified_cells * objects_state + state_update
+    {updated_grid, updated_state}
+  end
+
+  defn choose_plans(grid, rng) do
+    grid
+    |> attach_neighbourhood_to_new_dim()
+    |> filter_right_directions()
+    |> resolve_conflicts(rng)
+  end
+
+  defn combine_plans_with_objects(grid, plans) do
+    (grid &&& @object_filter) + (plans &&& @plan_filter)
+  end
+
+  defn filter_right_directions(grid) do
+    neigh = grid[[.., .., 1..-1//1]]
+    directions = neigh &&& @direction_filter
+    filter = (directions == @reverse_directions)
+    neigh * filter
+  end
+
+  defn resolve_conflicts(plans, rng) do
+    {r, _} = Nx.Random.uniform(rng, shape: {1, 8})
+    plan_flags = (plans != 0)
+    probabilities = plan_flags * r
+    filter = find_max_filter(probabilities)
+    Nx.sum(plans * filter, axes: [2])
+  end
+
+  defn find_max_filter(probabilities) do
+    probabilities_t = Nx.transpose(probabilities, axes: [2, 0, 1])
+    filter_t = (probabilities_t >= Nx.reduce_max(probabilities, axes: [2]))
+    Nx.transpose(filter_t, axes: [1, 2, 0])
+  end
+
   @doc """
   The function decides which plans are accepted and update the grid
   by putting `action` in the proper cells. `Consequences` will be

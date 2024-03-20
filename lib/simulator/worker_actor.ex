@@ -140,8 +140,8 @@ defmodule Simulator.WorkerActor do
           os,
           rng,
           &create_plan/4,
-          &is_update_valid?/2,
-          &apply_action/3,
+          &action_mappings/0,
+          &map_state/2,
           &apply_consequence/3,
           &generate_signal/1,
           &signal_factor/1
