@@ -13,8 +13,8 @@ defmodule Evacuation.Constants do
       @remove_person 2
       @create_fire 3
 
-      @person_move 0b00000001_00000010_00000000
-      @fire_spread 0b00000011_00000000_00000000
+      @person_move 0x01_02_00
+      @fire_spread 0x03_00_00
 
       @fire_spreading_frequency 2
 
