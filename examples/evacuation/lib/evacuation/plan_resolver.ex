@@ -19,21 +19,20 @@ defmodule Evacuation.PlanResolver do
   end
 
   @impl true
-  defn map_state(objects_state, _fun_label) do
+  defn map_state_action(objects_state, _fun_label) do
     identity(objects_state)
   end
 
   @impl true
-  defn apply_consequence(object, plan, old_state) do
-    {new_object, new_state} =
-      cond do
-        plans_objects_match(plan, @person_move, object, @person) ->
-          {@empty, old_state}
+  defn consequence_mappings() do
+    # TODO move po's to consts
+    Nx.tensor([
+      [0x01_02_01, @empty, @identity]
+    ])
+  end
 
-        true ->
-          {object, old_state}
-      end
-
-    {new_object, Nx.broadcast(new_state, {1, 1})}
+  @impl true
+  defn map_state_consequence(objects_state, _fun_label) do
+    identity(objects_state)
   end
 end

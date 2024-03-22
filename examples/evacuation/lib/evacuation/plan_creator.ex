@@ -12,7 +12,7 @@ defmodule Evacuation.PlanCreator do
     person_plans = create_plan_person(grid_without_signals, plan_directions)
     fire_plans = create_plan_fire(grid_without_signals, iteration, rng)
     plans = grid[[.., .., 0]] + person_plans + fire_plans
-    Nx.put_slice(grid, [0, 0, 0], add_dimension(plans))
+    plans
   end
 
   defn create_plan_person(grid, directions) do

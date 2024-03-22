@@ -84,24 +84,35 @@ defmodule Simulator.Callbacks do
     end
   end
 
-  defmacro map_state(objects_state, fun_label) do
+  defmacro map_state_action(objects_state, fun_label) do
     if is_nil(@module_plan_resolver) do
-      throw("Function map_state/2 is not implemented!")
+      throw("Function map_state_action/2 is not implemented!")
     else
       quote do
         plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
-        plan_resolver.map_state(unquote(objects_state), unquote(fun_label))
+        plan_resolver.map_state_action(unquote(objects_state), unquote(fun_label))
       end
     end
   end
 
-  defmacro apply_consequence(object, plan, old_state) do
+  defmacro consequence_mappings() do
     if is_nil(@module_plan_resolver) do
-      throw("Function apply_consequence/3 is not implemented!")
+      throw("Function consequence_mappings/0 is not implemented!")
     else
       quote do
         plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
-        plan_resolver.apply_consequence(unquote(object), unquote(plan), unquote(old_state))
+        plan_resolver.consequence_mappings()
+      end
+    end
+  end
+
+  defmacro map_state_consequence(objects_state, fun_label) do
+    if is_nil(@module_plan_resolver) do
+      throw("Function map_state_consequence/2 is not implemented!")
+    else
+      quote do
+        plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
+        plan_resolver.map_state_consequence(unquote(objects_state), unquote(fun_label))
       end
     end
   end

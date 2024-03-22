@@ -32,9 +32,8 @@ defmodule Simulator.WorkerActor.Plans do
   end
 
   defn process_plans(grid, objects_state, rng, action_mappings, map_state) do
-    grid_without_signals = grid[[.., .., 0]]
-    accepted_plans = choose_plans(grid_without_signals, rng)
-    plans_with_objects = combine_plans_with_objects(grid_without_signals, accepted_plans)
+    accepted_plans = choose_plans(grid, rng)
+    plans_with_objects = combine_plans_with_objects(grid, accepted_plans)
     apply_actions(plans_with_objects, objects_state, action_mappings, map_state)
   end
 

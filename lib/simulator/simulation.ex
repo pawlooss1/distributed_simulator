@@ -184,7 +184,7 @@ defmodule Simulator.Simulation do
 
   defp create_neighbors(location, workers) do
     directions_to_locations =
-      @directions
+      @directions_list
       |> Enum.map(fn direction -> {direction, {:global, shift(location, direction)}} end)
       |> Enum.reject(fn {_direction, {:global, location}} -> workers[location] == nil end)
 
