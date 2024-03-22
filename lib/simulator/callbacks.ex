@@ -73,24 +73,24 @@ defmodule Simulator.Callbacks do
     end
   end
 
-  defmacro is_update_valid?(action, object) do
+  defmacro action_mappings() do
     if is_nil(@module_plan_resolver) do
-      throw("Function is_update_valid?/2 is not implemented!")
+      throw("Function action_mappings/0 is not implemented!")
     else
       quote do
         plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
-        plan_resolver.is_update_valid?(unquote(action), unquote(object))
+        plan_resolver.action_mappings()
       end
     end
   end
 
-  defmacro apply_action(object, plan, old_state) do
+  defmacro map_state(objects_state, fun_label) do
     if is_nil(@module_plan_resolver) do
-      throw("Function apply_action/3 is not implemented!")
+      throw("Function map_state/2 is not implemented!")
     else
       quote do
         plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
-        plan_resolver.apply_action(unquote(object), unquote(plan), unquote(old_state))
+        plan_resolver.map_state(unquote(objects_state), unquote(fun_label))
       end
     end
   end

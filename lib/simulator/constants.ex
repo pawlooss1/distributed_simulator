@@ -42,15 +42,17 @@ defmodule Simulator.Constants do
                                   1
                                 )
           # directions
-          @dir_stay 0
-          @dir_right 1
-          @dir_top_right 2
-          @dir_top 3
-          @dir_top_left 4
-          @dir_left 5
-          @dir_bottom_left 6
-          @dir_bottom 7
-          @dir_bottom_right 8
+          @direction_filter 0xff_00_00_00
+
+          @dir_stay 0x00_00_00_00
+          @dir_right 0x01_00_00_00
+          @dir_top_right 0x02_00_00_00
+          @dir_top 0x03_00_00_00
+          @dir_top_left 0x04_00_00_00
+          @dir_left 0x05_00_00_00
+          @dir_bottom_left 0x06_00_00_00
+          @dir_bottom 0x07_00_00_00
+          @dir_bottom_right 0x08_00_00_00
 
           @directions [
             @dir_right,
@@ -63,17 +65,31 @@ defmodule Simulator.Constants do
             @dir_bottom_right
           ]
 
+          @reverse_directions Nx.tensor([
+            @dir_left,
+            @dir_bottom_left,
+            @dir_bottom,
+            @dir_bottom_right,
+            @dir_right,
+            @dir_top_right,
+            @dir_top,
+            @dir_top_left
+          ])
+
           # plans
           @rejected 0
           @accepted 1
 
           # object
+          @object_filter 0xff
           @empty 0
 
           # action
+          @action_object_filter 0xff_ff_ff
           @keep 0
 
           # plan
+          @plan_filter 0xff_ff_ff_00
           @plan_keep Nx.tensor([@keep, @keep])
 
           # for signals
@@ -86,6 +102,9 @@ defmodule Simulator.Constants do
           @consequence_position 8
           @action_position 16
           @direction_position 24
+
+          # state_mapping
+          @identity 0
 
           unquote(__MODULE__).define_constants()
         end

@@ -23,8 +23,8 @@ defmodule Iteration do
          objects_state,
          rng,
          create_plan,
-         is_update_valid?,
-         apply_action,
+         action_mappings,
+         map_state,
          apply_consequence,
          generate_signal,
          signal_factor
@@ -33,22 +33,15 @@ defmodule Iteration do
 
     {order, rng} = Nx.Random.shuffle(rng, Nx.tensor(@directions))
 
-    {updated_grid, accepted_plans, updated_objects_state} =
-      Plans.process_plans(
-        grid,
-        plans,
-        objects_state,
-        order,
-        is_update_valid?,
-        apply_action
-      )
+    {updated_grid, updated_objects_state} =
+      Plans.process_plans(grid, objects_state, rng, action_mappings, map_state)
 
     {updated_grid, updated_objects_state} =
       Consequences.apply_consequences(
         updated_grid,
         updated_objects_state,
         plans,
-        accepted_plans,
+        plans,
         apply_consequence
       )
 

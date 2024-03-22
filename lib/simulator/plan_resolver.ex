@@ -13,12 +13,8 @@ defmodule Simulator.PlanResolver do
   the exemplary usage.
   """
 
-  @callback is_update_valid?(action :: Nx.t(), object :: Nx.t()) :: Nx.t()
-  @callback apply_action(
-              object :: Nx.t(),
-              plan :: Nx.t(),
-              old_state :: Nx.t()
-            ) :: {new_object :: integer(), new_state :: Nx.t()}
+  @callback action_mappings() :: Nx.t()
+  @callback map_state(Nx.t(), Nx.t()) :: Nx.t()
   @callback apply_consequence(
               object :: Nx.t(),
               plan :: Nx.t(),
