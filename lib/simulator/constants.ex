@@ -54,7 +54,7 @@ defmodule Simulator.Constants do
           @dir_bottom 0x07_00_00_00
           @dir_bottom_right 0x08_00_00_00
 
-          @directions [
+          @directions_list [
             @dir_right,
             @dir_top_right,
             @dir_top,
@@ -64,6 +64,8 @@ defmodule Simulator.Constants do
             @dir_bottom,
             @dir_bottom_right
           ]
+
+          @directions Nx.tensor(@directions_list)
 
           @reverse_directions Nx.tensor([
             @dir_left,

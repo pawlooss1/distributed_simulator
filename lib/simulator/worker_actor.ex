@@ -141,8 +141,9 @@ defmodule Simulator.WorkerActor do
           rng,
           &create_plan/4,
           &action_mappings/0,
-          &map_state/2,
-          &apply_consequence/3,
+          &map_state_action/2,
+          &consequence_mappings/0,
+          &map_state_consequence/2,
           &generate_signal/1,
           &signal_factor/1
         )
@@ -189,7 +190,7 @@ defmodule Simulator.WorkerActor do
   defp send_to_neighbors(neighbors, message_atom, tensors, location) do
     neighbors
     |> Map.keys()
-    |> Enum.filter(fn key -> key in @directions end)
+    |> Enum.filter(fn key -> key in @directions_list end)
     |> Enum.each(&do_send_to_neighbors(&1, neighbors, message_atom, tensors, location))
   end
 

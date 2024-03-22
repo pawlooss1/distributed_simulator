@@ -14,12 +14,9 @@ defmodule Simulator.PlanResolver do
   """
 
   @callback action_mappings() :: Nx.t()
-  @callback map_state(Nx.t(), Nx.t()) :: Nx.t()
-  @callback apply_consequence(
-              object :: Nx.t(),
-              plan :: Nx.t(),
-              old_state :: Nx.t()
-            ) :: {new_object :: integer(), new_state :: Nx.t()}
+  @callback map_state_action(Nx.t(), Nx.t()) :: Nx.t()
+  @callback consequence_mappings() :: Nx.t()
+  @callback map_state_consequence(Nx.t(), Nx.t()) :: Nx.t()
 
   defmacro __using__(_opts) do
     quote location: :keep do
