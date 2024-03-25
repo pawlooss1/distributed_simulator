@@ -98,4 +98,30 @@ defmodule Simulator.Helpers do
   defn put_object(grid, x, y, object) do
     Nx.put_slice(grid, [x, y, 0], Nx.broadcast(object, {1, 1, 1}))
   end
+
+  @spec identity(Nx.t) :: Nx.t()
+  defn identity(tensor) do
+    tensor
+  end
+
+  @spec add_dimension(Nx.t()) :: Nx.t()
+  defn add_dimension(tensor) do
+    Nx.new_axis(tensor, -1)
+  end
+
+  @spec attach_neighbourhood_to_new_dim(Nx.t()) :: Nx.t()
+  defn attach_neighbourhood_to_new_dim(grid) do
+    padded_grid = Nx.pad(grid, 0, [{1, 1, 0}, {1, 1, 0}])
+    Nx.stack([
+      grid,
+      padded_grid[[1..-2//1, 2..-1//1]],
+      padded_grid[[0..-3//1, 2..-1//1]],
+      padded_grid[[0..-3//1, 1..-2//1]],
+      padded_grid[[0..-3//1, 0..-3//1]],
+      padded_grid[[1..-2//1, 0..-3//1]],
+      padded_grid[[2..-1//1, 0..-3//1]],
+      padded_grid[[2..-1//1, 1..-2//1]],
+      padded_grid[[2..-1//1, 2..-1//1]],
+    ], axis: 2)
+  end
 end

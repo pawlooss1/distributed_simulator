@@ -13,8 +13,8 @@ defmodule Evacuation.Constants do
       @remove_person 2
       @create_fire 3
 
-      @person_move Nx.tensor([@add_person, @remove_person])
-      @fire_spread Nx.tensor([@create_fire, @keep])
+      @person_move 0x01_02_00
+      @fire_spread 0x03_00_00
 
       @fire_spreading_frequency 2
 

@@ -12,68 +12,71 @@ defmodule Simulator.WorkerActor.Signal do
   Calculates signal update for all cells.
   """
   @spec calculate_signal_updates(Nx.t(), fun()) :: Nx.t()
-  defn calculate_signal_updates(grid, generate_signal) do
-    {x_size, y_size, _z_size} = Nx.shape(grid)
-
-    {_i, _grid, update_grid} =
-      while {i = 1, grid, update_grid = Nx.broadcast(0, Nx.shape(grid))},
-            Nx.less(i, x_size - 1) do
-        update_for_row = Nx.broadcast(0, {y_size, 8})
-
-        {_i, _j, grid, update_for_row} =
-          while {i, j = 1, grid, update_for_row}, Nx.less(j, y_size - 1) do
-            update_for_cell = signal_update_for_cell(i, j, grid, generate_signal)
-
-            update_for_row =
-              Nx.put_slice(update_for_row, [j, 1], Nx.broadcast(update_for_cell, {1, 8}))
-
-            {i, j + 1, grid, update_for_row}
-          end
-
-        update_grid =
-          Nx.put_slice(update_grid, [i, 1, 1], Nx.broadcast(update_for_row, {1, y_size, 8}))
-
-        {i + 1, grid, update_grid}
-      end
-
-    update_grid
+  defn calculate_signal_updates(grid, signal_generators) do
+    propagated_signals = propagate_signals(grid)
+    generated_signals = generate_signals(grid, signal_generators)
+    propagated_signals + generated_signals
   end
 
-  # Standard signal update for given cell.
-  defnp signal_update_for_cell(x, y, grid, generate_signal) do
-    signals_update = Nx.broadcast(0, {8})
-
-    {_x, _y, _dir, _grid, signals_update} =
-      while {x, y, dir = 1, grid, signals_update}, Nx.less(dir, 9) do
-        # coords of a cell that we consider signal from
-        {x2, y2} = shift({x, y}, dir)
-
-        update_value = signal_update_from_direction(x2, y2, grid, dir, generate_signal)
-
-        signals_update =
-          Nx.put_slice(signals_update, [dir - 1], Nx.broadcast(update_value, {1}))
-
-        {x, y, dir + 1, grid, signals_update}
-      end
-
-    signals_update
+  defn propagate_signals(grid) do
+    {_, _, update} =
+    while {direction = 1, grid, updated_grid = grid}, direction < 9 do
+      update = propagated_signals_for_direction(grid, direction)
+      {direction + 1, grid, Nx.put_slice(updated_grid, [0, 0, direction], add_dimension(update))}
+    end
+    update[[.., .., 1..-1//1]]
   end
 
-  # Calculate generated + propagated signal.
-  #
-  # It is coming from given cell - {x_from, y_from}, from direction dir.
-  # Coordinates of a calling cell don't matter (but can be reconstructed moving 1 step in opposite direction).
-  defnp signal_update_from_direction(x_from, y_from, grid, dir, generate_signal) do
-    is_cardinal = Nx.remainder(dir, 2)
+  defn generate_signals(grid, signal_generators) do
+    generators = signal_generators.()
+    {n, _} = Nx.shape(generators)
 
-    generated_signal = generate_signal.(grid[x_from][y_from][0])
+    {_, _, _, signal_update} =
+      while {
+              i = 0,
+              generators,
+              g = grid[[.., .., 0]],
+              signal_update = Nx.broadcast(0, Nx.shape(grid)),
+            },
+            i < n do
+        filter = generators[i][0]
+        generated_signal = generators[i][1]
 
-    propagated_signal =
-      is_cardinal * grid[x_from][y_from][adj_left(dir)]
-      + grid[x_from][y_from][dir]
-      + is_cardinal * grid[x_from][y_from][adj_right(dir)]
+        filtered_g = g == filter
+        u_o = filtered_g * generated_signal
 
-    generated_signal + propagated_signal
+        {i + 1, generators, g, signal_update + Nx.broadcast(u_o, grid, axes: [0, 1])}
+      end
+
+    signal_update[[.., .., 1..-1//1]]
+  end
+
+  defn propagated_signals_for_direction(grid, direction) do
+    if rem(direction, 2) do
+      Nx.sum(Nx.stack([
+        signal_shift(grid[[.., .., adj_left(direction)]], direction),
+        signal_shift(grid[[.., .., direction]], direction),
+        signal_shift(grid[[.., .., adj_right(direction)]], direction)
+      ], axis: 2), axes: [2])
+    else
+      signal_shift(grid[[.., .., direction]], direction)
+    end
+  end
+
+  defn signal_shift(grid, direction) do
+    padded_grid = Nx.pad(grid, 0, [{1, 1, 0}, {1, 1, 0}])
+    cond do
+      direction == 1 -> padded_grid[[1..-2//1, 2..-1//1]]
+      direction == 2 -> padded_grid[[0..-3//1, 2..-1//1]]
+      direction == 3 -> padded_grid[[0..-3//1, 1..-2//1]]
+      direction == 4 -> padded_grid[[0..-3//1, 0..-3//1]]
+      direction == 5 -> padded_grid[[1..-2//1, 0..-3//1]]
+      direction == 6 -> padded_grid[[2..-1//1, 0..-3//1]]
+      direction == 7 -> padded_grid[[2..-1//1, 1..-2//1]]
+      direction == 8 -> padded_grid[[2..-1//1, 2..-1//1]]
+      # we should never get here
+      true -> grid
+    end
   end
 
   @doc """
@@ -96,19 +99,19 @@ defmodule Simulator.WorkerActor.Signal do
     contents of the cell.
   """
   @spec apply_signal_update(Nx.t(), Nx.t(), fun()) :: Nx.t()
-  defn apply_signal_update(grid, signal_update, signal_factor) do
-    signal_factors = map_signal_factor(grid, signal_factor)
+  defn apply_signal_update(grid, signal_update, signal_factors) do
+    cell_factors = map_signal_factor(grid, signal_factors)
 
     signal = Nx.slice_along_axis(grid, 1, 8, [axis: 2])
 
     updated_signal =
       signal_update
-      |> Nx.slice_along_axis(1, 8, [axis: 2])
       |> Nx.multiply(@signal_suppression_factor)
       |> Nx.add(signal)
       |> Nx.multiply(@signal_attenuation_factor)
-      |> Nx.multiply(signal_factors)
-      |> Nx.as_type({:s, 8})
+      |> Nx.multiply(cell_factors)
+      |> Nx.round()
+      |> Nx.as_type(@grid_type)
 
     Nx.put_slice(grid, [0, 0, 1], updated_signal)
   end
@@ -117,24 +120,32 @@ defmodule Simulator.WorkerActor.Signal do
   # shape of the passed `grid`. Tensor gives a factor for every cell
   # to multiply it by signal in that cell. Value depends on the
   # contents of the cell - e.g. obstacles block the signal.
-  defnp map_signal_factor(grid, signal_factor) do
-    {x_size, y_size, _z_size} = Nx.shape(grid)
+  defn map_signal_factor(grid, signal_factors) do
+    factors = signal_factors.()
+    {n, _} = Nx.shape(factors)
+    {x, y, _} = Nx.shape(grid)
+    g = grid[[.., .., 0]]
 
-    {_i, _grid, signal_factors} =
-      while {i = 0, grid, signal_factors = Nx.broadcast(0, {x_size, y_size, 1})},
-            Nx.less(i, x_size) do
-        {_i, _j, grid, signal_factors} =
-          while {i, j = 0, grid, signal_factors}, Nx.less(j, y_size) do
-            cell_signal_factor = Nx.broadcast(signal_factor.(grid[i][j][0]), {1, 1, 1})
-            signal_factors = Nx.put_slice(signal_factors, [i, j, 0], cell_signal_factor)
+    {_, _, _, cell_factors, updated_cells} =
+      while {
+              i = 0,
+              factors,
+              g,
+              cell_factors = Nx.broadcast(0.0, Nx.shape(g)),
+              updated_cells = Nx.broadcast(0, Nx.shape(g))
+            },
+            i < n do
+        filter = factors[i][0]
+        factor = factors[i][1]
 
-            {i, j + 1, grid, signal_factors}
-          end
+        filtered_g = g == filter
+        cell_factor = filtered_g * factor
 
-        {i + 1, grid, signal_factors}
+        {i + 1, factors, g, cell_factors + cell_factor, updated_cells + filtered_g}
       end
 
-    signal_factors
+    unmodified_cells = not updated_cells
+    add_dimension(unmodified_cells + cell_factors)
   end
 
   # gets next direction, counterclockwise ( @top -> @top_left, @right -> @bottom_right)

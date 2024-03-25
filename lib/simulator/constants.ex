@@ -25,6 +25,7 @@ defmodule Simulator.Constants do
 
       defmacro __using__(_opts) do
         quote location: :keep do
+          @grid_type {:s, 64}
           # constants set in simulation's config file
           @max_iterations Application.compile_env!(:distributed_simulator, :max_iterations)
 
@@ -42,38 +43,56 @@ defmodule Simulator.Constants do
                                   1
                                 )
           # directions
-          @dir_stay 0
-          @dir_top 1
-          @dir_top_right 2
-          @dir_right 3
-          @dir_bottom_right 4
-          @dir_bottom 5
-          @dir_bottom_left 6
-          @dir_left 7
-          @dir_top_left 8
+          @direction_filter 0xff_00_00_00
 
-          @directions [
-            @dir_top,
-            @dir_top_right,
+          @dir_stay 0x00_00_00_00
+          @dir_right 0x01_00_00_00
+          @dir_top_right 0x02_00_00_00
+          @dir_top 0x03_00_00_00
+          @dir_top_left 0x04_00_00_00
+          @dir_left 0x05_00_00_00
+          @dir_bottom_left 0x06_00_00_00
+          @dir_bottom 0x07_00_00_00
+          @dir_bottom_right 0x08_00_00_00
+
+          @directions_list [
             @dir_right,
-            @dir_bottom_right,
-            @dir_bottom,
-            @dir_bottom_left,
+            @dir_top_right,
+            @dir_top,
+            @dir_top_left,
             @dir_left,
-            @dir_top_left
+            @dir_bottom_left,
+            @dir_bottom,
+            @dir_bottom_right
           ]
+
+          @directions Nx.tensor(@directions_list)
+
+          @reverse_directions Nx.tensor([
+            @dir_left,
+            @dir_bottom_left,
+            @dir_bottom,
+            @dir_bottom_right,
+            @dir_right,
+            @dir_top_right,
+            @dir_top,
+            @dir_top_left
+          ])
 
           # plans
           @rejected 0
           @accepted 1
 
           # object
+          @object_filter 0xff
           @empty 0
 
           # action
+          @action_object_filter 0xff_ff_ff
           @keep 0
 
           # plan
+          @plan_filter 0xff_ff_ff_00
           @plan_keep Nx.tensor([@keep, @keep])
 
           # for signals
@@ -81,6 +100,14 @@ defmodule Simulator.Constants do
 
           # grid creation
           @margin_size 3
+
+          # positions
+          @consequence_position 8
+          @action_position 16
+          @direction_position 24
+
+          # state_mapping
+          @identity 0
 
           unquote(__MODULE__).define_constants()
         end

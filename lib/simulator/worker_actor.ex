@@ -130,7 +130,7 @@ defmodule Simulator.WorkerActor do
        ) do
     Printer.write_to_file(state)
 
-    {:s, 8} = Nx.type(grid)
+    @grid_type = Nx.type(grid)
 
     {new_grid, new_objects_state, new_rng} =
       EXLA.jit(fn i, g, os, rng ->
@@ -139,12 +139,13 @@ defmodule Simulator.WorkerActor do
           g,
           os,
           rng,
-          &create_plan/6,
-          &is_update_valid?/2,
-          &apply_action/3,
-          &apply_consequence/3,
-          &generate_signal/1,
-          &signal_factor/1
+          &create_plan/4,
+          &action_mappings/0,
+          &map_state_action/2,
+          &consequence_mappings/0,
+          &map_state_consequence/2,
+          &signal_generators/0,
+          &signal_factors/0
         )
       end).(
         iteration,
@@ -152,6 +153,8 @@ defmodule Simulator.WorkerActor do
         objects_state,
         rng
       )
+
+    new_rng = Nx.Random.fold_in(rng, iteration)
 
     new_metrics =
       calculate_metrics(metrics, grid, objects_state, new_grid, new_objects_state, iteration)
@@ -189,7 +192,7 @@ defmodule Simulator.WorkerActor do
   defp send_to_neighbors(neighbors, message_atom, tensors, location) do
     neighbors
     |> Map.keys()
-    |> Enum.filter(fn key -> key in @directions end)
+    |> Enum.filter(fn key -> key in @directions_list end)
     |> Enum.each(&do_send_to_neighbors(&1, neighbors, message_atom, tensors, location))
   end
 

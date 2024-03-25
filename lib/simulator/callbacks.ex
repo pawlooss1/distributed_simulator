@@ -8,24 +8,24 @@ defmodule Simulator.Callbacks do
                           nil
                         )
 
-  defmacro generate_signal(object) do
+  defmacro signal_generators() do
     if is_nil(@module_cell) do
-      throw("Function generate_signal/1 is not implemented!")
+      throw("Function signal_generators/0 is not implemented!")
     else
       quote do
         cell = Application.get_env(:distributed_simulator, :module_cell)
-        cell.generate_signal(unquote(object))
+        cell.signal_generators()
       end
     end
   end
 
-  defmacro signal_factor(object) do
+  defmacro signal_factors() do
     if is_nil(@module_cell) do
-      throw("Function signal_factor/1 is not implemented!")
+      throw("Function signal_factors/0 is not implemented!")
     else
       quote do
         cell = Application.get_env(:distributed_simulator, :module_cell)
-        cell.signal_factor(unquote(object))
+        cell.signal_factors()
       end
     end
   end
@@ -56,16 +56,14 @@ defmodule Simulator.Callbacks do
     end
   end
 
-  defmacro create_plan(x_index, y_index, grid, objects_state, iterations, rng) do
+  defmacro create_plan(grid, objects_state, iterations, rng) do
     if is_nil(@module_plan_creator) do
-      throw("Function create_plan/5 is not implemented!")
+      throw("Function create_plan/4 is not implemented!")
     else
       quote do
         plan_creator = Application.get_env(:distributed_simulator, :module_plan_creator)
 
         plan_creator.create_plan(
-          unquote(x_index),
-          unquote(y_index),
           unquote(grid),
           unquote(objects_state),
           unquote(iterations),
@@ -75,35 +73,46 @@ defmodule Simulator.Callbacks do
     end
   end
 
-  defmacro is_update_valid?(action, object) do
+  defmacro action_mappings() do
     if is_nil(@module_plan_resolver) do
-      throw("Function is_update_valid?/2 is not implemented!")
+      throw("Function action_mappings/0 is not implemented!")
     else
       quote do
         plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
-        plan_resolver.is_update_valid?(unquote(action), unquote(object))
+        plan_resolver.action_mappings()
       end
     end
   end
 
-  defmacro apply_action(object, plan, old_state) do
+  defmacro map_state_action(objects_state, fun_label) do
     if is_nil(@module_plan_resolver) do
-      throw("Function apply_action/3 is not implemented!")
+      throw("Function map_state_action/2 is not implemented!")
     else
       quote do
         plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
-        plan_resolver.apply_action(unquote(object), unquote(plan), unquote(old_state))
+        plan_resolver.map_state_action(unquote(objects_state), unquote(fun_label))
       end
     end
   end
 
-  defmacro apply_consequence(object, plan, old_state) do
+  defmacro consequence_mappings() do
     if is_nil(@module_plan_resolver) do
-      throw("Function apply_consequence/3 is not implemented!")
+      throw("Function consequence_mappings/0 is not implemented!")
     else
       quote do
         plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
-        plan_resolver.apply_consequence(unquote(object), unquote(plan), unquote(old_state))
+        plan_resolver.consequence_mappings()
+      end
+    end
+  end
+
+  defmacro map_state_consequence(objects_state, fun_label) do
+    if is_nil(@module_plan_resolver) do
+      throw("Function map_state_consequence/2 is not implemented!")
+    else
+      quote do
+        plan_resolver = Application.get_env(:distributed_simulator, :module_plan_resolver)
+        plan_resolver.map_state_consequence(unquote(objects_state), unquote(fun_label))
       end
     end
   end
