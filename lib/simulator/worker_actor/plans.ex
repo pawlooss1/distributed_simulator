@@ -66,7 +66,7 @@ defmodule Simulator.WorkerActor.Plans do
       end
 
     unmodified_cells = not updated_cells
-    updated_grid = unmodified_cells * grid + objects_update
+    updated_grid = unmodified_cells * (grid &&& @object_filter) + objects_update
     updated_state = unmodified_cells * objects_state + state_update
     {updated_grid, updated_state}
   end
