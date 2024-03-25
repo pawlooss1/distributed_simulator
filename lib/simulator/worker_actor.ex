@@ -130,7 +130,7 @@ defmodule Simulator.WorkerActor do
        ) do
     Printer.write_to_file(state)
 
-    {:s, 8} = Nx.type(grid)
+    @grid_type = Nx.type(grid)
 
     {new_grid, new_objects_state, new_rng} =
       EXLA.jit(fn i, g, os, rng ->
@@ -144,8 +144,8 @@ defmodule Simulator.WorkerActor do
           &map_state_action/2,
           &consequence_mappings/0,
           &map_state_consequence/2,
-          &generate_signal/1,
-          &signal_factor/1
+          &signal_generators/0,
+          &signal_factors/0
         )
       end).(
         iteration,
@@ -153,6 +153,8 @@ defmodule Simulator.WorkerActor do
         objects_state,
         rng
       )
+
+    new_rng = Nx.Random.fold_in(rng, iteration)
 
     new_metrics =
       calculate_metrics(metrics, grid, objects_state, new_grid, new_objects_state, iteration)

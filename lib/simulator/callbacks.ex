@@ -8,24 +8,24 @@ defmodule Simulator.Callbacks do
                           nil
                         )
 
-  defmacro generate_signal(object) do
+  defmacro signal_generators() do
     if is_nil(@module_cell) do
-      throw("Function generate_signal/1 is not implemented!")
+      throw("Function signal_generators/0 is not implemented!")
     else
       quote do
         cell = Application.get_env(:distributed_simulator, :module_cell)
-        cell.generate_signal(unquote(object))
+        cell.signal_generators()
       end
     end
   end
 
-  defmacro signal_factor(object) do
+  defmacro signal_factors() do
     if is_nil(@module_cell) do
-      throw("Function signal_factor/1 is not implemented!")
+      throw("Function signal_factors/0 is not implemented!")
     else
       quote do
         cell = Application.get_env(:distributed_simulator, :module_cell)
-        cell.signal_factor(unquote(object))
+        cell.signal_factors()
       end
     end
   end
