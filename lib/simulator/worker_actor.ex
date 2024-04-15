@@ -327,7 +327,8 @@ defmodule Simulator.WorkerActor do
         %{
           grid: grid,
           signal_update: signal_update,
-          phase: :apply_signal_update
+          phase: :apply_signal_update,
+          fill_signal_iterations: fill_signal_iterations
         } = state
       ) do
     final_grid =
@@ -337,15 +338,31 @@ defmodule Simulator.WorkerActor do
         &signal_factors/0
       ])
 
-    new_state = %{
-      state
-      | grid: final_grid,
-        phase: :calulate_metrics
-    }
+    new_state =
+      if fill_signal_iterations <= 0 do
+        %{state | grid: final_grid, phase: :calulate_metrics}
+      else
+        %{
+          state
+          | grid: final_grid,
+            phase: :calc_signal_update,
+            fill_signal_iterations: fill_signal_iterations - 1
+        }
+      end
 
-    GenServer.cast(self(), :calulate_metrics)
+    GenServer.cast(self(), new_state.phase)
 
     {:noreply, new_state}
+  end
+
+  def handle_cast(
+        :calculate_metrics,
+        %{
+          phase: :calulate_metrics,
+          fill_signal_iterations: 0
+        } = state
+      ) do
+    start_new_iteration(%{state | fill_signal_iterations: -1})
   end
 
   def handle_cast(
@@ -390,16 +407,18 @@ defmodule Simulator.WorkerActor do
          %{
            neighbors_count: neighbors_count,
            grid: grid,
-           objects_state: objects_state
+           objects_state: objects_state,
+           fill_signal_iterations: fill_signal_iterations
          } = state
        ) do
     @grid_type = Nx.type(grid)
     Printer.write_to_file(state)
 
     start_message =
-      case neighbors_count do
-        0 -> :run_iteration
-        _ -> :create_plans
+      cond do
+        fill_signal_iterations > 0 -> :calc_signal_update
+        neighbors_count == 0 -> :run_iteration
+        true -> :create_plans
       end
 
     GenServer.cast(self(), start_message)

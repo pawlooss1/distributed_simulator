@@ -80,7 +80,8 @@ defmodule Simulator.Simulation do
       metrics: metrics,
       metrics_save_step: metrics_save_step,
       objects_state: objects_state,
-      workers_by_dim: {workers_x, workers_y} = workers_by_dim
+      workers_by_dim: {workers_x, workers_y} = workers_by_dim,
+      fill_signal_iterations: fill_signal_iterations
     } = params
 
     main_pid = self()
@@ -95,7 +96,8 @@ defmodule Simulator.Simulation do
         location: location,
         objects_state: Nx.backend_copy(state_fragment),
         metrics: Nx.backend_copy(metrics),
-        metrics_save_step: metrics_save_step
+        metrics_save_step: metrics_save_step,
+        fill_signal_iterations: fill_signal_iterations
       ]
 
       pid =
