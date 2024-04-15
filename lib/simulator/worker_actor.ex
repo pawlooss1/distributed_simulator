@@ -18,10 +18,12 @@ defmodule Simulator.WorkerActor do
   use Simulator.BaseConstants
 
   import Simulator.Callbacks
+  import Simulator.Helpers
 
   require Logger
 
   alias Simulator.Printer
+  alias Simulator.WorkerActor.{Consequences, Plans, Signal}
 
   @doc """
   Starts the WorkerActor.
@@ -39,6 +41,11 @@ defmodule Simulator.WorkerActor do
       |> Map.new()
       |> Map.merge(%{
         iteration: 0,
+        phase: nil,
+        objects: nil,
+        old_grid: nil,
+        old_objects_state: nil,
+        signal_update: nil,
         start_time: DateTime.utc_now(),
         stashed: [],
         rng: Nx.Random.key(42)
@@ -47,7 +54,7 @@ defmodule Simulator.WorkerActor do
     Printer.create_visualization_directory(location)
     Printer.create_metrics_directory(location)
 
-    {:ok, state}
+    {:ok, %{state | grid: Nx.backend_transfer(state.grid, Nx.default_backend())}}
   end
 
   @impl true
@@ -68,70 +75,15 @@ defmodule Simulator.WorkerActor do
   def handle_cast(:start, state), do: start_new_iteration(state)
 
   def handle_cast(
-        {:synchronization, _pid, _grid_slice, _objects_state_slice},
-        %{
-          processed_neighbors: n,
-          neighbors_count: n
-        } = state
-      ) do
-    start_new_iteration(state)
-  end
-
-  def handle_cast(
-        {:synchronization, pid, grid_slice, objects_state_slice},
+        :run_iteration,
         %{
           grid: grid,
+          iteration: iteration,
           objects_state: objects_state,
-          neighbors_count: neighbors_count,
-          neighbors: neighbors,
-          processed_neighbors: processed_neighbors
+          rng: rng,
+          phase: :run_iteration
         } = state
       ) do
-    direction = neighbors[pid]
-    grid_location = put_slice_start(grid, direction)
-    objects_state_location = put_slice_start(objects_state, direction)
-
-    new_state = %{
-      state
-      | grid: Nx.put_slice(grid, grid_location, grid_slice),
-        objects_state: Nx.put_slice(objects_state, objects_state_location, objects_state_slice),
-        processed_neighbors: processed_neighbors + 1
-    }
-
-    if neighbors_count == processed_neighbors + 1 do
-      start_new_iteration(new_state)
-    else
-      {:noreply, new_state}
-    end
-  end
-
-  def handle_cast(message, state) do
-    state = Map.update!(state, :stashed, fn stashed -> [message | stashed] end)
-    {:noreply, state}
-  end
-
-  defp start_new_iteration(%{iteration: iteration} = state) when iteration >= @max_iterations do
-    Printer.write_to_file(state)
-    {x, y} = state.location
-    dt2 = DateTime.utc_now()
-    diff = DateTime.diff(dt2, state.start_time, :millisecond)
-    Logger.info("all done for #{inspect(x)} #{inspect(y)} in #{inspect(diff)}")
-    {:stop, :normal, state}
-  end
-
-  defp start_new_iteration(
-         %{
-           grid: grid,
-           iteration: iteration,
-           objects_state: objects_state,
-           metrics: metrics,
-           rng: rng
-         } = state
-       ) do
-    Printer.write_to_file(state)
-
-    @grid_type = Nx.type(grid)
-
     {new_grid, new_objects_state, new_rng} =
       EXLA.jit(fn i, g, os, rng ->
         Iteration.compute(
@@ -154,39 +106,332 @@ defmodule Simulator.WorkerActor do
         rng
       )
 
-    new_rng = Nx.Random.fold_in(rng, iteration)
-
-    new_metrics =
-      calculate_metrics(metrics, grid, objects_state, new_grid, new_objects_state, iteration)
-
     new_state = %{
       state
       | grid: new_grid,
-        iteration: iteration + 1,
         objects_state: new_objects_state,
-        metrics: new_metrics,
         rng: new_rng,
-        processed_neighbors: 0
+        phase: :calulate_metrics
     }
 
-    distribute_margins(new_state)
+    GenServer.cast(self(), :calulate_metrics)
 
-    if state.neighbors_count == 0 do
-      start_new_iteration(new_state)
+    {:noreply, new_state}
+  end
+
+  def handle_cast(
+        :create_plans,
+        %{
+          grid: grid,
+          iteration: iteration,
+          objects_state: objects_state,
+          rng: rng,
+          phase: :create_plans
+        } = state
+      ) do
+    plans =
+      EXLA.jit_apply(&Plans.create_plans/5, [iteration, grid, objects_state, rng, &create_plan/4])
+
+    distribute_plans(state, plans)
+
+    new_state =
+      %{
+        state
+        | objects: plans,
+          processed_neighbors: 0,
+          phase: :remote_plans
+      }
+      |> unstash_messages()
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast(
+        {:remote_plans, pid, plans_slice},
+        %{
+          objects: plans,
+          neighbors_count: neighbors_count,
+          neighbors: neighbors,
+          processed_neighbors: processed_neighbors,
+          phase: :remote_plans
+        } = state
+      ) do
+    direction = neighbors[pid]
+    location = put_slice_start(plans, direction)
+
+    new_state = %{
+      state
+      | objects: Nx.put_slice(plans, location, plans_slice),
+        processed_neighbors: processed_neighbors + 1
+    }
+
+    if neighbors_count == processed_neighbors + 1 do
+      GenServer.cast(self(), :process_plans)
+      {:noreply, %{new_state | phase: :process_plans}}
     else
       {:noreply, new_state}
     end
   end
 
-  defp distribute_margins(%{
-         grid: grid,
-         objects_state: objects_state,
-         neighbors: neighbors,
-         location: location
-       }) do
-    tensors = [grid, objects_state]
+  def handle_cast(
+        :process_plans,
+        %{
+          objects: plans,
+          objects_state: objects_state,
+          rng: rng,
+          phase: :process_plans
+        } = state
+      ) do
+    {updated_objects, updated_objects_state} =
+      EXLA.jit_apply(&Plans.process_plans/5, [
+        plans,
+        objects_state,
+        rng,
+        &action_mappings/0,
+        &map_state_action/2
+      ])
 
-    send_to_neighbors(neighbors, :synchronization, tensors, location)
+    distribute_consequences(state, updated_objects, updated_objects_state)
+
+    new_state =
+      %{
+        state
+        | objects: updated_objects,
+          objects_state: updated_objects_state,
+          processed_neighbors: 0,
+          phase: :remote_consequences
+      }
+      |> unstash_messages()
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast(
+        {:remote_consequences, pid, objects_slice, objects_state_slice},
+        %{
+          objects: objects,
+          objects_state: objects_state,
+          neighbors_count: neighbors_count,
+          neighbors: neighbors,
+          processed_neighbors: processed_neighbors,
+          phase: :remote_consequences
+        } = state
+      ) do
+    direction = neighbors[pid]
+    location = put_slice_start(objects, direction)
+
+    new_state = %{
+      state
+      | objects: Nx.put_slice(objects, location, objects_slice),
+        objects_state: Nx.put_slice(objects_state, location, objects_state_slice),
+        processed_neighbors: processed_neighbors + 1
+    }
+
+    if neighbors_count == processed_neighbors + 1 do
+      GenServer.cast(self(), :process_consequences)
+      {:noreply, %{new_state | phase: :process_consequences}}
+    else
+      {:noreply, new_state}
+    end
+  end
+
+  def handle_cast(
+        :process_consequences,
+        %{
+          objects: objects,
+          objects_state: objects_state,
+          grid: grid,
+          phase: :process_consequences
+        } = state
+      ) do
+    {updated_objects, updated_objects_state} =
+      EXLA.jit_apply(&Consequences.process_consequences/4, [
+        objects,
+        objects_state,
+        &consequence_mappings/0,
+        &map_state_consequence/2
+      ])
+
+    updated_grid = Nx.put_slice(grid, [0, 0, 0], add_dimension(updated_objects))
+
+    new_state = %{
+      state
+      | grid: updated_grid,
+        objects_state: updated_objects_state,
+        phase: :calc_signal_update
+    }
+
+    GenServer.cast(self(), :calc_signal_update)
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast(
+        :calc_signal_update,
+        %{
+          grid: grid,
+          phase: :calc_signal_update
+        } = state
+      ) do
+    signal_update =
+      EXLA.jit_apply(&Signal.calculate_signal_updates/2, [
+        grid,
+        &signal_generators/0
+      ])
+
+    distribute_signal(state, signal_update)
+
+    new_state =
+      %{
+        state
+        | signal_update: signal_update,
+          processed_neighbors: 0,
+          phase: :remote_signal
+      }
+      |> unstash_messages()
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast(
+        {:remote_signal, pid, signal_update_slice},
+        %{
+          neighbors_count: neighbors_count,
+          neighbors: neighbors,
+          signal_update: signal_update,
+          processed_neighbors: processed_neighbors,
+          phase: :remote_signal
+        } = state
+      ) do
+    direction = neighbors[pid]
+    location = put_slice_start(signal_update, direction)
+
+    new_state = %{
+      state
+      | signal_update: Nx.put_slice(signal_update, location, signal_update_slice),
+        processed_neighbors: processed_neighbors + 1
+    }
+
+    if neighbors_count == processed_neighbors + 1 do
+      GenServer.cast(self(), :apply_signal_update)
+      {:noreply, %{new_state | phase: :apply_signal_update}}
+    else
+      {:noreply, new_state}
+    end
+  end
+
+  def handle_cast(
+        :apply_signal_update,
+        %{
+          grid: grid,
+          signal_update: signal_update,
+          phase: :apply_signal_update
+        } = state
+      ) do
+    final_grid =
+      EXLA.jit_apply(&Signal.apply_signal_update/3, [
+        grid,
+        signal_update,
+        &signal_factors/0
+      ])
+
+    new_state = %{
+      state
+      | grid: final_grid,
+        phase: :calulate_metrics
+    }
+
+    GenServer.cast(self(), :calulate_metrics)
+
+    {:noreply, new_state}
+  end
+
+  def handle_cast(
+        :calulate_metrics,
+        %{
+          metrics: metrics,
+          grid: grid,
+          old_grid: old_grid,
+          objects_state: objects_state,
+          old_objects_state: old_objects_state,
+          iteration: iteration,
+          phase: :calulate_metrics
+        } = state
+      ) do
+    new_metrics =
+      calculate_metrics(metrics, old_grid, old_objects_state, grid, objects_state, iteration)
+
+    new_state = %{
+      state
+      | iteration: iteration + 1,
+        metrics: new_metrics
+    }
+
+    start_new_iteration(new_state)
+  end
+
+  def handle_cast(message, state) do
+    state = Map.update!(state, :stashed, fn stashed -> [message | stashed] end)
+    {:noreply, state}
+  end
+
+  defp start_new_iteration(%{iteration: iteration} = state) when iteration >= @max_iterations do
+    Printer.write_to_file(state)
+    {x, y} = state.location
+    dt2 = DateTime.utc_now()
+    diff = DateTime.diff(dt2, state.start_time, :millisecond)
+    Logger.info("all done for #{inspect(x)} #{inspect(y)} in #{inspect(diff)}")
+    {:stop, :normal, state}
+  end
+
+  defp start_new_iteration(
+         %{
+           neighbors_count: neighbors_count,
+           grid: grid,
+           objects_state: objects_state
+         } = state
+       ) do
+    @grid_type = Nx.type(grid)
+    Printer.write_to_file(state)
+
+    start_message =
+      case neighbors_count do
+        0 -> :run_iteration
+        _ -> :create_plans
+      end
+
+    GenServer.cast(self(), start_message)
+
+    new_state = %{
+      state
+      | old_grid: grid,
+        old_objects_state: objects_state,
+        phase: start_message
+    }
+
+    {:noreply, new_state}
+  end
+
+  defp unstash_messages(%{stashed: stashed} = state) do
+    Enum.each(stashed, fn message -> GenServer.cast(self(), message) end)
+    %{state | stashed: []}
+  end
+
+  defp distribute_plans(state, plans) do
+    send_to_neighbors(state.neighbors, :remote_plans, [plans], state.location)
+  end
+
+  defp distribute_consequences(state, objects, objects_state) do
+    send_to_neighbors(
+      state.neighbors,
+      :remote_consequences,
+      [objects, objects_state],
+      state.location
+    )
+  end
+
+  defp distribute_signal(state, signal_update) do
+    send_to_neighbors(state.neighbors, :remote_signal, [signal_update], state.location)
   end
 
   defp send_to_neighbors(neighbors, message_atom, tensors, location) do
@@ -198,20 +443,22 @@ defmodule Simulator.WorkerActor do
 
   defp do_send_to_neighbors(direction, neighbors, message_atom, tensors, location) do
     neighbor = neighbors[direction]
+    Logger.info("Sending tensors to #{inspect(neighbor)} (#{inspect(location)}) in dir #{inspect(direction)}")
 
     message =
       tensors
-      |> Enum.map(fn tensor ->
-        start = slice_start(tensor, direction)
-        length = slice_length(tensor, direction)
-
-        Nx.slice(tensor, start, length)
-      end)
+      |> Enum.map(&slice_tensor(&1, direction))
       |> Enum.map(&maybe_backend_copy(&1, neighbor))
       |> then(fn tensors -> [message_atom, {:global, location}] ++ tensors end)
       |> List.to_tuple()
 
     GenServer.cast(neighbor, message)
+  end
+
+  defp slice_tensor(tensor, direction) do
+    start = slice_start(tensor, direction)
+    length = slice_length(tensor, direction)
+    Nx.slice(tensor, start, length)
   end
 
   defp slice_start(tensor, direction) do
