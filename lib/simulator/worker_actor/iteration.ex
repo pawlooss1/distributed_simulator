@@ -32,9 +32,9 @@ defmodule Iteration do
          signal_generators,
          signal_factors
        ) do
-    plans = Plans.create_plans(iteration, grid, objects_state, rng, create_plan)
+    {plans, rng} = Plans.create_plans(iteration, grid, objects_state, rng, create_plan)
 
-    {updated_objects, updated_objects_state} =
+    {updated_objects, updated_objects_state, rng} =
       Plans.process_plans(plans, objects_state, rng, action_mappings, map_state_action)
 
     {updated_objects, updated_objects_state} =

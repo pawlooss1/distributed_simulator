@@ -129,7 +129,7 @@ defmodule Simulator.WorkerActor do
           phase: :create_plans
         } = state
       ) do
-    plans =
+    {plans, rng} =
       EXLA.jit_apply(&Plans.create_plans/5, [iteration, grid, objects_state, rng, &create_plan/4])
 
     distribute_plans(state, plans)
@@ -138,6 +138,7 @@ defmodule Simulator.WorkerActor do
       %{
         state
         | objects: plans,
+          rng: rng,
           processed_neighbors: 0,
           phase: :remote_plans
       }
@@ -182,7 +183,7 @@ defmodule Simulator.WorkerActor do
           phase: :process_plans
         } = state
       ) do
-    {updated_objects, updated_objects_state} =
+    {updated_objects, updated_objects_state, rng} =
       EXLA.jit_apply(&Plans.process_plans/5, [
         plans,
         objects_state,
@@ -198,6 +199,7 @@ defmodule Simulator.WorkerActor do
         state
         | objects: updated_objects,
           objects_state: updated_objects_state,
+          rng: rng,
           processed_neighbors: 0,
           phase: :remote_consequences
       }
@@ -443,7 +445,6 @@ defmodule Simulator.WorkerActor do
 
   defp do_send_to_neighbors(direction, neighbors, message_atom, tensors, location) do
     neighbor = neighbors[direction]
-    Logger.info("Sending tensors to #{inspect(neighbor)} (#{inspect(location)}) in dir #{inspect(direction)}")
 
     message =
       tensors

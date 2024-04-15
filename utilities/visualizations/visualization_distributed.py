@@ -180,7 +180,7 @@ for i, frame in enumerate(frames):
     plt.savefig(f'frames/{i}.png')
     ims.append([im])
 
-ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,
+ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True,
                                 repeat=False)
 
 ani.save("movie.mp4")
