@@ -99,7 +99,7 @@ defmodule Simulator.Constants do
           @infinity 1_000_000_000
 
           # grid creation
-          @margin_size 3
+          @margin_size 1
 
           # positions
           @consequence_position 8

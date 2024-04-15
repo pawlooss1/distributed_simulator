@@ -183,15 +183,5 @@ defmodule Simulator.WorkerActor.Plans do
     else
       {grid, accepted_plans, objects_state}
     end
-
-    # end
-  end
-
-  defnp initial_plans(x_size, y_size) do
-    Nx.broadcast(Nx.tensor([@keep, @keep]), {8, x_size, y_size, 2})
-  end
-
-  defnp add_plan(plans, direction, i, j, plan) do
-    Nx.put_slice(plans, [direction, i, j, 0], Nx.broadcast(plan, {1, 1, 1, 2}))
   end
 end
