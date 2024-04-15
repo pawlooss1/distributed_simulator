@@ -10,9 +10,9 @@ defmodule Evacuation.PlanCreator do
     grid_without_signals = grid[[.., .., 0]]
     plan_directions = calc_plan_directions(grid)
     person_plans = create_plan_person(grid_without_signals, plan_directions)
-    fire_plans = create_plan_fire(grid_without_signals, iteration, rng)
+    {fire_plans, rng} = create_plan_fire(grid_without_signals, iteration, rng)
     plans = grid[[.., .., 0]] + person_plans + fire_plans
-    plans
+    {plans, rng}
   end
 
   defn create_plan_person(grid, directions) do
@@ -21,14 +21,15 @@ defmodule Evacuation.PlanCreator do
 
   defn create_plan_fire(grid, iteration, rng) do
     if Nx.remainder(iteration, @fire_spreading_frequency) |> Nx.equal(Nx.tensor(0)) do
-      {r, _} = Nx.Random.uniform(rng, shape: {1, 8})
+      {x, y} = Nx.shape(grid)
+      {r, rng} = Nx.Random.uniform(rng, shape: {x, y, 8})
       available_fields = grid != @obstacle
       available_neighbourhood = attach_neighbourhood_to_new_dim(available_fields)
       directions = Nx.argmax(available_neighbourhood[[.., .., 1..-1//1]] * r, axis: 2) + 1
 
-      create_plans_for_object_type(grid, directions, @fire, @fire_spread)
+      {create_plans_for_object_type(grid, directions, @fire, @fire_spread), rng}
     else
-      Nx.broadcast(0, Nx.shape(grid))
+      {Nx.broadcast(0, Nx.shape(grid)), rng}
     end
   end
 

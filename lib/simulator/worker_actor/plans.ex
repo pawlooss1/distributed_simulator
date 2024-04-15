@@ -26,15 +26,19 @@ defmodule Simulator.WorkerActor.Plans do
   @doc """
   Creates plans for every cell in the grid.
   """
-  @spec create_plans(Types.index(), Nx.t(), Nx.t(), Nx.t(), fun()) :: Nx.t()
+  @spec create_plans(Types.index(), Nx.t(), Nx.t(), Nx.t(), fun()) :: {Nx.t(), Nx.t()}
   defn create_plans(iteration, grid, objects_state, rng, create_plan) do
     create_plan.(grid, objects_state, iteration, rng)
   end
 
   defn process_plans(grid, objects_state, rng, action_mappings, map_state) do
-    accepted_plans = choose_plans(grid, rng)
+    {accepted_plans, rng} = choose_plans(grid, rng)
     plans_with_objects = combine_plans_with_objects(grid, accepted_plans)
-    apply_actions(plans_with_objects, objects_state, action_mappings, map_state)
+
+    {updated_grid, updated_state} =
+      apply_actions(plans_with_objects, objects_state, action_mappings, map_state)
+
+    {updated_grid, updated_state, rng}
   end
 
   defn apply_actions(grid, objects_state, action_mappings, map_state) do
@@ -85,21 +89,22 @@ defmodule Simulator.WorkerActor.Plans do
   defn filter_right_directions(grid) do
     neigh = grid[[.., .., 1..-1//1]]
     directions = neigh &&& @direction_filter
-    filter = (directions == @reverse_directions)
+    filter = directions == @reverse_directions
     neigh * filter
   end
 
   defn resolve_conflicts(plans, rng) do
-    {r, _} = Nx.Random.uniform(rng, shape: {1, 8})
-    plan_flags = (plans != 0)
+    {x, y, _} = Nx.shape(plans)
+    {r, rng} = Nx.Random.uniform(rng, shape: {x, y, 8})
+    plan_flags = plans != 0
     probabilities = plan_flags * r
     filter = find_max_filter(probabilities)
-    Nx.sum(plans * filter, axes: [2])
+    {Nx.sum(plans * filter, axes: [2]), rng}
   end
 
   defn find_max_filter(probabilities) do
     probabilities_t = Nx.transpose(probabilities, axes: [2, 0, 1])
-    filter_t = (probabilities_t >= Nx.reduce_max(probabilities, axes: [2]))
+    filter_t = probabilities_t >= Nx.reduce_max(probabilities, axes: [2])
     Nx.transpose(filter_t, axes: [1, 2, 0])
   end
 

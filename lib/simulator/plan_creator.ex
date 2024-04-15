@@ -21,7 +21,7 @@ defmodule Simulator.PlanCreator do
               iteration :: Types.index(),
               rng :: Nx.t()
             ) ::
-            grid :: Nx.t()
+              {grid :: Nx.t(), rng :: Nx.t()}
 
   defmacro __using__(_opts) do
     quote location: :keep do
