@@ -16,15 +16,16 @@ defmodule Simulator.Helpers do
   defn shift({x, y}, direction) do
     shifts = Nx.tensor([
       [0, 0],
-      [-1, 0],
-      [-1, 1],
       [0, 1],
-      [1, 1],
-      [1, 0],
-      [1, -1],
+      [-1, 1],
+      [-1, 0],
+      [-1, -1],
       [0, -1],
-      [-1, -1]
+      [1, -1],
+      [1, 0],
+      [1, 1],
     ])
+    direction = direction >>> @direction_position
     shift = shifts[direction]
     {x + shift[0], y + shift[1]}
   end
