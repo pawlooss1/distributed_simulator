@@ -23,6 +23,7 @@ defmodule Evacuation do
       metrics: metrics,
       metrics_save_step: 1,
       objects_state: objects_state,
+      fill_signal_iterations: 50,
       workers_by_dim: Simulation.fetch_workers_numbers()
     }
 

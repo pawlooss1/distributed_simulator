@@ -19,7 +19,7 @@ defmodule Evacuation.Constants do
       @fire_spreading_frequency 2
 
       @exit_signal 30
-      @fire_signal -30
+      @fire_signal -5
     end
   end
 end
