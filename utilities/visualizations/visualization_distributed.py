@@ -104,8 +104,13 @@ def to_objects_and_signals(grids):
 
 def adjust_signals(signals, objects):
     """ normalize signals to fit in [0, 1] range and zero them on objects' positions """
-    signals = (signals - np.amin(signals))
-    signals = signals / np.amax(signals)
+    positive_signals = np.where(signals > 0, signals, 0)
+    negative_signals = np.where(signals < 0, signals, 0)
+    positive_signals = positive_signals / np.amax(signals)
+    negative_signals = negative_signals / (-np.amin(signals))
+    signals = positive_signals + negative_signals
+    signals = signals + 1
+    signals = signals / 2
     return np.where(objects == 0, signals, 0)
 
 
@@ -180,7 +185,7 @@ for i, frame in enumerate(frames):
     plt.savefig(f'frames/{i}.png')
     ims.append([im])
 
-ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True,
+ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,
                                 repeat=False)
 
 ani.save("movie.mp4")
