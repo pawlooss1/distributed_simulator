@@ -147,12 +147,17 @@ defmodule Simulator.Helpers do
     |> Nx.add(1)
   end
 
-  @spec create_plans_for_object_type(Nx.t(), Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
-  defn create_plans_for_object_type(grid, directions, object, plan) do
-    directions = (grid == object) * directions
+  @spec create_plans_for_object_type(Nx.t(), Nx.t(), Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
+  defn create_plans_for_object_type(grid, objects_state, directions, plan, object_filter) do
+    directions = object_filter.(grid, objects_state) * directions
     filter = directions != 0
     plans = filter * plan
     plans + (directions <<< @direction_position)
+  end
+
+  @spec create_plans_without_dir_for_object_type(Nx.t(), Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
+  defn create_plans_without_dir_for_object_type(grid, objects_state, plan, object_filter) do
+    object_filter.(grid, objects_state) * plan
   end
 
   @spec choose_available_directions_randomly(Nx.t(), Nx.t(), Nx.t()) :: {Nx.t(), Nx.t()}

@@ -14,7 +14,7 @@ defmodule Rabbits do
   def start(map_path) do
     grid = read_grid(map_path)
     {x, y, _z} = Nx.shape(grid)
-    objects_state = Nx.broadcast(@rabbit_start_energy, {x, y})
+    objects_state = Nx.broadcast(@rabbit_start_energy, {x, y}) # TODO sprawdzic czy to nie jest zle
     metrics = Nx.tensor([0, 0, 0, 0, 0, 0])
     Printer.clean()
 
@@ -23,6 +23,7 @@ defmodule Rabbits do
       metrics: metrics,
       metrics_save_step: 4,
       objects_state: objects_state,
+      fill_signal_iterations: 0,
       workers_by_dim: Simulation.fetch_workers_numbers()
     }
 
