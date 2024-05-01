@@ -44,6 +44,10 @@ defmodule Simulator.Constants do
                                 )
           # directions
           @direction_filter 0xff_00_00_00
+          @direction_vectors Nx.complex(
+            Nx.tensor([1, 0.7071067690849304, 0, -0.7071067690849304, -1, -0.7071067690849304, 0, 0.7071067690849304]),
+            Nx.tensor([0, 0.7071067690849304, 1, 0.7071067690849304, 0, -0.7071067690849304, -1, -0.7071067690849304])
+          )
 
           @dir_stay 0x00_00_00_00
           @dir_right 0x01_00_00_00

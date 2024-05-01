@@ -125,4 +125,43 @@ defmodule Simulator.Helpers do
       padded_grid[[2..-1//1, 2..-1//1]],
     ], axis: 2)
   end
+
+  @spec calc_plan_directions(Nx.t()) :: Nx.t()
+  defn calc_plan_directions(grid) do
+    resultants = Nx.dot(grid[[.., .., 1..8]], @direction_vectors)
+
+    resultants
+    |> Nx.phase()
+    |> radian_to_direction()
+    # 0 + i0 has angle = 0 too hence the correction
+    |> Nx.multiply(resultants != Nx.complex(0, 0))
+    |> Nx.as_type(Nx.type(grid))
+  end
+
+  defnp radian_to_direction(angles) do
+    Nx.round(angles * 4 / Nx.Constants.pi())
+    # correction because Nx.phase results are from (-pi, pi]
+    |> Nx.add(8)
+    |> Nx.remainder(8)
+    # angle = 0 -> dir = 1, etc.
+    |> Nx.add(1)
+  end
+
+  @spec create_plans_for_object_type(Nx.t(), Nx.t(), Nx.t(), Nx.t()) :: Nx.t()
+  defn create_plans_for_object_type(grid, directions, object, plan) do
+    directions = (grid == object) * directions
+    filter = directions != 0
+    plans = filter * plan
+    plans + (directions <<< @direction_position)
+  end
+
+  @spec choose_available_directions_randomly(Nx.t(), Nx.t(), Nx.t()) :: {Nx.t(), Nx.t()}
+  defn choose_available_directions_randomly(grid, rng, availability_filter) do
+    {x, y} = Nx.shape(grid)
+    {r, rng} = Nx.Random.uniform(rng, shape: {x, y, 8})
+    available_fields = availability_filter.(grid)
+    available_neighbourhood = attach_neighbourhood_to_new_dim(available_fields)
+    directions = Nx.argmax(available_neighbourhood[[.., .., 1..-1//1]] * r, axis: 2) + 1
+    {directions, rng}
+  end
 end
