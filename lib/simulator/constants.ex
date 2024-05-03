@@ -26,6 +26,7 @@ defmodule Simulator.Constants do
       defmacro __using__(_opts) do
         quote location: :keep do
           @grid_type {:s, 64}
+          @objects_state_type {:s, 16}
           # constants set in simulation's config file
           @max_iterations Application.compile_env!(:distributed_simulator, :max_iterations)
 
@@ -99,6 +100,10 @@ defmodule Simulator.Constants do
           @plan_filter 0xff_ff_ff_00
           @plan_keep Nx.tensor([@keep, @keep])
 
+          # object state
+          @state_filter 0xff_ff_00_00_00_00
+          @plan_state_filter 0xff_ff_ff_ff_ff_00
+
           # for signals
           @infinity 1_000_000_000
 
@@ -109,6 +114,7 @@ defmodule Simulator.Constants do
           @consequence_position 8
           @action_position 16
           @direction_position 24
+          @state_position 32
 
           # state_mapping
           @identity 0

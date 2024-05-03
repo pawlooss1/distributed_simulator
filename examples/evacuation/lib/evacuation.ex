@@ -14,7 +14,7 @@ defmodule Evacuation do
   def start(map_path) do
     grid = read_grid(map_path)
     {x, y, _z} = Nx.shape(grid)
-    objects_state = Nx.broadcast(0, {x, y})
+    objects_state = Nx.broadcast(0, {x, y}) |> Nx.as_type(@objects_state_type)
     metrics = Nx.tensor([0,0,0])
     Printer.clean()
 
@@ -30,7 +30,7 @@ defmodule Evacuation do
     Simulation.start(parameters)
   end
 
-  defp read_grid(map_path) do
+  def read_grid(map_path) do
     File.read!(map_path)
     |> String.split("\n")
     |> Enum.map(&parse_line/1)

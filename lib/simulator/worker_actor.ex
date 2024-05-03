@@ -444,6 +444,7 @@ defmodule Simulator.WorkerActor do
          } = state
        ) do
     @grid_type = Nx.type(grid)
+    @objects_state_type = Nx.type(objects_state)
     Printer.write_to_file(state)
 
     start_message =
