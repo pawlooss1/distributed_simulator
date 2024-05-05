@@ -14,7 +14,10 @@ defmodule Rabbits do
   def start(map_path) do
     grid = read_grid(map_path)
     {x, y, _z} = Nx.shape(grid)
-    objects_state = Nx.broadcast(@rabbit_start_energy, {x, y}) # TODO sprawdzic czy to nie jest zle
+    objects_state =
+      Nx.broadcast(@rabbit_start_energy, {x, y})
+      |> Nx.multiply(Nx.equal(grid[[.., .., 0]], @rabbit))
+      |> Nx.as_type(@objects_state_type)
     metrics = Nx.tensor([0, 0, 0, 0, 0, 0])
     Printer.clean()
 

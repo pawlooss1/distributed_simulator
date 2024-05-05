@@ -44,8 +44,10 @@ def read_grids(frames_dir, verbose=False):
     n_frames = len(os.listdir(frames_dir))
     grids = [0 for _x in range(n_frames)]
 
-    for filename in os.listdir(frames_dir):
-        grid_nr = int(filename.split("_")[1].split(".")[0])
+    indexed_files = [(int(filename.split("_")[1].split(".")[0]), filename) for filename in os.listdir(frames_dir)]
+    filenames = [file[1] for file in sorted(indexed_files)]
+
+    for grid_nr, filename in enumerate(filenames):
         path = os.path.join(frames_dir, filename)
         with open(path, 'r') as f:
             grid_file = f.read()

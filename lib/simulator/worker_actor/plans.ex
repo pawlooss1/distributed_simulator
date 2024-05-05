@@ -93,7 +93,7 @@ defmodule Simulator.WorkerActor.Plans do
   end
 
   defn filter_right_directions(grid) do
-    neigh = grid[[.., .., 1..-1//1]]
+    neigh = grid #[[.., .., 1..-1//1]]
     directions = neigh &&& @direction_filter
     filter = directions == @reverse_directions
     neigh * filter
@@ -101,28 +101,12 @@ defmodule Simulator.WorkerActor.Plans do
 
   defn resolve_conflicts(plans, rng) do
     {x, y, _} = Nx.shape(plans)
-    {r, rng} = Nx.Random.uniform(rng, shape: {x, y, 8})
+    {r, rng} = Nx.Random.uniform(rng, shape: {x, y, 9})
     plan_flags = (plans &&& @plan_filter) != 0
     probabilities = plan_flags * r
     filter = find_max_filter(probabilities)
     {Nx.sum(plans * filter, axes: [2]), rng}
   end
-
-  # defn filter_right_directions(grid) do
-  #   neigh = grid # [[.., .., 1..-1//1]]
-  #   directions = neigh &&& @direction_filter
-  #   filter = directions == @reverse_directions
-  #   neigh * filter
-  # end
-
-  # defn resolve_conflicts(plans, rng) do
-  #   {x, y, _} = Nx.shape(plans)
-  #   {r, rng} = Nx.Random.uniform(rng, shape: {x, y, 9})
-  #   plan_flags = (plans &&& @plan_filter) != 0 # prawdopodobnie trzeba odfiltrowac object state
-  #   probabilities = plan_flags * r
-  #   filter = find_max_filter(probabilities)
-  #   {Nx.sum(plans * filter, axes: [2]), rng}
-  # end
 
   defn find_max_filter(probabilities) do
     probabilities_t = Nx.transpose(probabilities, axes: [2, 0, 1])
