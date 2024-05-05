@@ -4,17 +4,18 @@ defmodule Rabbits.Cell do
 
   import Nx.Defn
 
-  @impl true
-  defn generate_signal(object) do
-    cond do
-      Nx.equal(object, @rabbit) -> @rabbit_signal
-      Nx.equal(object, @lettuce) -> @lettuce_signal
-      true -> 0
+    @impl true
+    defn signal_generators() do
+      Nx.tensor([
+        [@rabbit, @rabbit_signal],
+        [@lettuce, @lettuce_signal]
+      ])
     end
-  end
 
-  @impl true
-  defn signal_factor(_object) do
-    1
-  end
+    @impl true
+    defn signal_factors() do
+      Nx.tensor([
+        [@empty, 1]
+      ])
+    end
 end

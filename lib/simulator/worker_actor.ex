@@ -22,6 +22,7 @@ defmodule Simulator.WorkerActor do
 
   require Logger
 
+  alias ElixirSense.Log
   alias Simulator.Printer
   alias Simulator.WorkerActor.{Consequences, Plans, Signal}
 
@@ -73,6 +74,37 @@ defmodule Simulator.WorkerActor do
   end
 
   def handle_cast(:start, state), do: start_new_iteration(state)
+
+  def handle_cast(
+        :run_iteration,
+        %{
+          grid: grid,
+          iteration: iteration,
+          objects_state: objects_state,
+          rng: rng,
+          fill_signal_iterations: fill_signal_iterations,
+          phase: :run_iteration
+        } = state
+      )
+      when fill_signal_iterations > 0 do
+        Logger.info("Filling with signals #{fill_signal_iterations}")
+    signal_update =
+      EXLA.jit_apply(&Signal.calculate_signal_updates/2, [grid, &signal_generators/0])
+
+    final_grid =
+      EXLA.jit_apply(&Signal.apply_signal_update/3, [grid, signal_update, &signal_factors/0])
+
+    new_state = %{
+      state
+      | grid: final_grid,
+        fill_signal_iterations: fill_signal_iterations - 1,
+        phase: :run_iteration
+    }
+
+    GenServer.cast(self(), :run_iteration)
+
+    {:noreply, new_state}
+  end
 
   def handle_cast(
         :run_iteration,
@@ -412,12 +444,13 @@ defmodule Simulator.WorkerActor do
          } = state
        ) do
     @grid_type = Nx.type(grid)
+    @objects_state_type = Nx.type(objects_state)
     Printer.write_to_file(state)
 
     start_message =
       cond do
-        fill_signal_iterations > 0 -> :calc_signal_update
         neighbors_count == 0 -> :run_iteration
+        fill_signal_iterations > 0 -> :calc_signal_update
         true -> :create_plans
       end
 

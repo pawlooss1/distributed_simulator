@@ -6,114 +6,65 @@ defmodule Rabbits.PlanCreator do
   import Simulator.Helpers
 
   @impl true
-  defn create_plan(i, j, grid, objects_state, iteration, rng) do
-    cond do
-      Nx.equal(grid[i][j][0], @rabbit) ->
-        create_plan_rabbit(i, j, grid, objects_state, rng)
-
-      Nx.equal(grid[i][j][0], @lettuce) ->
-        create_plan_lettuce(i, j, grid, iteration, rng)
-
-      true ->
-        create_plan_other(i, j, grid)
-    end
+  defn create_plan(grid, objects_state, iteration, rng) do
+    grid_without_signals = grid[[.., .., 0]]
+    plan_directions = calc_plan_directions(grid)
+    {rabbit_plans, rng} = create_plan_rabbit(grid_without_signals, objects_state, plan_directions, rng)
+    {lettuce_plans, rng} = create_plan_lettuce(grid_without_signals, objects_state, iteration, rng)
+    plans = grid_without_signals + rabbit_plans + lettuce_plans
+    {plans, rng}
   end
 
-  defnp create_plan_rabbit(i, j, grid, objects_state, rng) do
-    cond do
-      Nx.less(objects_state[i][j], 1) ->
-        rabbit_die()
+  defn create_plan_rabbit(grid, objects_state, directions, rng) do
+    dead_rabbit_filter = fn g, os -> g == @rabbit and os < 1 end
 
-      Nx.greater(objects_state[i][j], @rabbit_reproduction_energy) ->
-        rabbit_procreate(grid, i, j, rng)
+    die_plans =
+      create_plans_without_dir_for_object_type(
+        grid,
+        objects_state,
+        @rabbit_die,
+        dead_rabbit_filter
+      )
 
-     true ->
-        rabbit_move(grid, i, j)
-    end
+      availability_filter = fn g -> g == @empty or g == @lettuce end
+    {procreate_directions, rng} = choose_available_directions_randomly(grid, rng, availability_filter)
+    procreative_rabbit_filter = fn g, os -> g == @rabbit and os > @rabbit_reproduction_energy end
+
+    procreate_plans =
+      create_plans_for_object_type(
+        grid,
+        objects_state,
+        procreate_directions,
+        @rabbit_procreate,
+        procreative_rabbit_filter
+      )
+
+      moving_rabbit_filter = fn g, os -> g == @rabbit and os >= 1 and os <= @rabbit_reproduction_energy end
+
+      move_plans =
+        create_plans_for_object_type(
+          grid,
+          objects_state,
+          directions,
+          @rabbit_move,
+          moving_rabbit_filter
+        )
+        {die_plans + procreate_plans + move_plans, rng}
   end
 
-  defnp rabbit_die() do
-    {@dir_stay, @rabbit_die}
-  end
-
-  defnp rabbit_procreate(grid, i, j, rng) do
-    {_i, _j, _direction, availability, availability_size, _grid} =
-      while {i, j, direction = @dir_top, availability = Nx.broadcast(Nx.tensor(0), {8}), curr = 0,
-             grid},
-            Nx.less_equal(direction, @dir_top_left) do
-        {x, y} = shift({i, j}, direction)
-
-        if Nx.equal(grid[x][y][0], @empty) or Nx.equal(grid[x][y][0], @lettuce) do
-          availability = Nx.put_slice(availability, [curr], Nx.broadcast(direction, {1}))
-          {i, j, direction + 1, availability, curr + 1, grid}
-        else
-          {i, j, direction + 1, availability, curr, grid}
-        end
-      end
-
-    if availability_size > 0 do
-      rng = Nx.Random.fold_in(rng, i * 7 + j * 5)
-      {index, _new_rng} = Nx.Random.randint(rng, 0, availability_size)
-      {availability[index], @rabbit_procreate}
-    else
-      {@dir_stay, @rabbit_rest}
-    end
-  end
-
-  defnp rabbit_move(grid, i, j) do
-    {_i, _j, _direction, signals, _grid} =
-      while {i, j, direction = @dir_top, signals = Nx.broadcast(Nx.tensor(-@infinity), {9}),
-             grid},
-            Nx.less_equal(direction, @dir_top_left) do
-        {x, y} = shift({i, j}, direction)
-
-        signals =
-          if Nx.equal(grid[x][y][0], @empty) or Nx.equal(grid[x][y][0], @lettuce) do
-            Nx.put_slice(signals, [direction], Nx.broadcast(grid[i][j][direction], {1}))
-          else
-            Nx.put_slice(signals, [direction], Nx.broadcast(-@infinity, {1}))
-          end
-
-        {i, j, direction + 1, signals, grid}
-      end
-
-    if signals |> Nx.reduce_max() |> Nx.greater(-@infinity) do
-      direction = Nx.argmax(signals)
-      {direction, @rabbit_move}
-    else
-      {@dir_stay, @rabbit_rest}
-    end
-  end
-
-  defnp create_plan_lettuce(i, j, grid, iteration, rng) do
+  defn create_plan_lettuce(grid, objects_state, iteration, rng) do
     if Nx.remainder(iteration, @lettuce_growth_factor) |> Nx.equal(Nx.tensor(0)) do
-      {_i, _j, _direction, availability, availability_size, _grid} =
-        while {i, j, direction = @dir_top, availability = Nx.broadcast(Nx.tensor(0), {8}),
-               curr = 0, grid},
-              Nx.less(direction, @dir_top_left) do
-          {x, y} = shift({i, j}, direction)
-
-          if Nx.equal(grid[x][y][0], @empty) do
-            availability = Nx.put_slice(availability, [curr], Nx.broadcast(direction, {1}))
-            {i, j, direction + 1, availability, curr + 1, grid}
-          else
-            {i, j, direction + 1, availability, curr, grid}
-          end
-        end
-
-      if availability_size > 0 do
-        rng = Nx.Random.fold_in(rng, i * 7 + j * 5)
-        {index, _new_rng} = Nx.Random.randint(rng, 0, availability_size)
-        {availability[index], @lettuce_grow}
-      else
-        {@dir_stay, @plan_keep}
-      end
+      {directions, rng} = choose_available_directions_randomly(grid, rng, &Nx.equal(&1, @empty))
+      plans = create_plans_for_object_type(
+        grid,
+        objects_state,
+        directions,
+        @lettuce_grow,
+        fn g, _ -> g == @lettuce end
+      )
+      {plans, rng}
     else
-      {@dir_stay, @plan_keep}
+      {Nx.broadcast(@keep, Nx.shape(grid)), rng}
     end
-  end
-
-  defnp create_plan_other(_i, _j, _grid) do
-    {@dir_stay, @plan_keep}
   end
 end

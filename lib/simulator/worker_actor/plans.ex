@@ -32,7 +32,7 @@ defmodule Simulator.WorkerActor.Plans do
   end
 
   defn process_plans(grid, objects_state, rng, action_mappings, map_state) do
-    {accepted_plans, rng} = choose_plans(grid, rng)
+    {accepted_plans, rng} = choose_plans(grid, objects_state, rng)
     plans_with_objects = combine_plans_with_objects(grid, accepted_plans)
 
     {updated_grid, updated_state} =
@@ -49,11 +49,11 @@ defmodule Simulator.WorkerActor.Plans do
       while {
               i = 0,
               filters,
-              objects_state,
               grid,
+              os = (grid &&& @state_filter) >>> @state_position |> Nx.as_type(@objects_state_type),
               g = grid &&& @action_object_filter,
               objects_update = Nx.broadcast(0, Nx.shape(grid)),
-              state_update = Nx.broadcast(0, Nx.shape(objects_state)),
+              state_update = Nx.broadcast(Nx.tensor(0, type: @objects_state_type), Nx.shape(grid)),
               updated_cells = Nx.broadcast(0, Nx.shape(grid))
             },
             i < n do
@@ -63,31 +63,37 @@ defmodule Simulator.WorkerActor.Plans do
 
         filtered_g = g == filter
         u_po = filtered_g * (object_update + (grid &&& @plan_filter))
-        s_po = filtered_g * map_state.(objects_state, fun_label)
+        s_po = filtered_g * map_state.(os, fun_label)
 
-        {i + 1, filters, objects_state, grid, g, objects_update + u_po, state_update + s_po,
+        {i + 1, filters, grid, os, g, objects_update + u_po, state_update + s_po,
          updated_cells + filtered_g}
       end
 
     unmodified_cells = not updated_cells
     updated_grid = unmodified_cells * (grid &&& @object_filter) + objects_update
-    updated_state = unmodified_cells * objects_state + state_update
+    updated_state = Nx.as_type(unmodified_cells, @objects_state_type) * objects_state + state_update
     {updated_grid, updated_state}
   end
 
-  defn choose_plans(grid, rng) do
+  defn choose_plans(grid, objects_state, rng) do
     grid
+    |> append_state(objects_state)
     |> attach_neighbourhood_to_new_dim()
     |> filter_right_directions()
     |> resolve_conflicts(rng)
   end
 
+  defn append_state(grid, objects_state) do
+    objects_state = Nx.as_type(objects_state &&& 0xff_ff, @grid_type)
+    grid + (objects_state <<< @state_position)
+  end
+
   defn combine_plans_with_objects(grid, plans) do
-    (grid &&& @object_filter) + (plans &&& @plan_filter)
+    (grid &&& @object_filter) + (plans &&& @plan_state_filter)
   end
 
   defn filter_right_directions(grid) do
-    neigh = grid[[.., .., 1..-1//1]]
+    neigh = grid #[[.., .., 1..-1//1]]
     directions = neigh &&& @direction_filter
     filter = directions == @reverse_directions
     neigh * filter
@@ -95,8 +101,8 @@ defmodule Simulator.WorkerActor.Plans do
 
   defn resolve_conflicts(plans, rng) do
     {x, y, _} = Nx.shape(plans)
-    {r, rng} = Nx.Random.uniform(rng, shape: {x, y, 8})
-    plan_flags = plans != 0
+    {r, rng} = Nx.Random.uniform(rng, shape: {x, y, 9})
+    plan_flags = (plans &&& @plan_filter) != 0
     probabilities = plan_flags * r
     filter = find_max_filter(probabilities)
     {Nx.sum(plans * filter, axes: [2]), rng}

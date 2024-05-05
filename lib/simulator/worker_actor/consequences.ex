@@ -39,7 +39,7 @@ defmodule Simulator.WorkerActor.Consequences do
               grid,
               g = grid &&& @action_object_filter,
               objects_update = Nx.broadcast(0, Nx.shape(grid)),
-              state_update = Nx.broadcast(0, Nx.shape(objects_state)),
+              state_update = Nx.broadcast(Nx.tensor(0, type: @objects_state_type), Nx.shape(grid)),
               updated_cells = Nx.broadcast(0, Nx.shape(grid))
             },
             i < n do
@@ -57,7 +57,7 @@ defmodule Simulator.WorkerActor.Consequences do
 
     unmodified_cells = not updated_cells
     updated_grid = unmodified_cells * grid + objects_update
-    updated_state = unmodified_cells * objects_state + state_update
+    updated_state = Nx.as_type(unmodified_cells, @objects_state_type) * objects_state + state_update
     {updated_grid, updated_state}
   end
 
