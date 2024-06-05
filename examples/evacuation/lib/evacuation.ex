@@ -21,7 +21,7 @@ defmodule Evacuation do
     parameters = %{
       grid: grid,
       metrics: metrics,
-      metrics_save_step: 10,
+      metrics_save_step: 100,
       objects_state: objects_state,
       fill_signal_iterations: 0,
       workers_by_dim: Simulation.fetch_workers_numbers()
