@@ -1,7 +1,7 @@
 import Config
 
 config :distributed_simulator,
-  max_iterations: 25,
+  max_iterations: 100,
   module_cell: Evacuation.Cell,
   module_metrics: Evacuation.Metrics,
   module_plan_creator: Evacuation.PlanCreator,
